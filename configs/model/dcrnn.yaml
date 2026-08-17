@@ -1,0 +1,36 @@
+# DCRNN model-only configuration.
+# Task horizon, data split, optimizer, early stopping, scheduled sampling,
+# checkpointing, and evaluation metrics belong to the train/test configs.
+
+model:
+  name: dcrnn
+  num_nodes: 10
+  hidden_dim: 32
+  num_rnn_layers: 1
+  max_diffusion_step: 2
+  num_graph_supports: 1
+  decoder: autoregressive
+  output_dim: 1
+  go_token: normalized_zero
+  dropout: 0.0
+
+graph:
+  artifact_path: artifacts/graphs/bwdf_pearson_static_graph.npz
+  matrix_key: random_walk
+  expected_method: pearson_full_positive
+  expected_corr_threshold: null
+  expected_negative_policy: clip_zero
+  expected_self_loop_in_adjacency: false
+  expected_nodes: 10
+  node_names: [A, B, C, D, E, F, G, H, I, J]
+  dma_columns:
+    - DMA 1
+    - DMA 2
+    - DMA 3
+    - DMA 4
+    - DMA 5
+    - DMA 6
+    - DMA 7
+    - DMA 8
+    - DMA 9
+    - DMA 10

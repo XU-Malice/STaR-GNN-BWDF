@@ -1,0 +1,4 @@
+base_config: configs/train/dcrnn_24h.yaml
+output:
+  base_dir: results/paper/reproduction/baselines/dcrnn/24h
+  keep_last_checkpoint_after_training: false

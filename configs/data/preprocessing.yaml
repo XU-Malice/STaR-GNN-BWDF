@@ -1,0 +1,31 @@
+# Preprocessing parameters for the leakage-safe DCRNN data pipeline.
+
+interpolation:
+  # pandas method="time": use actual distances between timestamps.
+  demand: time
+  weather: time
+  limit_direction: both
+  # Train and test are interpolated independently.
+  split_aware: true
+  require_no_nan: true
+
+outliers:
+  # Standard Tukey fence.
+  iqr_multiplier: 1.5
+  # Fit Q1/Q3/IQR on training rows only, then freeze the thresholds.
+  threshold_source: train
+  # Replace outliers with NaN and interpolate inside each split.
+  method: interpolate
+  limit_direction: both
+  split_aware: true
+  require_no_nan: true
+
+sampling:
+  history_hours: 672
+  history_days: 28
+  single_step_hours: 24
+  multi_step_hours: 168
+  stride_hours: 24
+  expected_train_samples: 686
+  expected_train_rollout_samples: 680
+  expected_test_eval_sequences: 46

@@ -1,0 +1,4 @@
+base_config: configs/train/dcrnn_168h.yaml
+output:
+  base_dir: results/paper/reproduction/baselines/dcrnn/168h
+  keep_last_checkpoint_after_training: false

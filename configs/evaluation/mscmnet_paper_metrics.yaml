@@ -1,0 +1,79 @@
+paper:
+  title: Water demand forecasting in multiple district metered areas based on a multi-scale correction module neural network architecture
+  journal: Water Research X
+  year: 2024
+  article: "100269"
+  doi: 10.1016/j.wroa.2024.100269
+  source: Supplementary material, sections S1-1 through S1-8
+  protocol: common_46
+  expected_sequences: 46
+  mape_unit: fraction
+  metric_conventions:
+    dma_rows: metric_per_dma
+    total_MAE: sum_of_A_to_J_dma_mae
+    total_MAPE_RMSE_NSE: metric_on_hourly_sum_of_A_to_J_demand
+  primary_reference_model: MSCMNet_W
+  secondary_reference_models:
+    - MSCMNet_WM
+  entity_order: [A, B, C, D, E, F, G, H, I, J, total]
+  metric_order: [MAE, MAPE, RMSE, NSE]
+
+# Values are transcribed from the attached publisher supplementary document.
+# In both MAE tables, for all six published models, the displayed total equals
+# the sum of DMA A-J (within the table's three-decimal rounding).  The other
+# total metrics use the total-demand series convention.
+# MSCMNet_W is the primary reference because it has the best total-demand
+# result for all four metrics in both the 24 h and 168 h tables.
+tasks:
+  24h:
+    horizon: 24
+    MSCMNet_W:
+      A: {MAE: 0.739, MAPE: 0.120, RMSE: 0.876, NSE: 0.716}
+      B: {MAE: 0.394, MAPE: 0.043, RMSE: 0.454, NSE: 0.680}
+      C: {MAE: 0.299, MAPE: 0.110, RMSE: 0.367, NSE: 0.782}
+      D: {MAE: 3.263, MAPE: 0.097, RMSE: 3.700, NSE: 0.597}
+      E: {MAE: 1.864, MAPE: 0.024, RMSE: 2.301, NSE: 0.971}
+      F: {MAE: 1.372, MAPE: 0.120, RMSE: 1.551, NSE: -0.391}
+      G: {MAE: 1.032, MAPE: 0.041, RMSE: 1.227, NSE: 0.902}
+      H: {MAE: 2.003, MAPE: 0.079, RMSE: 2.406, NSE: 0.861}
+      I: {MAE: 1.584, MAPE: 0.062, RMSE: 1.901, NSE: 0.287}
+      J: {MAE: 1.921, MAPE: 0.087, RMSE: 2.158, NSE: 0.171}
+      total: {MAE: 14.471, MAPE: 0.026, RMSE: 7.586, NSE: 0.959}
+    MSCMNet_WM:
+      A: {MAE: 0.926, MAPE: 0.136, RMSE: 1.081, NSE: 0.552}
+      B: {MAE: 0.376, MAPE: 0.041, RMSE: 0.434, NSE: 0.716}
+      C: {MAE: 0.243, MAPE: 0.090, RMSE: 0.305, NSE: 0.848}
+      D: {MAE: 3.655, MAPE: 0.108, RMSE: 4.128, NSE: 0.506}
+      E: {MAE: 1.837, MAPE: 0.024, RMSE: 2.240, NSE: 0.972}
+      F: {MAE: 1.335, MAPE: 0.116, RMSE: 1.520, NSE: -0.361}
+      G: {MAE: 1.157, MAPE: 0.047, RMSE: 1.348, NSE: 0.884}
+      H: {MAE: 1.755, MAPE: 0.069, RMSE: 2.196, NSE: 0.885}
+      I: {MAE: 1.477, MAPE: 0.058, RMSE: 1.798, NSE: 0.372}
+      J: {MAE: 2.028, MAPE: 0.091, RMSE: 2.271, NSE: 0.088}
+      total: {MAE: 14.790, MAPE: 0.027, RMSE: 7.924, NSE: 0.957}
+  168h:
+    horizon: 168
+    MSCMNet_W:
+      A: {MAE: 0.733, MAPE: 0.117, RMSE: 0.889, NSE: 0.784}
+      B: {MAE: 0.420, MAPE: 0.046, RMSE: 0.487, NSE: 0.690}
+      C: {MAE: 0.294, MAPE: 0.108, RMSE: 0.368, NSE: 0.796}
+      D: {MAE: 3.364, MAPE: 0.100, RMSE: 3.875, NSE: 0.597}
+      E: {MAE: 1.881, MAPE: 0.024, RMSE: 2.387, NSE: 0.971}
+      F: {MAE: 1.425, MAPE: 0.124, RMSE: 1.643, NSE: -0.346}
+      G: {MAE: 1.075, MAPE: 0.043, RMSE: 1.295, NSE: 0.900}
+      H: {MAE: 2.091, MAPE: 0.083, RMSE: 2.542, NSE: 0.854}
+      I: {MAE: 1.609, MAPE: 0.063, RMSE: 1.985, NSE: 0.550}
+      J: {MAE: 2.058, MAPE: 0.094, RMSE: 2.337, NSE: 0.426}
+      total: {MAE: 14.950, MAPE: 0.026, RMSE: 7.756, NSE: 0.960}
+    MSCMNet_WM:
+      A: {MAE: 0.949, MAPE: 0.138, RMSE: 1.135, NSE: 0.642}
+      B: {MAE: 0.399, MAPE: 0.044, RMSE: 0.463, NSE: 0.722}
+      C: {MAE: 0.234, MAPE: 0.087, RMSE: 0.304, NSE: 0.861}
+      D: {MAE: 3.762, MAPE: 0.111, RMSE: 4.305, NSE: 0.506}
+      E: {MAE: 1.854, MAPE: 0.024, RMSE: 2.365, NSE: 0.972}
+      F: {MAE: 1.384, MAPE: 0.120, RMSE: 1.611, NSE: -0.303}
+      G: {MAE: 1.217, MAPE: 0.049, RMSE: 1.430, NSE: 0.877}
+      H: {MAE: 1.830, MAPE: 0.072, RMSE: 2.312, NSE: 0.880}
+      I: {MAE: 1.503, MAPE: 0.059, RMSE: 1.875, NSE: 0.604}
+      J: {MAE: 2.158, MAPE: 0.098, RMSE: 2.443, NSE: 0.389}
+      total: {MAE: 15.290, MAPE: 0.027, RMSE: 8.097, NSE: 0.957}

@@ -1,0 +1,46 @@
+schema_version: 1
+release_id: star_gnn_common46_seed0_v1
+selection_policy: validation_first_test_once
+source_run_stamp: "20260807-203600"
+
+dataset:
+  name: BWDF
+  nodes: 10
+  history_hours: 672
+  horizons: [24, 168]
+  primary_test_protocol: common_46
+  expected_common_test_origins: 46
+
+paper_setting:
+  learning_rate: 0.0003
+  weight_decay: 0.0
+  cl_decay_steps: 500
+  state_loss_weight: 0.03
+  max_epochs: 100
+  seed: 0
+
+variants:
+  Base: backbone
+  State: dssn_sasr
+  FA-DPR: fa_dpr
+  Full: full
+
+selection_evidence:
+  candidates_declared_before_test: 3
+  validation_relations_passed: 28
+  validation_relations_total: 32
+  test_relations_passed: 31
+  test_relations_total: 32
+  test_used_for_training_or_selection: false
+
+expected_common46_test:
+  24h:
+    Base: {MAE: 5.356315, MAPE: 2.212928, RMSE: 6.848257, NSE: 0.970419}
+    State: {MAE: 4.895320, MAPE: 2.010448, RMSE: 6.133886, NSE: 0.976269}
+    FA-DPR: {MAE: 4.739336, MAPE: 1.944550, RMSE: 6.079036, NSE: 0.976691}
+    Full: {MAE: 4.360841, MAPE: 1.804574, RMSE: 5.534656, NSE: 0.980679}
+  168h:
+    Base: {MAE: 7.734838, MAPE: 3.248413, RMSE: 9.817428, NSE: 0.939504}
+    State: {MAE: 5.122511, MAPE: 2.102380, RMSE: 6.468312, NSE: 0.973739}
+    FA-DPR: {MAE: 7.578056, MAPE: 3.277716, RMSE: 9.332415, NSE: 0.945334}
+    Full: {MAE: 4.919812, MAPE: 2.013774, RMSE: 6.160881, NSE: 0.976176}

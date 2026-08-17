@@ -1,0 +1,39 @@
+# STGCN model-only configuration.
+# Data split, optimizer, early stopping, checkpointing, and metrics live in
+# the task-specific training configurations.
+
+model:
+  name: stgcn
+  num_nodes: 10
+  temporal_kernel_size: 3
+  chebyshev_order: 3
+  # Each row is [temporal channels, spatial bottleneck, output channels].
+  block_channels:
+    - [64, 16, 64]
+    - [64, 16, 64]
+  head_channels: 64
+  decoder: direct_future_conditioned
+  output_dim: 1
+  dropout: 0.0
+
+graph:
+  artifact_path: artifacts/graphs/bwdf_pearson_static_graph.npz
+  matrix_key: static_adj
+  support: scaled_symmetric_normalized_laplacian_chebyshev
+  expected_method: pearson_full_positive
+  expected_corr_threshold: null
+  expected_negative_policy: clip_zero
+  expected_self_loop_in_adjacency: false
+  expected_nodes: 10
+  node_names: [A, B, C, D, E, F, G, H, I, J]
+  dma_columns:
+    - DMA 1
+    - DMA 2
+    - DMA 3
+    - DMA 4
+    - DMA 5
+    - DMA 6
+    - DMA 7
+    - DMA 8
+    - DMA 9
+    - DMA 10

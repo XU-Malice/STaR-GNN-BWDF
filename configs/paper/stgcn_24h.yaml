@@ -1,0 +1,4 @@
+base_config: configs/train/stgcn_24h.yaml
+output:
+  base_dir: results/paper/reproduction/baselines/stgcn/24h
+  keep_last_checkpoint_after_training: false

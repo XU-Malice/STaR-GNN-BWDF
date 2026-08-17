@@ -1,0 +1,14 @@
+base_config: configs/train/star_dcrnn_24h.yaml
+training:
+  learning_rate: 0.0003
+  weight_decay: 0.0
+  max_epochs: 100
+  scheduled_sampling:
+    schedule: inverse_sigmoid
+    cl_decay_steps: 500
+innovation:
+  dssn_sasr:
+    state_loss_weight: 0.03
+output:
+  base_dir: results/paper/reproduction/star_gnn/24h
+  keep_last_checkpoint_after_training: false

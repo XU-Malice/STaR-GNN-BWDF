@@ -1,0 +1,52 @@
+# Python / IDE
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.idea/
+.vscode/
+*.egg-info/
+
+# Local environments and logs
+.env
+.venv/
+results/logs/
+results/cleanroom_validation/
+results/release_validation/
+results/public_release_validation/
+*.log
+*.pid
+*_latest_log.txt
+
+# Raw/processed data and generated graph artifacts
+data/raw/
+data/processed/
+repos/
+artifacts/graphs/*.npz
+
+# Large checkpoint release files (publish as GitHub Release assets)
+results/paper/frozen_v1/models/
+results/paper/frozen_v1/source_snapshot.tar.gz
+results/paper/verification/
+results/paper/reproduction/
+checkpoints/*.pt
+*.pt
+dist/
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+
+# Generated local experiment outputs
+results/baselines/
+results/innovations/
+results/training/
+results/graph/
+results/data_quality/
+
+# Keep generated paper CSV/Markdown/PNG/PDF under version control.
+!paper/tables/**
+!paper/figures/**
+!paper/reports/**

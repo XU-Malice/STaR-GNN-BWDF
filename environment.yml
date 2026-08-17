@@ -1,0 +1,14 @@
+name: star-gnn-bwdf
+channels:
+  - pytorch
+  - nvidia
+  - defaults
+dependencies:
+  - python=3.11
+  - pip=26.1
+  - pip:
+      # The CUDA wheel index is intentionally explicit.  CPU-only users may
+      # install torch separately, then install requirements-lock.txt.
+      - --extra-index-url https://download.pytorch.org/whl/cu128
+      - -r requirements-lock.txt
+      - -e .

@@ -1,0 +1,127 @@
+{
+  "status": "dcrnn_base_unified",
+  "canonical_model": "star_gnn/Base (variant=backbone)",
+  "canonical_checkpoint_sha256": {
+    "24h": "7fb5aab78254b650ce02d7bfe64273b9a9d42a47585cd075152697118927137f",
+    "168h": "b7f6a97b372517e012306cdc284942e5a37f0ece086bd4ed64105981152b6f99"
+  },
+  "removed_model": "baselines/dcrnn",
+  "removed_files": {
+    "models/baselines/dcrnn/168h/seed_0/checkpoint_best.pt": {
+      "bytes": 348647,
+      "sha256": "6cf87ac61eff63e35a293c9cc416d390d417f1599bfe5c5cf6913818ecb35fdd"
+    },
+    "models/baselines/dcrnn/168h/seed_0/evaluation/metrics_aggregate_total_common_46.csv": {
+      "bytes": 93,
+      "sha256": "0e5a363163b59acf05da50656ee9c5e988750a891f0d57210ac819e0469f5ae2"
+    },
+    "models/baselines/dcrnn/168h/seed_0/evaluation/metrics_aggregate_total_operational.csv": {
+      "bytes": 93,
+      "sha256": "c2e1db40675989b7b462fd40a1e0a1fbebe4349eb810e2c57e380f04be5821b0"
+    },
+    "models/baselines/dcrnn/168h/seed_0/evaluation/metrics_aggregate_total_strict_within_test.csv": {
+      "bytes": 93,
+      "sha256": "0e5a363163b59acf05da50656ee9c5e988750a891f0d57210ac819e0469f5ae2"
+    },
+    "models/baselines/dcrnn/168h/seed_0/evaluation/metrics_common_46.csv": {
+      "bytes": 624,
+      "sha256": "776cd2a0bb115214ec4ebacc8c2acbe5453ed5d9766013b53fad824c7a715a8f"
+    },
+    "models/baselines/dcrnn/168h/seed_0/evaluation/metrics_operational.csv": {
+      "bytes": 624,
+      "sha256": "afef61ebaf04c121527e3ab7e2a6682a3055a0b53398317b0a0e6296a2d0e3c7"
+    },
+    "models/baselines/dcrnn/168h/seed_0/evaluation/metrics_strict_within_test.csv": {
+      "bytes": 624,
+      "sha256": "776cd2a0bb115214ec4ebacc8c2acbe5453ed5d9766013b53fad824c7a715a8f"
+    },
+    "models/baselines/dcrnn/168h/seed_0/evaluation/paper_comparison.csv": {
+      "bytes": 10936,
+      "sha256": "f1843aa3ab70e23e8ed2c564c6489fbc2a7b5ec4a173702c2362065f9c05d4b8"
+    },
+    "models/baselines/dcrnn/168h/seed_0/evaluation/paper_comparison_report.md": {
+      "bytes": 1450,
+      "sha256": "75ac085dca03c706768abdc19d77e26c7eb414a2bc0f12883da7906488b5ddeb"
+    },
+    "models/baselines/dcrnn/168h/seed_0/evaluation/paper_comparison_summary.json": {
+      "bytes": 516,
+      "sha256": "57a7c04c2c5dc58d63e8acffe1da257c3304ab35b172c1e85ed7753ab0badaee"
+    },
+    "models/baselines/dcrnn/168h/seed_0/evaluation/predictions.npz": {
+      "bytes": 505385,
+      "sha256": "e8b51da16de1e529af1f4b4a8c5105f483915f2aceac79d163390626b5099c3a"
+    },
+    "models/baselines/dcrnn/168h/seed_0/evaluation/test_summary.json": {
+      "bytes": 2490,
+      "sha256": "d240bd88019ec30812eeb23aa4189d416ba540cd00b19bf809e31ac2f03f4494"
+    },
+    "models/baselines/dcrnn/168h/seed_0/history.csv": {
+      "bytes": 25500,
+      "sha256": "c3aae984cbb1a384c9a664abd3d9bf88306d3aa99fd0d1aa2bf4a35de25778e2"
+    },
+    "models/baselines/dcrnn/168h/seed_0/training_summary.json": {
+      "bytes": 569,
+      "sha256": "8492663aef705cf4d7002a248a84f6024559845daa383a7c390da8639bf62034"
+    },
+    "models/baselines/dcrnn/24h/seed_0/checkpoint_best.pt": {
+      "bytes": 343911,
+      "sha256": "d180723d37395e1648752655cc331437e44d887b11e3483aa521ae1a6b9c05b8"
+    },
+    "models/baselines/dcrnn/24h/seed_0/evaluation/metrics_aggregate_total_common_46.csv": {
+      "bytes": 93,
+      "sha256": "2a8f52582d9b6cbfc0b12c096fdf96dcdd39a8ce26d50a79d233617dc40a289b"
+    },
+    "models/baselines/dcrnn/24h/seed_0/evaluation/metrics_aggregate_total_operational.csv": {
+      "bytes": 93,
+      "sha256": "fa88d729760c8234effd3db935f3cb5e25334ec94f1ee222566664fd20b5adc3"
+    },
+    "models/baselines/dcrnn/24h/seed_0/evaluation/metrics_aggregate_total_strict_within_test.csv": {
+      "bytes": 93,
+      "sha256": "751cae31cb467a3e65ab1038fa9ead32e230683bffeb426560b0f06d80cd80de"
+    },
+    "models/baselines/dcrnn/24h/seed_0/evaluation/metrics_common_46.csv": {
+      "bytes": 623,
+      "sha256": "0beee58328f76cb8fb752ce1d7ed2693efbf0a97197b4447b87024c556567074"
+    },
+    "models/baselines/dcrnn/24h/seed_0/evaluation/metrics_operational.csv": {
+      "bytes": 624,
+      "sha256": "666176181e20fcd7a1671ff91eddeb3c5c4b097bfa56a54c97f45c50993d305f"
+    },
+    "models/baselines/dcrnn/24h/seed_0/evaluation/metrics_strict_within_test.csv": {
+      "bytes": 623,
+      "sha256": "3f6ae5dad5c97c19cad9d73b13fdc9187bfd476a05c80fd867dfd86a1b119492"
+    },
+    "models/baselines/dcrnn/24h/seed_0/evaluation/paper_comparison.csv": {
+      "bytes": 10816,
+      "sha256": "7ba7ab6cad4f91686cbdb606048dd5d9c359ecaefff1182c1a66ae6b3a0f3e03"
+    },
+    "models/baselines/dcrnn/24h/seed_0/evaluation/paper_comparison_report.md": {
+      "bytes": 1440,
+      "sha256": "3ac93c4105fff43b415cf63062b7439b6b860af8bcdf8e547ab69a755f1270f3"
+    },
+    "models/baselines/dcrnn/24h/seed_0/evaluation/paper_comparison_summary.json": {
+      "bytes": 515,
+      "sha256": "52d850c7f839091a8a85cf13ca0d5ef0187435e57612076666ce745b8248e33b"
+    },
+    "models/baselines/dcrnn/24h/seed_0/evaluation/predictions.npz": {
+      "bytes": 123911,
+      "sha256": "5e446807fa45224f51be485dbf27d372716511b81fcefdb09719e0d56dcf6f01"
+    },
+    "models/baselines/dcrnn/24h/seed_0/evaluation/test_summary.json": {
+      "bytes": 2475,
+      "sha256": "99d2d1e90ec2486945c79234c1bc3f684b385d2e9f649e241592d74b2d1f6219"
+    },
+    "models/baselines/dcrnn/24h/seed_0/history.csv": {
+      "bytes": 17787,
+      "sha256": "fc8aa437fe9b80fcbf5e6ff20d603842ad534618a81eea36f5f304addc6e53ac"
+    },
+    "models/baselines/dcrnn/24h/seed_0/training_summary.json": {
+      "bytes": 462,
+      "sha256": "48f19d427702054b29fb19cd9241efc3050b586ecc830073fec31e3348aa9847"
+    }
+  },
+  "removed_summary_rows": 2,
+  "created_utc": "2026-08-17T02:12:38.655093+00:00",
+  "training_performed": false,
+  "test_used_for_selection": false
+}

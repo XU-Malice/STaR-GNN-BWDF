@@ -1,0 +1,31 @@
+# BWDF deterministic static graph configuration.
+
+source:
+  data_dir: data/processed/data_build
+  demand_file: demand_hourly.parquet
+  split_config: configs/data/paper_split.yaml
+  features_config: configs/data/features.yaml
+
+graph:
+  method: pearson_full_positive
+  corr_threshold: null
+  negative_policy: clip_zero
+  self_loop_in_adjacency: false
+  static: true
+  normalization: random_walk
+
+output:
+  artifact_path: artifacts/graphs/bwdf_pearson_static_graph.npz
+  diagnostics_dir: results/graph/pearson_static
+
+validation:
+  expected_nodes: 10
+  expected_fit_rows: 17136
+  atol: 1.0e-10
+  stability_segments: 4
+
+bootstrap:
+  enabled: true
+  block_hours: 168
+  n_resamples: 200
+  seed: 42

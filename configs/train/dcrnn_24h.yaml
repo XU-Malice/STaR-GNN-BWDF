@@ -1,0 +1,80 @@
+# DCRNN baseline: next-24-hour prediction from 672 hours of history.
+base_config: configs/model/dcrnn.yaml
+
+source:
+  data_dir: data/processed/data_build
+  split_config: configs/data/paper_split.yaml
+  feature_config: configs/data/features.yaml
+  sample_index: data/processed/data_build/sample_index_single_step_24h.csv
+
+task:
+  name: single_step_24h
+  display_name: day-ahead 24-hour forecasting
+  horizon: 24
+  history_hours: 672
+  stride_hours: 24
+
+features:
+  weather_columns:
+    - rainfall_depth
+    - air_temperature
+    - air_humidity
+    - windspeed
+  temporal_encoding: cyclical
+  historical_weather: true
+  future_weather: false
+  future_temporal: true
+  expected_input_dim: 12
+  expected_future_exog_dim: 7
+
+split:
+  expected_development_samples: 686
+  validation_samples: 68
+  purge_samples: 0
+  expected_fit_samples: 618
+  expected_test_candidates: 80
+  expected_operational_samples: 80
+  expected_strict_samples: 52
+  expected_common_samples: 46
+
+training:
+  loss: mae
+  optimizer: adam
+  learning_rate: 0.001
+  weight_decay: 0.00001
+  batch_size: 16
+  validation_batch_size: 16
+  max_epochs: 100
+  early_stopping_patience: 15
+  early_stopping_min_delta: 0.0
+  gradient_clip_norm: 5.0
+  shuffle_train_samples: true
+  seeds: [0, 1, 2, 3, 4]
+  scheduled_sampling:
+    schedule: inverse_sigmoid
+    cl_decay_steps: 350
+  tensorboard:
+    enabled: true
+    subdir: tensorboard
+    flush_every_epochs: 1
+
+runtime:
+  device: auto
+  allow_cpu_fallback: false
+  # A formal run is started only on a lightly occupied visible GPU.
+  minimum_free_memory_mib: 8192
+  maximum_used_memory_mib: 2048
+  maximum_gpu_utilization_percent: 20
+
+evaluation:
+  primary_protocol: common_46
+  protocols:
+    - operational
+    - strict_within_test
+    - common_46
+  metrics: [MAE, MAPE, RMSE, NSE]
+  teacher_forcing_ratio: 0.0
+
+output:
+  base_dir: results/baselines/dcrnn/24h
+  keep_last_checkpoint_after_training: false

@@ -1,0 +1,109 @@
+{
+  "num_nodes": 10,
+  "possible_undirected_edges": 45,
+  "positive_undirected_edges": 45,
+  "density": 1.0,
+  "all_offdiagonal_adjacency_weights": {
+    "count": 45,
+    "min": 0.03192355900502325,
+    "q1": 0.4512800331540723,
+    "median": 0.5802146555715496,
+    "mean": 0.5502700683151887,
+    "q3": 0.6620265602635227,
+    "max": 0.8993700728299278,
+    "std": 0.2015246900476475
+  },
+  "positive_edge_weights": {
+    "count": 45,
+    "min": 0.03192355900502325,
+    "q1": 0.4512800331540723,
+    "median": 0.5802146555715496,
+    "mean": 0.5502700683151887,
+    "q3": 0.6620265602635227,
+    "max": 0.8993700728299278,
+    "std": 0.2015246900476475
+  },
+  "delta2": 0.4461243761334959,
+  "node_metrics": [
+    {
+      "node_name": "A",
+      "dma_column": "DMA 1",
+      "degree": 9,
+      "weighted_degree": 4.278090733982792,
+      "propagation_entropy": 2.0876789773127546,
+      "effective_neighbors": 8.066171653255948
+    },
+    {
+      "node_name": "B",
+      "dma_column": "DMA 2",
+      "degree": 9,
+      "weighted_degree": 5.102925149945231,
+      "propagation_entropy": 2.129331914602786,
+      "effective_neighbors": 8.409246839323592
+    },
+    {
+      "node_name": "C",
+      "dma_column": "DMA 3",
+      "degree": 9,
+      "weighted_degree": 4.722114805440799,
+      "propagation_entropy": 2.0884296792271804,
+      "effective_neighbors": 8.072229217186074
+    },
+    {
+      "node_name": "D",
+      "dma_column": "DMA 4",
+      "degree": 9,
+      "weighted_degree": 5.401172935150241,
+      "propagation_entropy": 2.1600023388738703,
+      "effective_neighbors": 8.671157939184466
+    },
+    {
+      "node_name": "E",
+      "dma_column": "DMA 5",
+      "degree": 9,
+      "weighted_degree": 6.27749540859586,
+      "propagation_entropy": 2.17564768371308,
+      "effective_neighbors": 8.807888000762189
+    },
+    {
+      "node_name": "F",
+      "dma_column": "DMA 6",
+      "degree": 9,
+      "weighted_degree": 2.9410082231755466,
+      "propagation_entropy": 2.0097189919258076,
+      "effective_neighbors": 7.4612203895291715
+    },
+    {
+      "node_name": "G",
+      "dma_column": "DMA 7",
+      "degree": 9,
+      "weighted_degree": 5.666013481617988,
+      "propagation_entropy": 2.174163678127175,
+      "effective_neighbors": 8.794826739658287
+    },
+    {
+      "node_name": "H",
+      "dma_column": "DMA 8",
+      "degree": 9,
+      "weighted_degree": 5.967992039174441,
+      "propagation_entropy": 2.176815036479035,
+      "effective_neighbors": 8.818175916827446
+    },
+    {
+      "node_name": "I",
+      "dma_column": "DMA 9",
+      "degree": 9,
+      "weighted_degree": 3.5882630451107502,
+      "propagation_entropy": 2.1132513595333338,
+      "effective_neighbors": 8.275102927326081
+    },
+    {
+      "node_name": "J",
+      "dma_column": "DMA 10",
+      "degree": 9,
+      "weighted_degree": 5.579230326173344,
+      "propagation_entropy": 2.172591065820782,
+      "effective_neighbors": 8.78100675648091
+    }
+  ]
+}

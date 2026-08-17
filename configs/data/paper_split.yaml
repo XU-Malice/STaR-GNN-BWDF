@@ -1,0 +1,75 @@
+# MSCMNet paper protocol — train/test split configuration.
+# Reference: Water Research X, 2024, Article 100269.
+# This config defines the exact time ranges and evaluation protocol
+# used by all downstream preprocessing and model-training scripts.
+
+paper_period:
+  start: "2021-01-01 00:00:00+01:00"
+  end: "2023-03-05 23:00:00+01:00"
+  expected_rows: 19056
+
+split:
+  train_start: "2021-01-01 00:00:00+01:00"
+  train_end_inclusive: "2022-12-15 23:00:00+01:00"
+  test_start: "2022-12-16 00:00:00+01:00"
+  test_end_inclusive: "2023-03-05 23:00:00+01:00"
+  expected_train_rows: 17136
+  expected_test_rows: 1920
+  note: >
+    The article text says train to Dec 15 and test from Dec 15.
+    S1 / Table 2 counts imply train includes 2022-12-15 and
+    test starts 2022-12-16.
+
+source:
+  repo: "repos/wf4bwdf"
+
+features:
+  demand:
+    expected_dma_count: 10
+    dma_letters: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
+    dma_columns: ["DMA 1", "DMA 2", "DMA 3", "DMA 4", "DMA 5",
+                  "DMA 6", "DMA 7", "DMA 8", "DMA 9", "DMA 10"]
+  weather:
+    rainfall_depth: Rain
+    air_temperature: Temperature
+    air_humidity: Humidity
+    windspeed: Windspeed
+  temporal:
+    - hour
+    - time_zone_standard
+    - weekday
+    - holiday
+    - day_of_week
+
+preprocessing:
+  linear_interpolation:
+    demand: time
+    weather: time
+    limit_direction: both
+  quartile_outlier_exclusion:
+    note: >
+      Paper says outliers are excluded by the quartile method but does
+      not specify the exact rule.  The standard IQR-1.5-interpolate
+      protocol is applied in the per-model tensor builders.
+
+tasks:
+  single_step_24h:
+    horizon_hours: 24
+    stride_hours: 24
+    max_history_weeks_for_indexing: 4
+  multi_step_168h:
+    horizon_hours: 168
+    stride_hours: 24
+    max_history_weeks_for_indexing: 4
+
+evaluation:
+  paper_test_sequences:
+    expected_sequences: 46
+    derivation: >
+      80 test days - 28 days within-test history - 7 day horizon + 1 = 46.
+    max_history_weeks_within_test: 4
+    horizon_hours: 168
+    stride_hours: 24
+
+outputs:
+  data_build_dir: "data/processed/data_build"

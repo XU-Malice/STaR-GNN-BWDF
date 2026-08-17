@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "release_id": "star_gnn_common46_seed0_v1",
+  "selection_policy": "validation_first_test_once",
+  "paper_setting": {
+    "learning_rate": 0.0003,
+    "weight_decay": 0.0,
+    "cl_decay_steps": 500,
+    "state_loss_weight": 0.03,
+    "max_epochs": 100,
+    "seed": 0
+  },
+  "model_identity": {
+    "canonical_dcrnn": "star_gnn/Base",
+    "variant": "backbone",
+    "statement": "DCRNN and Base are the same no-innovation model; no second DCRNN checkpoint is released."
+  },
+  "artifacts": {
+    "star_gnn/Base/24h": {
+      "source": "results/innovations/star_dcrnn_fadpr/candidate_matrix/lr_0p0003__wd_0__cl_500/shared/backbone/24h/seed_0/20260807-203600",
+      "source_checkpoint_sha256": "7fb5aab78254b650ce02d7bfe64273b9a9d42a47585cd075152697118927137f",
+      "protocol_counts": {
+        "operational": 80,
+        "strict_within_test": 52,
+        "common_46": 46
+      },
+      "test_targets_used_for_training_or_selection": false
+    },
+    "star_gnn/Base/168h": {
+      "source": "results/innovations/star_dcrnn_fadpr/candidate_matrix/lr_0p0003__wd_0__cl_500/shared/backbone/168h/seed_0/20260807-203600",
+      "source_checkpoint_sha256": "b7f6a97b372517e012306cdc284942e5a37f0ece086bd4ed64105981152b6f99",
+      "protocol_counts": {
+        "operational": 74,
+        "strict_within_test": 46,
+        "common_46": 46
+      },
+      "test_targets_used_for_training_or_selection": false
+    },
+    "star_gnn/State/24h": {
+      "source": "results/innovations/star_dcrnn_fadpr/candidate_matrix/lr_0p0003__wd_0__cl_500/slw_0p03/dssn_sasr/24h/seed_0/20260807-203600",
+      "source_checkpoint_sha256": "6c5e5af2097b2c3b77260f54b4539253d418d75c781818b34d82cce71f461c44",
+      "protocol_counts": {
+        "operational": 80,
+        "strict_within_test": 52,
+        "common_46": 46
+      },
+      "test_targets_used_for_training_or_selection": false
+    },
+    "star_gnn/State/168h": {
+      "source": "results/innovations/star_dcrnn_fadpr/candidate_matrix/lr_0p0003__wd_0__cl_500/slw_0p03/dssn_sasr/168h/seed_0/20260807-203600",
+      "source_checkpoint_sha256": "56cea3c83db3227e144afab61d4926dce9a4786f361cbbf2f80582b959566a91",
+      "protocol_counts": {
+        "operational": 74,
+        "strict_within_test": 46,
+        "common_46": 46
+      },
+      "test_targets_used_for_training_or_selection": false
+    },
+    "star_gnn/FA-DPR/24h": {
+      "source": "results/innovations/star_dcrnn_fadpr/candidate_matrix/lr_0p0003__wd_0__cl_500/shared/fa_dpr/24h/seed_0/20260807-203600",
+      "source_checkpoint_sha256": "64780ff88651051ffeaec71d5abd223a3cf99601709cbedb5e6bf73ce8056531",
+      "protocol_counts": {
+        "operational": 80,
+        "strict_within_test": 52,
+        "common_46": 46
+      },
+      "test_targets_used_for_training_or_selection": false
+    },
+    "star_gnn/FA-DPR/168h": {
+      "source": "results/innovations/star_dcrnn_fadpr/candidate_matrix/lr_0p0003__wd_0__cl_500/shared/fa_dpr/168h/seed_0/20260807-203600",
+      "source_checkpoint_sha256": "6b7c8c9e29bad0c58dd95fec80a4ef9643fad8586dac98ff83eac755ed2b02aa",
+      "protocol_counts": {
+        "operational": 74,
+        "strict_within_test": 46,
+        "common_46": 46
+      },
+      "test_targets_used_for_training_or_selection": false
+    },
+    "star_gnn/Full/24h": {
+      "source": "results/innovations/star_dcrnn_fadpr/candidate_matrix/lr_0p0003__wd_0__cl_500/slw_0p03/full/24h/seed_0/20260807-203600",
+      "source_checkpoint_sha256": "25ec7f969b4b39d33eeedafcc5a995e9b7dfec5758cdc5354c425564e477378a",
+      "protocol_counts": {
+        "operational": 80,
+        "strict_within_test": 52,
+        "common_46": 46
+      },
+      "test_targets_used_for_training_or_selection": false
+    },
+    "star_gnn/Full/168h": {
+      "source": "results/innovations/star_dcrnn_fadpr/candidate_matrix/lr_0p0003__wd_0__cl_500/slw_0p03/full/168h/seed_0/20260807-203600",
+      "source_checkpoint_sha256": "a3bbb915302a4d7d19c3dd085768901b025baeb3c888e8e784d3650f2c1e3fd8",
+      "protocol_counts": {
+        "operational": 74,
+        "strict_within_test": 46,
+        "common_46": 46
+      },
+      "test_targets_used_for_training_or_selection": false
+    },
+    "baselines/stgcn/24h": {
+      "source": "results/baselines/stgcn/24h/seed_0",
+      "source_checkpoint_sha256": "8cb249970e5c695053adc89cba7b1a323963998e3bfa2cd398048c9f1440148a",
+      "protocol_counts": {
+        "operational": 80,
+        "strict_within_test": 52,
+        "common_46": 46
+      },
+      "test_targets_used_for_training_or_selection": false
+    },
+    "baselines/stgcn/168h": {
+      "source": "results/baselines/stgcn/168h/seed_0",
+      "source_checkpoint_sha256": "0e4422a1b35210a5680c010a2d483d3d1f7e7ca0bb97e358352b77e6a2abfc5a",
+      "protocol_counts": {
+        "operational": 74,
+        "strict_within_test": 46,
+        "common_46": 46
+      },
+      "test_targets_used_for_training_or_selection": false
+    }
+  }
+}

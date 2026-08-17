@@ -1,0 +1,38 @@
+# STaR-DCRNN: next-24-hour prediction from 672 hours of history.
+base_config: configs/train/dcrnn_24h.yaml
+
+model:
+  name: star_dcrnn
+
+training:
+  # Validation-selected paper setting, frozen before final test reporting.
+  learning_rate: 0.0003
+  weight_decay: 0.0
+  batch_size: 16
+  validation_batch_size: 16
+  max_epochs: 100
+  early_stopping_patience: 15
+  early_stopping_min_delta: 0.0
+  gradient_clip_norm: 5.0
+  scheduled_sampling:
+    schedule: inverse_sigmoid
+    cl_decay_steps: 500
+
+innovation:
+  dssn_sasr:
+    slice_hours: 24
+    epsilon: 0.00001
+    initial_alpha: 0.5
+    state_loss_weight: 0.03
+    alpha_weight_decay: 0.0
+  fa_dpr:
+    patch_length: 24
+    attention_dim: 16
+    num_heads: 1
+    dropout: 0.0
+    gate_bias: -2.0
+    condition_on_future_calendar: true
+
+output:
+  base_dir: results/innovations/star_dcrnn_fadpr
+  keep_last_checkpoint_after_training: false

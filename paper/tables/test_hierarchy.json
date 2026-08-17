@@ -1,0 +1,25 @@
+{
+  "protocol": "common_46",
+  "test_origins": 46,
+  "selection_policy": "validation_first_test_once",
+  "aggregate_relations": {
+    "24h_State_vs_DCRNN": "4/4",
+    "24h_FA-DPR_vs_DCRNN": "4/4",
+    "24h_Full_vs_State": "4/4",
+    "24h_Full_vs_FA-DPR": "4/4",
+    "24h_Full_vs_STGCN": "4/4",
+    "168h_State_vs_DCRNN": "4/4",
+    "168h_FA-DPR_vs_DCRNN": "3/4",
+    "168h_Full_vs_State": "4/4",
+    "168h_Full_vs_FA-DPR": "4/4",
+    "168h_Full_vs_STGCN": "4/4"
+  },
+  "daily_relations": {
+    "Day1-7_State_vs_DCRNN": "28/28",
+    "Day1-7_FA-DPR_vs_DCRNN": "15/28",
+    "Day1-7_Full_vs_State": "26/28",
+    "Day1-7_Full_vs_FA-DPR": "28/28",
+    "Day1-7_Full_vs_STGCN": "28/28"
+  },
+  "transparent_exception": "FA-DPR 168h MAPE is slightly worse than DCRNN; all other registered factorial Test relations pass (31/32)."
+}

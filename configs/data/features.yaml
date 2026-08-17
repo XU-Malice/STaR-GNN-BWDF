@@ -1,0 +1,76 @@
+# Feature configuration for DMA-WDF preprocessing pipeline.
+# Defines the exact feature set used across all models.
+
+weather:
+  rainfall_depth: Rain
+  air_temperature: Temperature
+  air_humidity: Humidity
+  windspeed: Windspeed
+
+temporal:
+  - hour
+  - time_zone_standard
+  - weekday
+  - holiday
+  - day_of_week
+
+# Feature order for per-DMA branch inputs (MSNet / MSCMNet family).
+# This matches the paper: own DMA demand + 4 weather + 5 temporal.
+branch_input_order:
+  - own_dma_demand
+  - rainfall_depth
+  - air_temperature
+  - air_humidity
+  - windspeed
+  - hour
+  - time_zone_standard
+  - weekday
+  - holiday
+  - day_of_week
+
+# MSCMNet_W branch features (no weather — "meteorology-removed" setting).
+mscmnet_w_branch_input_order:
+  - own_dma_demand
+  - hour
+  - time_zone_standard
+  - weekday
+  - holiday
+  - day_of_week
+
+# Land-use type encoding for node metadata (Share-STGNN).
+land_type_ids:
+  hospital: 0
+  residential_countryside: 1
+  suburban_residential_commercial: 2
+  residential_commercial_city: 3
+  facility_office_sport: 4
+  residential_city: 5
+  city_centre: 6
+  commercial_industrial_port: 7
+
+# FC1 correction features (forecast-day features only).
+fc1_features:
+  weather:
+    - rainfall_depth
+    - air_temperature
+    - air_humidity
+    - windspeed
+  temporal:
+    - hour
+    - time_zone_standard
+    - weekday
+    - holiday
+    - day_of_week
+
+# DMA properties mapping.
+dma_mapping:
+  A: DMA 1
+  B: DMA 2
+  C: DMA 3
+  D: DMA 4
+  E: DMA 5
+  F: DMA 6
+  G: DMA 7
+  H: DMA 8
+  I: DMA 9
+  J: DMA 10

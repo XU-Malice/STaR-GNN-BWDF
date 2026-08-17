@@ -1,0 +1,21 @@
+# STaR-DCRNN model-only configuration.
+# The sealed DCRNN graph, DCGRU, decoder, and diffusion settings are inherited.
+base_config: configs/model/dcrnn.yaml
+
+model:
+  name: star_dcrnn
+
+innovation:
+  dssn_sasr:
+    slice_hours: 24
+    epsilon: 0.00001
+    initial_alpha: 0.5
+    state_loss_weight: 0.03
+    alpha_weight_decay: 0.0
+  fa_dpr:
+    patch_length: 24
+    attention_dim: 16
+    num_heads: 1
+    dropout: 0.0
+    gate_bias: -2.0
+    condition_on_future_calendar: true

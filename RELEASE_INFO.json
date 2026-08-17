@@ -1,0 +1,27 @@
+{
+  "repository": "STaR-GNN-BWDF",
+  "release_version": "1.2.0",
+  "paper_method": "STaR-GNN",
+  "dataset": "BWDF",
+  "test_protocol": "common_46",
+  "test_origins": 46,
+  "paper_setting": {
+    "learning_rate": 0.0003,
+    "weight_decay": 0.0,
+    "cl_decay_steps": 500,
+    "state_loss_weight": 0.03,
+    "max_epochs": 100,
+    "seed": 0
+  },
+  "frozen_tasks": 10,
+  "selection_policy": "validation_first_test_once",
+  "test_relations": "31/32",
+  "reevaluation_metric_comparisons": 40,
+  "reevaluation_absolute_tolerance": 0.0005,
+  "reevaluation_relative_tolerance": 0.0005,
+  "clean_room_from_scratch_runs": 10,
+  "clean_room_metric_comparisons": 40,
+  "canonical_dcrnn_identity": "star_gnn/Base (variant=backbone)",
+  "duplicate_dcrnn_checkpoint_released": false,
+  "checkpoint_distribution": "GitHub Release asset; not committed to source tree"
+}
