@@ -83,7 +83,8 @@ STGCN、DCRNN 与 STaR-GNN 的对比，十 DMA 指标，168 h 的 Day 1--Day 7
 ### A. 验证论文 checkpoint（推荐先做）
 
 下载 GitHub Release 中的冻结工件并解压到
-`results/paper/frozen_v1/`，然后执行：
+`results/paper/frozen_v1/`，然后执行。Release 保留 checkpoint、冻结预测、指标和
+校验清单，但不重新分发受上游许可约束的 BWDF 原始/处理数据：
 
 ```bash
 conda env create -f environment.yml
@@ -95,7 +96,12 @@ bash scripts/reproduce/verify_pretrained.sh \
   --device cuda:0
 ```
 
-该入口依次检查文件 SHA-256、10 个 checkpoint 元数据、common-46 样本数、
+全新服务器首次运行时，该入口会先检查论文处理数据和训练期 Pearson 图；缺少时
+自动调用 `scripts/data/run_pipeline.sh` 与 `scripts/graph/run_graph_pipeline.sh`
+生成，已有且路径完整时直接复用。首次自动准备需要能够访问
+`environment.yml` 中固定版本的 wf4bwdf 上游源，不会触发模型训练。
+
+随后该入口依次检查文件 SHA-256、10 个 checkpoint 元数据、common-46 样本数、
 Test 隔离字段、冻结指标、消融层级，并重新推理全部模型。GPU 复评只对指标
 跨 CUDA/cuDNN 环境的末位浮点误差使用 `5e-4` 绝对与相对容差（0.05%），
 并输出40项指标差异审计表；checkpoint 哈希、协议字段和样本索引仍须完全一致。
