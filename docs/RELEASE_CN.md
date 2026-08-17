@@ -34,7 +34,8 @@ Git 仓库提交以下小型、可审计内容：
 - 与源码一致的版本标签。
 
 Release 包应包含冻结 checkpoint、预测、Test 摘要、指标和 manifest。原始 BWDF
-数据遵循其上游许可，不随本仓库重新分发。
+数据、处理数据及训练期 Pearson 图遵循上游许可和可重建原则，不随本仓库重新分发。
+`verify_pretrained.sh` 会在全新服务器检测缺失项并自动依次运行数据预处理和图构建。
 
 不得上传：Conda 环境、缓存、服务器日志、PID 文件、失败临时目录、旧 HPO、旧
 SGDR、候选搜索结果、个人路径或本地补丁压缩包。
@@ -173,6 +174,11 @@ bash scripts/reproduce/verify_pretrained.sh \
   --re-evaluate \
   --device cuda:0
 ```
+
+首次运行若缺少 `data/processed/data_build/` 或
+`artifacts/graphs/bwdf_pearson_static_graph.npz`，脚本会自动生成；因此需要联网
+安装并访问 `environment.yml` 中固定提交的 wf4bwdf。该自动步骤不训练模型。
+已有完整数据和图时会显示 `REUSE` 并直接进入 checkpoint 审计。
 
 ## 6. GitHub 实际下载后的第二轮验收
 

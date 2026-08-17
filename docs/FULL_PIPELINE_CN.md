@@ -48,7 +48,7 @@ DCRNN。冻结目录保留内部键名 `Base`，但它就是唯一的 DCRNN chec
 | 目的 | 推荐命令 | 是否训练 | 典型耗时 |
 |---|---|---:|---:|
 | 检查源码、环境和单元测试 | `bash scripts/reproduce/smoke_test.sh` | 否 | 数十秒 |
-| 验证冻结 checkpoint 和论文结果 | `bash scripts/reproduce/verify_pretrained.sh --re-evaluate --device cuda:0` | 否 | 数分钟 |
+| 验证冻结 checkpoint 和论文结果 | `bash scripts/reproduce/verify_pretrained.sh --re-evaluate --device cuda:0` | 否 | 已有数据时数分钟；首次含数据/图构建 |
 | 从原始数据重新训练论文实验 | `bash scripts/reproduce/train_from_scratch.sh ...` | 是 | 单卡约 10--15 h |
 | 模拟外部读者从零验收 | `bash scripts/reproduce/validate_clean_room.sh ...` | 是 | 环境安装加完整训练 |
 
@@ -636,6 +636,11 @@ GitHub Release 中的冻结工件应解压到：
 results/paper/frozen_v1/
 ```
 
+Release 包含 checkpoint、冻结预测、Test 摘要、指标和 SHA-256 清单；出于上游
+数据许可和仓库体积考虑，不包含 BWDF 原始/处理数据及由训练期数据生成的 Pearson
+图。全新服务器首次执行本节命令时，`verify_pretrained.sh` 会自动补齐这些前置
+产物；需要能够访问 `environment.yml` 固定提交的 wf4bwdf 上游源。
+
 ### 9.1 只验证，不重新推理
 
 ```bash
@@ -647,6 +652,10 @@ bash scripts/reproduce/verify_pretrained.sh
 ```text
 verify_pretrained.sh
   -> check_environment.py
+  -> 检查 data/processed/data_build/
+       -> 缺少时调用 scripts/data/run_pipeline.sh
+  -> 检查 artifacts/graphs/bwdf_pearson_static_graph.npz
+       -> 缺少或数据刚重建时调用 scripts/graph/run_graph_pipeline.sh
   -> verify_paper_release.py
        -> _verify_checksums
        -> _audit_checkpoint
@@ -659,7 +668,7 @@ verify_pretrained.sh
 
 该模式检查 SHA-256、checkpoint 元数据、46 个 common 起点、teacher forcing、
 `test_targets_used_for_training_or_selection=false`、注册四指标和 31/32 消融关系，
-然后直接从冻结预测生成表图。
+然后直接从冻结预测生成表图。数据和图仅在缺失时构建，模型不会重新训练。
 
 ### 9.2 重新执行 checkpoint 推理
 

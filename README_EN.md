@@ -82,6 +82,12 @@ paper models:
 bash scripts/reproduce/smoke_test.sh
 ```
 
+The GitHub Release contains checkpoints, frozen predictions, metrics, and
+checksums, but intentionally does not redistribute licensed BWDF raw/processed
+data. On a pristine server, the command below automatically runs the pinned
+data pipeline and training-only Pearson graph builder when those artifacts are
+missing; existing artifacts are reused and no model is retrained.
+
 Verify the frozen paper artifacts, their hashes, and reported relations:
 
 ```bash
