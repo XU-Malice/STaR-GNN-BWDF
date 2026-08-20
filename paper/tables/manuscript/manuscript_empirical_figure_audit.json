@@ -1,0 +1,60 @@
+{
+  "figure2": {
+    "day7_relative_to_day1_pct": {
+      "DCRNN": 38.245219677937584,
+      "DCRNN + SAS-Norm": 2.642989242091973,
+      "DCRNN + FA-DPR": 11.93403132023327,
+      "STaR-GNN": 1.6983860988234087
+    },
+    "interpretation_guardrail": "SAS-Norm is the primary contributor to low long-horizon MAE; STaR-GNN should not be claimed to dominate SAS-Norm on 168 h MAE."
+  },
+  "figure3": {
+    "paired_win_rates": [
+      {
+        "task": "24h",
+        "baseline": "DCRNN",
+        "wins": 45,
+        "losses": 1,
+        "ties": 0,
+        "n_origins": 46,
+        "win_rate_pct": 97.82608695652173,
+        "median_star_MAE": 9.263452997,
+        "median_baseline_MAE": 11.2486242675
+      },
+      {
+        "task": "24h",
+        "baseline": "STGCN",
+        "wins": 45,
+        "losses": 1,
+        "ties": 0,
+        "n_origins": 46,
+        "win_rate_pct": 97.82608695652173,
+        "median_star_MAE": 9.263452997,
+        "median_baseline_MAE": 12.157738437
+      },
+      {
+        "task": "168h",
+        "baseline": "DCRNN",
+        "wins": 46,
+        "losses": 0,
+        "ties": 0,
+        "n_origins": 46,
+        "win_rate_pct": 100.0,
+        "median_star_MAE": 12.192746333999999,
+        "median_baseline_MAE": 16.6120303835
+      },
+      {
+        "task": "168h",
+        "baseline": "STGCN",
+        "wins": 40,
+        "losses": 6,
+        "ties": 0,
+        "n_origins": 46,
+        "win_rate_pct": 86.95652173913044,
+        "median_star_MAE": 12.192746333999999,
+        "median_baseline_MAE": 14.512069004499999
+      }
+    ],
+    "interpretation_guardrail": "ECDF is restricted to DCRNN, STGCN, and STaR-GNN so sample-level robustness is not conflated with ablation analysis."
+  }
+}
