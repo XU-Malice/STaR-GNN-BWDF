@@ -1,0 +1,40 @@
+paper:
+  title: Water demand forecasting in multiple district metered areas based on a multi-scale correction module neural network architecture
+  journal: Water Research X
+  year: 2024
+  article: "100269"
+  doi: 10.1016/j.wroa.2024.100269
+  source: Supplementary material, Tables S1-1 through S1-8
+  protocol: common_46
+  expected_sequences: 46
+  metric_conventions:
+    total_MAE: sum_of_A_to_J_dma_mae
+    total_MAPE_RMSE_NSE: metric_on_hourly_sum_of_A_to_J_demand
+  model_order:
+    - GRU
+    - LSTM
+    - MSNet
+    - MSCMNet_WM
+    - MSCMNet_M
+    - MSCMNet_W
+
+# Reported total rows transcribed from Que et al. (2024) supplementary
+# Tables S1-1--S1-8. MAPE is stored as the paper's fraction and converted to
+# percent only when rendering manuscript tables.
+tasks:
+  24h:
+    horizon: 24
+    GRU: {MAE: 16.314, MAPE: 0.031, RMSE: 10.194, NSE: 0.916}
+    LSTM: {MAE: 17.698, MAPE: 0.029, RMSE: 9.711, NSE: 0.920}
+    MSNet: {MAE: 15.537, MAPE: 0.032, RMSE: 9.526, NSE: 0.929}
+    MSCMNet_WM: {MAE: 14.790, MAPE: 0.027, RMSE: 7.924, NSE: 0.957}
+    MSCMNet_M: {MAE: 14.912, MAPE: 0.028, RMSE: 8.111, NSE: 0.954}
+    MSCMNet_W: {MAE: 14.471, MAPE: 0.026, RMSE: 7.586, NSE: 0.959}
+  168h:
+    horizon: 168
+    GRU: {MAE: 18.305, MAPE: 0.031, RMSE: 11.353, NSE: 0.918}
+    LSTM: {MAE: 18.678, MAPE: 0.029, RMSE: 11.031, NSE: 0.922}
+    MSNet: {MAE: 15.908, MAPE: 0.032, RMSE: 9.698, NSE: 0.930}
+    MSCMNet_WM: {MAE: 15.290, MAPE: 0.027, RMSE: 8.097, NSE: 0.957}
+    MSCMNet_M: {MAE: 15.405, MAPE: 0.028, RMSE: 8.395, NSE: 0.953}
+    MSCMNet_W: {MAE: 14.950, MAPE: 0.026, RMSE: 7.756, NSE: 0.960}
