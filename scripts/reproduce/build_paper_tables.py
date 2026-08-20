@@ -7,8 +7,12 @@ Two MAE conventions are intentionally kept separate:
 * internal aggregate-demand MAE = MAE after summing A--J at each hour.
 
 The manuscript ablation is strictly factorial and contains only DCRNN,
-DCRNN + SAS-Norm, DCRNN + FA-DPR, and STaR-GNN.  STGCN is an independent
+DCRNN + SAS-Norm, DCRNN + FA-DPR, and STaR-GNN. STGCN is an independent
 graph baseline and belongs only to the overall comparison.
+
+CSV/JSON audit artifacts retain full numeric precision. Human-facing Markdown
+tables use a uniform three-decimal display precision; no metric or model is
+rounded differently to alter apparent ranking.
 """
 
 from __future__ import annotations
@@ -253,7 +257,7 @@ def _markdown(rows: list[dict[str, Any]]) -> str:
     ]
     for row in rows:
         lines.append(
-            "| {task} | {model} | {MAE:.6f} | {MAPE:.6f} | {RMSE:.6f} | {NSE:.6f} |".format(**row)
+            "| {task} | {model} | {MAE:.3f} | {MAPE:.3f} | {RMSE:.3f} | {NSE:.3f} |".format(**row)
         )
     return "\n".join(lines) + "\n"
 
@@ -265,7 +269,7 @@ def _markdown_dma(rows: list[dict[str, Any]]) -> str:
     ]
     for row in rows:
         lines.append(
-            "| {task} | {DMA} | {MAE:.6f} | {MAPE:.6f} | {RMSE:.6f} | {NSE:.6f} |".format(**row)
+            "| {task} | {DMA} | {MAE:.3f} | {MAPE:.3f} | {RMSE:.3f} | {NSE:.3f} |".format(**row)
         )
     return "\n".join(lines) + "\n"
 
@@ -284,7 +288,7 @@ publisher-compatible convention as the Que et al. (2024) supplementary tables.
 - `table_internal_common46.*`: aggregate-demand diagnostics only; do not mix its MAE with publisher-compatible MAE.
 
 The 168 h publisher-compatible MAE of SAS-Norm-only (12.207835) and STaR-GNN
-(12.233590) differs by only 0.025755 (about 0.21%).  This small point-estimate
+(12.233590) differs by only 0.025755 (about 0.21%). This small point-estimate
 difference is reported transparently and is not used to claim that the full
 model dominates SAS-Norm on every metric.
 """
