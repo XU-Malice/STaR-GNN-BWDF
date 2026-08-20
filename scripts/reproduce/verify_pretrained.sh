@@ -11,7 +11,8 @@
 #   5. 校验 10 个 checkpoint 的任务、seed、模型和冻结超参数；
 #   6. 校验每次评估都使用 common-46 且 Test 未参与训练/选参；
 #   7. 校验注册的四指标与 31/32 消融关系；
-#   8. 从冻结 predictions.npz 生成总体、DMA、逐日和 Pearson 图表。
+#   8. 生成统一 aggregate-demand 表图、DMA/逐日/Pearson 图；
+#   9. 生成与 MSCMNet 补充材料同口径的 9 模型总体比较图。
 #
 # 如需重新执行全部 checkpoint 推理：
 #   bash scripts/reproduce/verify_pretrained.sh \
@@ -90,8 +91,14 @@ python scripts/reproduce/build_paper_tables.py \
   --output paper/tables/literature \
   --frozen-layout
 python scripts/reproduce/build_detailed_test_artifacts.py
+python scripts/reproduce/build_literature_figures.py \
+  --table paper/tables/literature/table_literature_comparison_common46.csv \
+  --output paper/figures
 
 echo "============================================"
 echo "冻结 checkpoint、common-46 Test 与论文图表：PASS"
+echo "总体比较图：publisher-compatible 9 模型口径"
+echo "消融/逐日图：aggregate-demand 口径"
+echo "DMA 图：DMA-level 口径"
 echo "结果说明：paper/reports/TEST_RESULTS_CN.md"
 echo "============================================"
