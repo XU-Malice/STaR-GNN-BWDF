@@ -1,14 +1,45 @@
 {
   "figure2": {
+    "models": [
+      "DCRNN",
+      "DCRNN + SAS-Norm",
+      "DCRNN + FA-DPR",
+      "STaR-GNN"
+    ],
+    "stgcn_in_ablation": false,
     "day7_relative_to_day1_pct": {
       "DCRNN": 38.245219677937584,
       "DCRNN + SAS-Norm": 2.642989242091973,
       "DCRNN + FA-DPR": 11.93403132023327,
       "STaR-GNN": 1.6983860988234087
     },
-    "interpretation_guardrail": "SAS-Norm is the primary contributor to low long-horizon MAE; STaR-GNN should not be claimed to dominate SAS-Norm on 168 h MAE."
+    "full_vs_sas_168h": {
+      "metric": "publisher-compatible sum-of-DMA MAE",
+      "full_mean_MAE": 12.233590399391307,
+      "sas_mean_MAE": 12.20783511506522,
+      "mean_difference_full_minus_sas": 0.02575528432608681,
+      "relative_difference_percent_of_sas": 0.21097339604712717,
+      "full_lower_origins": 19,
+      "sas_lower_origins": 27,
+      "moving_block_bootstrap": {
+        "block_length_origins": 7,
+        "iterations": 50000,
+        "seed": 20260820,
+        "ci95_mean_difference": [
+          -0.1287760413972825,
+          0.1774752647619561
+        ],
+        "contains_zero": true
+      }
+    },
+    "interpretation_guardrail": "Treat the 168 h publisher-MAE difference between STaR-GNN and SAS-Norm-only as a small point-estimate difference, not as evidence of stable dominance. Emphasize STaR-GNN's lower MAPE/RMSE, higher NSE, lower aggregate-demand MAE, and smaller Day-1-to-Day-7 degradation."
   },
   "figure3": {
+    "models": [
+      "DCRNN",
+      "STGCN",
+      "STaR-GNN"
+    ],
     "paired_win_rates": [
       {
         "task": "24h",
@@ -55,6 +86,6 @@
         "median_baseline_MAE": 14.512069004499999
       }
     ],
-    "interpretation_guardrail": "ECDF is restricted to DCRNN, STGCN, and STaR-GNN so sample-level robustness is not conflated with ablation analysis."
+    "interpretation_guardrail": "Figure 3 is a baseline robustness analysis, not a factorial ablation figure."
   }
 }
