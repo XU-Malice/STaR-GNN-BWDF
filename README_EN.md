@@ -1,200 +1,162 @@
 # STaR-GNN for Multi-DMA Water-Demand Forecasting
 
-Official research code for leakage-safe 24 h and 168 h water-demand
-forecasting over ten district metered areas (DMAs). The repository contains
-the complete data protocol, training-only Pearson graph construction, DCRNN
-and STGCN baselines, the STaR-GNN factorial variants, frozen common-46 test
-artifacts, and scripts that reproduce the paper tables from raw BWDF data.
+[中文](README.md) | [Documentation index](docs/README.md) | [Full reproduction guide](docs/FULL_PIPELINE_CN.md) | [Method](docs/METHOD_CN.md) | [Results and artifacts](docs/RESULTS_AND_ARTIFACTS_CN.md) | [Plotting guide](docs/PLOTTING_CN.md)
 
-The public method name is **STaR-GNN**. The internal key `star_dcrnn` is kept
-for checkpoint compatibility because the graph-recurrent backbone uses DCGRU.
+This repository provides the reproducible implementation of STaR-GNN for 24 h day-ahead and 168 h week-ahead hourly water-demand forecasting over ten district metered areas (DMAs). It includes split-aware preprocessing, a training-only Pearson functional graph, DCRNN/STGCN graph baselines, the SAS-Norm and FA-DPR ablations, frozen common-46 test artifacts, and the tables/figures used by the Journal of Hydrology manuscript.
 
-## Main result
+> **Manuscript-facing comparisons use the publisher-compatible metric convention.** Internal aggregate-demand MAE values such as 4.360841/4.919812 are retained only for diagnostics and must not be mixed with the manuscript total MAE. See [`paper/tables/literature/METRIC_CONVENTIONS.md`](paper/tables/literature/METRIC_CONVENTIONS.md).
 
-The paper configuration was selected by validation performance from three
-predefined candidates and then evaluated once on the common-46 test protocol:
+## 1. Manuscript metric convention
 
-```yaml
-learning_rate: 0.0003
-weight_decay: 0.0
-cl_decay_steps: 500
-state_loss_weight: 0.03
-max_epochs: 100
-seed: 0
-```
+Aligned with the total convention reported by Que et al. (2024):
 
-| Horizon | Variant | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |
-|---|---|---:|---:|---:|---:|
-| 24 h | DCRNN | 5.356315 | 2.212928 | 6.848257 | 0.970419 |
-| 24 h | DCRNN + State | 4.895320 | 2.010448 | 6.133886 | 0.976269 |
-| 24 h | DCRNN + FA-DPR | 4.739336 | 1.944550 | 6.079036 | 0.976691 |
-| 24 h | **STaR-GNN** | **4.360841** | **1.804574** | **5.534656** | **0.980679** |
-| 168 h | DCRNN | 7.734838 | 3.248413 | 9.817428 | 0.939504 |
-| 168 h | DCRNN + State | 5.122511 | 2.102380 | 6.468312 | 0.973739 |
-| 168 h | DCRNN + FA-DPR | 7.578056 | 3.277716 | 9.332415 | 0.945334 |
-| 168 h | **STaR-GNN** | **4.919812** | **2.013774** | **6.160881** | **0.976176** |
+- **total MAE** = sum of the DMA A--J MAEs;
+- **total MAPE/RMSE/NSE** = metrics computed on the hourly aggregate-demand series;
+- primary evaluation = `common_46`, the 46 test origins shared by both forecast tasks;
+- test-time teacher forcing is disabled and future demand is never used for model selection.
 
-These are aggregate-demand metrics from 46 official test origins. Validation
-selected the configuration (28/32 predefined relations); the test set was
-used only for final transparent reporting (31/32 relations). See
-[`docs/RESULTS_AND_ARTIFACTS_CN.md`](docs/RESULTS_AND_ARTIFACTS_CN.md).
+Final STaR-GNN manuscript-facing results are:
 
-## Repository layout
+| Horizon | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |
+|---|---:|---:|---:|---:|
+| 24 h | **9.424199** | **1.804574** | **5.534656** | **0.980679** |
+| 168 h | **12.233590** | **2.013774** | **6.160881** | **0.976176** |
 
-```text
-configs/data/          data period, split, features, preprocessing
-configs/graph/         training-only Pearson graph protocol
-configs/model/         model-only architecture settings
-configs/train/         development training settings
-configs/paper/         immutable paper reproduction settings
-src/dma_wdf/           data, graph, models, training, evaluation
-scripts/reproduce/     freeze, verify, smoke, and full reproduction
-tests/                 leakage, shape, gradient, protocol regression tests
-docs/                  method, experiment, and reproduction documentation
-results/paper/         generated frozen release and paper tables
-```
+The complete nine-model comparison is in [`table_literature_comparison_common46.md`](paper/tables/literature/table_literature_comparison_common46.md). GRU, LSTM, MSNet, and MSCMNet variants are reported values from Que et al. (2024); DCRNN, STGCN, and STaR-GNN are re-evaluated on the current common-46 protocol. They should not be described as all being retrained under one identical codebase.
 
-## Installation
+## 2. Ablation naming and guardrails
 
-The recorded environment is Python 3.11.15, PyTorch 2.9.1+cu128, CUDA 12.8,
-NumPy 2.4.6, and pandas 3.0.5.
+| Manuscript name | Internal key | SAS-Norm | FA-DPR |
+|---|---|:---:|:---:|
+| DCRNN | `backbone` / `Base` | no | no |
+| DCRNN + SAS-Norm | `dssn_sasr` / `State` | yes | no |
+| DCRNN + FA-DPR | `fa_dpr` / `FA-DPR` | no | yes |
+| STaR-GNN | `full` / `Full` | yes | yes |
+
+The publisher-compatible ablation audit is **30/32**. Two real exceptions are intentionally retained:
+
+1. FA-DPR has a slightly worse 168 h MAPE than DCRNN (3.277716% vs. 3.248413%);
+2. SAS-Norm-only has a marginally lower 168 h sum-of-DMA MAE than full STaR-GNN (12.207835 vs. 12.233590, about 0.21%).
+
+Therefore the full model is best on all four metrics at 24 h; at 168 h it is best on MAPE/RMSE/NSE, while SAS-Norm-only is marginally lower on publisher-compatible MAE. See [`table_ablation_common46.md`](paper/tables/literature/table_ablation_common46.md).
+
+## 3. Final manuscript tables and figures
+
+The Results evidence chain is fixed as:
+
+1. **Overall predictive accuracy** — Table 1 + Figure 1;
+2. **Ablation and component contributions** — Table 2 + Figure 2;
+3. **Robustness across forecast origins** — Figure 3;
+4. **Spatial consistency across DMAs** — Table 3 + Figure 4;
+5. **Representative weekly forecasting behavior** — Figure 5.
+
+Main tables:
+
+- `paper/tables/literature/table_literature_comparison_common46.*`
+- `paper/tables/literature/table_ablation_common46.*`
+- `paper/tables/literature/table_star_gnn_dma_common46.*`
+
+Main figures:
+
+- `paper/figures/manuscript_fig1_relative_improvement.*`
+- `paper/figures/manuscript_fig2_day1_day7_publisher_mae.*`
+- `paper/figures/manuscript_fig3_origin_ecdf.*`
+- `paper/figures/manuscript_fig4_dma_mae_improvement.*`
+- `paper/figures/manuscript_fig5_representative_168h_trajectory.*`
+
+Final figure design is documented in [`docs/MANUSCRIPT_FIGURES_FINAL_CN.md`](docs/MANUSCRIPT_FIGURES_FINAL_CN.md); captions are in [`paper/captions/MANUSCRIPT_RESULT_FIGURE_CAPTIONS.md`](paper/captions/MANUSCRIPT_RESULT_FIGURE_CAPTIONS.md).
+
+## 4. Empirical checks captured by the figure audit
+
+- Day-7 vs Day-1 publisher-compatible MAE change for the 168 h task: DCRNN +38.25%, FA-DPR +11.93%, SAS-Norm +2.64%, STaR-GNN +1.70%.
+- Per-origin STaR-GNN win rate vs DCRNN: 45/46 at 24 h and 46/46 at 168 h.
+- Per-origin win rate vs STGCN: 45/46 at 24 h and 40/46 at 168 h.
+- DMA-level MAE improvement is positive in all 40 comparisons (10 DMAs × 2 horizons × 2 graph baselines), with heterogeneous magnitudes.
+- SAS-Norm is the primary contributor to low long-horizon MAE drift; the manuscript should not claim that the full model strictly dominates SAS-Norm-only on 168 h MAE.
+
+The underlying CSV/JSON evidence is stored in `paper/tables/manuscript/`.
+
+## 5. Installation and frozen-result verification
+
+Recorded environment: Python 3.11.15, PyTorch 2.9.1+cu128, CUDA 12.8, NumPy 2.4.6, pandas 3.0.5.
 
 ```bash
 conda env create -f environment.yml
 conda activate star-gnn-bwdf
 python -m pip install -e .
-```
 
-For an existing compatible environment:
-
-```bash
-python -m pip install -e ".[dev,plots,model]"
-python scripts/reproduce/check_environment.py
-```
-
-## Quick verification
-
-This checks the environment, source syntax, data protocol, graph identity,
-model shapes, leakage guards, and regression tests without retraining the
-paper models:
-
-```bash
-bash scripts/reproduce/smoke_test.sh
-```
-
-The GitHub Release contains checkpoints, frozen predictions, metrics, and
-checksums, but intentionally does not redistribute licensed BWDF raw/processed
-data. On a pristine server, the command below automatically runs the pinned
-data pipeline and training-only Pearson graph builder when those artifacts are
-missing; existing artifacts are reused and no model is retrained.
-
-Verify the frozen paper artifacts, their hashes, and reported relations:
-
-```bash
-bash scripts/reproduce/verify_pretrained.sh
-```
-
-Re-evaluate every frozen DCRNN, STGCN, and STaR-GNN checkpoint on common-46:
-
-```bash
-bash scripts/reproduce/verify_pretrained.sh --re-evaluate --device cpu
-```
-
-For the author-side pre-release audit, including atomic recovery from an
-interrupted artifact import, run:
-
-```bash
-bash scripts/reproduce/validate_everything.sh \
-  /path/to/DMA-WDF \
+bash scripts/reproduce/verify_pretrained.sh \
+  --re-evaluate \
   --device cuda:0
 ```
 
-This checks all 10 checkpoints and frozen predictions, source and artifact
-hashes, the complete test suite, the common-46 protocol, 10 fresh inference
-runs, and all aggregate/DMA/day-wise/Pearson paper artifacts. It does not
-retrain the models; use the from-scratch entry point below for that purpose.
-Fresh CUDA/cuDNN inference is audited with absolute and relative tolerances of
-`5e-4` (0.05%). The 40 metric comparisons are saved to CSV; checkpoint hashes,
-protocol fields, and sample indices remain exact-match checks.
-The final audit also validates DMA/day-wise/Pearson table cardinalities, nonempty
-figures, and legacy HPO/SGDR code isolation without requiring `rg`.
+The GitHub Release contains frozen checkpoints, predictions, metrics, and checksums. Licensed BWDF raw/processed data are not redistributed; missing processed data and the training-period graph can be rebuilt by the pinned pipeline without retraining the models.
 
-## Reproduce from raw data
-
-The complete pipeline trains every model before loading any official test
-target:
+To train the full paper experiment from raw data:
 
 ```bash
-bash scripts/reproduce/reproduce_all.sh \
+bash scripts/reproduce/train_from_scratch.sh \
   --device auto \
+  --evaluation-device cpu \
   --seeds 0
 ```
 
-The stages are data preparation, training-only graph construction, STGCN
-training, the four-cell DCRNN/STaR-GNN factorial experiment, frozen checkpoint
-evaluation, and paper-table generation. Existing nonempty output directories
-are never overwritten.
+See [`docs/FULL_PIPELINE_CN.md`](docs/FULL_PIPELINE_CN.md) for the full data/graph/training/evaluation workflow.
 
-The complete command-to-function walkthrough is in
-[`docs/FULL_PIPELINE_CN.md`](docs/FULL_PIPELINE_CN.md). Method details are in
-[`docs/METHOD_CN.md`](docs/METHOD_CN.md), while result provenance and paper
-artifacts are documented in
-[`docs/RESULTS_AND_ARTIFACTS_CN.md`](docs/RESULTS_AND_ARTIFACTS_CN.md).
+## 6. Regenerate the final manuscript figures
 
-Before publishing, the author-side clean-room entry point creates a separate
-source copy and a brand-new Conda prefix, rebuilds data and the training-only
-Pearson graph, trains all 10 runs, and audits 40 common-46 metrics against the
-frozen release:
+Stage 1 builds the manuscript audit tables and base Figures 1--5 from the frozen predictions:
 
 ```bash
-bash scripts/reproduce/validate_clean_room.sh \
-  --workspace /path/to/new-clean-room \
-  --frozen-release results/paper/frozen_v1 \
-  --device cuda:0 \
-  --evaluation-device cuda:0
+python scripts/reproduce/build_manuscript_results_figures.py \
+  --release results/paper/frozen_v1 \
+  --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
+  --figure-output paper/figures \
+  --table-output paper/tables/manuscript \
+  --bootstrap-iterations 5000 \
+  --bootstrap-seed 20260820
 ```
 
-## Data and evaluation protocol
-
-- Dataset period: 2021-01-01 to 2023-03-05, hourly.
-- Official training period: through 2022-12-15.
-- Official test period: from 2022-12-16.
-- Input history: 672 h; horizons: 24 h and 168 h.
-- Static graph: positive training-period Pearson correlations only, zero
-  diagonal, random-walk normalization, shared by both horizons.
-- Primary evaluation: `common_46`, with MAE, MAPE, RMSE, and NSE.
-- Test-time teacher forcing and future demand access: disabled.
-
-See [`data/README.md`](data/README.md) for obtaining BWDF. Raw data are not
-redistributed by this repository.
-
-## Models
-
-- **DCRNN / Base**: the common DCGRU backbone with both proposed components
-  disabled (`variant=backbone`). It is reported once in the paper.
-- **STGCN**: independently trained cross-model baseline.
-- **State**: DMA-wise daily state/shape transformation and restoration.
-- **FA-DPR**: forecast-aligned daily pattern retrieval.
-- **Full**: State + FA-DPR, the complete STaR-GNN.
-
-The frozen release contains one DCRNN identity only: `star_gnn/Base`
-(`variant=backbone`). No second `baselines/dcrnn` checkpoint is shipped.
-See [`docs/RESULTS_AND_ARTIFACTS_CN.md`](docs/RESULTS_AND_ARTIFACTS_CN.md).
-
-## Tests
+Stage 2 generates the **final** Figure 2 and Figure 3 layouts from the audited data:
 
 ```bash
+python scripts/reproduce/refine_manuscript_results_figures.py \
+  --table-dir paper/tables/manuscript \
+  --figure-dir paper/figures
+```
+
+Stage 2 intentionally overwrites the Stage-1 versions of Figure 2 and Figure 3. See [`docs/PLOTTING_CN.md`](docs/PLOTTING_CN.md) for prerequisites, outputs, audit files, reproducibility checks, and troubleshooting.
+
+## 7. Data and graph protocol
+
+- Dataset period: 2021-01-01 to 2023-03-05, hourly.
+- Training through 2022-12-15 23:00; test begins 2022-12-16.
+- Input history: 672 h; forecast horizons: 24 h and 168 h.
+- Graph: positive Pearson correlations computed from training demand only, zero diagonal, no threshold/Top-K, random-walk normalization.
+- The same fixed functional graph is shared by both horizons.
+- Primary test protocol: common-46.
+- Hyperparameters are determined from validation only.
+
+## 8. Repository layout
+
+```text
+configs/                 frozen data/graph/model/paper configuration
+src/dma_wdf/             core data, graph, model, training, evaluation code
+scripts/reproduce/       reproduction, frozen verification, manuscript tables/figures
+paper/tables/literature/ manuscript Tables 1--3 and metric conventions
+paper/tables/manuscript/ Figure 1--5 audit CSV/JSON artifacts
+paper/figures/           manuscript and supplementary PNG/PDF figures
+paper/captions/          final figure captions
+docs/                    method, results, reproduction, plotting, release guides
+```
+
+Legacy `test_overall_*`, `test_ablation_*`, `test_star_gnn_dma_metrics.*`, and aggregate-demand Day-1--Day-7 plots are retained as supplementary/internal diagnostics; they are not the main manuscript evidence.
+
+## 9. Tests, data, and citation
+
+```bash
+bash scripts/reproduce/smoke_test.sh
 python -m pytest tests -q
 ```
 
-## References
-
-- [DCRNN, ICLR 2018](https://openreview.net/forum?id=SJiHXGWAZ)
-- [STGCN, IJCAI 2018](https://www.ijcai.org/proceedings/2018/505)
-- [MSCMNet, Water Research X 2024](https://doi.org/10.1016/j.wroa.2024.100269)
-- [BWDF / wf4bwdf](https://github.com/WaterFutures/wf4bwdf)
-
-## License and citation
-
-See `LICENSE` and `CITATION.cff`. Update the preferred paper citation after
-the manuscript receives its final bibliographic record.
+See [`data/README.md`](data/README.md) for BWDF access, [`docs/RELEASE_CN.md`](docs/RELEASE_CN.md) for release/clean-room guidance, and `CITATION.cff` for citation metadata.
