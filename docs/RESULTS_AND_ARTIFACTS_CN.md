@@ -1,8 +1,8 @@
 # 实验结果、来源与论文工件
 
-本文档说明论文最终采用的评价口径、模型比较、消融结果、DMA 明细及自动生成工件。环境安装、数据预处理、训练、Test 和 checkpoint 复评命令见 [`FULL_PIPELINE_CN.md`](FULL_PIPELINE_CN.md)。
+本文档是当前仓库 **manuscript-facing 结果的唯一主入口**。环境、数据预处理、构图、训练和冻结 checkpoint 验证见 [`FULL_PIPELINE_CN.md`](FULL_PIPELINE_CN.md)；最终 Figure 1--5 设计见 [`MANUSCRIPT_FIGURES_FINAL_CN.md`](MANUSCRIPT_FIGURES_FINAL_CN.md)。
 
-## 1. 论文模型命名
+## 1. 模型与消融定义
 
 | 论文名称 | 内部键 | SAS-Norm | FA-DPR |
 |---|---|:---:|:---:|
@@ -10,34 +10,39 @@
 | DCRNN + SAS-Norm | `dssn_sasr` / `State` | ✓ | × |
 | DCRNN + FA-DPR | `fa_dpr` / `FA-DPR` | × | ✓ |
 | STaR-GNN | `full` / `Full` | ✓ | ✓ |
-| STGCN | 独立图时空基线 | × | × |
 
-最终参数只根据 Validation 确定；参数固定后才执行 common-46 Test。Test 不参与参数选择、early stopping 或组件取舍。所有最终预测均关闭 teacher forcing。
+**STGCN 是独立图时空 baseline，不属于消融。**
 
-## 2. 论文最终指标口径
+四个 factorial variants 共享同一数据、Pearson 图、DCRNN backbone、decoder、训练协议和 Test 协议，只改变 SAS-Norm / FA-DPR 是否启用。
 
-论文正文中的**总体模型比较和消融实验统一采用 MSCMNet publisher-compatible `total` 口径**，与 Que et al. (2024) Supplementary Tables S1-1--S1-8 保持一致：
+## 2. 最终评价口径
 
-- `total MAE`：A--J 十个 DMA 的 MAE 之和；
-- `total MAPE/RMSE/NSE`：在 A--J 求和后的小时总需求序列上计算。
+正文总体比较与消融统一采用与 Que et al. (2024) supplementary total 一致的 publisher-compatible 口径：
 
-因此，STaR-GNN 正文主结果的 total MAE 为：
+- `total MAE` = DMA A--J 十个 DMA-level MAE 之和；
+- `total MAPE/RMSE/NSE` = 在 A--J 小时需求先求和后得到的总需求序列上计算；
+- 主 Test = `common_46`；
+- Test `teacher forcing=0`；
+- Test target 不参与训练、early stopping 或模块选择。
 
-- 24 h：`9.424199`
-- 168 h：`12.233590`
+仓库同时保留 aggregate-demand MAE：
 
-仓库仍保留 aggregate-demand MAE `4.360841/4.919812`，仅用于运行解释、逐日诊断和可复现审计，不用于与 GRU/LSTM/MSNet/MSCMNet 的正文横向 MAE 比较。
+\[
+MAE_{agg}=MAE\left(\sum_i\hat y_i,\sum_i y_i\right),
+\]
 
-`build_paper_tables.py` 会自动检查：
+仅用于运行解释和内部诊断。不要把它与 publisher-compatible MAE 混在同一横向比较中。
 
-1. MSCMNet_W/WM 的 published total MAE 是否等于 A--J DMA MAE 之和（允许三位小数舍入误差）；
-2. DCRNN/STGCN/STaR-GNN 在两套口径下 MAPE、RMSE、NSE 是否一致；
-3. publisher-compatible MAE 是否保持与 aggregate-demand MAE 分离；
-4. publisher-compatible 消融关系是否严格为 `30/32`。
+STaR-GNN：
 
-## 3. 总体模型比较：9 个模型
+| Horizon | aggregate-demand MAE | publisher-compatible MAE |
+|---|---:|---:|
+| 24 h | 4.360841 | 9.424199 |
+| 168 h | 4.919812 | 12.233590 |
 
-下表是论文主模型对比表。GRU、LSTM、MSNet 和 MSCMNet 系列来自 Que et al. (2024) reported 结果；DCRNN、STGCN 和 STaR-GNN 在相同 common-46 Test 上按相同 publisher-compatible 口径计算。
+## 3. Table 1：总体模型比较
+
+文件：`paper/tables/literature/table_literature_comparison_common46.*`
 
 | Horizon | Model | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |
 |---|---|---:|---:|---:|---:|
@@ -60,97 +65,133 @@
 | 168 h | STGCN | 14.569 | 3.576 | 10.306 | 0.933 |
 | 168 h | **STaR-GNN** | **12.234** | **2.014** | **6.161** | **0.976** |
 
-自动生成文件：`paper/tables/literature/table_literature_comparison_common46.*`。
+### 总体 MAE 提升
 
-## 4. 消融实验：同一 publisher-compatible 口径
+- 24 h vs GRU/LSTM/MSNet/MSCMNet variants：34.9%--46.7%；
+- 24 h vs DCRNN/STGCN：20.9%--23.7%；
+- 168 h vs GRU/LSTM/MSNet/MSCMNet variants：18.2%--34.5%；
+- 168 h vs DCRNN/STGCN：16.0%--27.2%。
 
-消融表只保留图相关基线和 STaR-GNN 两个核心模块，所有数值与第 3 节使用同一口径。
+**来源边界：** GRU/LSTM/MSNet/MSCMNet variants 为 Que et al. (2024) reported results；DCRNN、STGCN、STaR-GNN 为本仓库 common-46 复评。不能写成 9 个模型全部在完全相同训练条件下重训。
+
+## 4. Table 2：factorial ablation
+
+文件：`paper/tables/literature/table_ablation_common46.*`
 
 | Horizon | Model | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |
 |---|---|---:|---:|---:|---:|
-| 24 h | STGCN | 12.358 | 2.425 | 7.905 | 0.961 |
 | 24 h | DCRNN | 11.917 | 2.213 | 6.848 | 0.970 |
 | 24 h | DCRNN + SAS-Norm | 10.468 | 2.010 | 6.134 | 0.976 |
 | 24 h | DCRNN + FA-DPR | 11.238 | 1.945 | 6.079 | 0.977 |
 | 24 h | **STaR-GNN** | **9.424** | **1.805** | **5.535** | **0.981** |
-| 168 h | STGCN | 14.569 | 3.576 | 10.306 | 0.933 |
 | 168 h | DCRNN | 16.801 | 3.248 | 9.817 | 0.940 |
 | 168 h | **DCRNN + SAS-Norm** | **12.208** | 2.102 | 6.468 | 0.974 |
 | 168 h | DCRNN + FA-DPR | 14.086 | 3.278 | 9.332 | 0.945 |
-| 168 h | **STaR-GNN** | 12.234 | **2.014** | **6.161** | **0.976** |
+| 168 h | STaR-GNN | 12.234 | **2.014** | **6.161** | **0.976** |
 
-publisher-compatible 消融自动验收为 **30/32**。两个真实例外必须透明保留：
+### 168 h MAE 如何解释
 
-1. FA-DPR 的 168 h MAPE（3.277716%）略高于 DCRNN（3.248413%）；
-2. 168 h 下 SAS-Norm-only 的 sum-of-DMA MAE 为 `12.207835`，略低于完整 STaR-GNN 的 `12.233590`，差异约 0.21%。
+SAS-Norm-only 的 publisher-compatible MAE 为 `12.207835`，STaR-GNN 为 `12.233590`，差值 `0.025755`，约为 SAS-Norm 的 `0.21%`。
 
-因此正文不应写“完整模型在两个预测范围四项指标上均最优”，而应说明完整模型在 24 h 四项指标均最优，在 168 h 的 MAPE/RMSE/NSE 最优，而 SAS-Norm-only 在 sum-of-DMA MAE 上略低。
+这不是预测结果被改动，而是 aggregate-demand MAE 与 sum-of-DMA MAE 两种聚合定义的排序差异：
 
-自动生成文件：`paper/tables/literature/table_ablation_common46.*`；自动验收：`table_ablation_audit.json`。
+- aggregate-demand MAE：STaR-GNN `4.919812` < SAS-Norm `5.122511`；
+- publisher-compatible MAE：SAS-Norm `12.207835` < STaR-GNN `12.233590`。
 
-## 5. STaR-GNN 的 DMA-level 结果
+由于 168 h forecast origins 每隔 24 h 启动并强烈重叠，最终 Figure 2 审计使用 **7-origin moving-block bootstrap** 而不是把 46 origins 当作独立样本。Full−SAS 的均值差 CI 跨过 0，因此正文应表述为：
 
-逐 DMA 表不再做跨 DMA 聚合，而是直接报告各 DMA 自身 MAE、MAPE、RMSE 和 NSE。
+> 在 168 h publisher-compatible MAE 上，SAS-Norm-only 与完整 STaR-GNN 的点估计近似持平；完整模型同时取得更低的 MAPE、RMSE、更高的 NSE，以及更低的 aggregate-demand MAE 和更小的 Day-1-to-Day-7 相对误差增长。
 
-| Horizon | DMA | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |
-|---|---|---:|---:|---:|---:|
-| 24 h | A | 0.806 | 12.413 | 1.229 | 0.643 |
-| 24 h | B | 0.264 | 2.775 | 0.367 | 0.850 |
-| 24 h | C | 0.161 | 5.398 | 0.209 | 0.935 |
-| 24 h | D | 2.017 | 6.278 | 2.513 | 0.853 |
-| 24 h | E | 1.258 | 1.557 | 1.593 | 0.988 |
-| 24 h | F | 0.626 | 5.889 | 0.787 | 0.670 |
-| 24 h | G | 0.810 | 3.103 | 1.028 | 0.940 |
-| 24 h | H | 1.255 | 5.379 | 1.780 | 0.929 |
-| 24 h | I | 1.045 | 4.285 | 1.316 | 0.766 |
-| 24 h | J | 1.183 | 5.205 | 1.483 | 0.844 |
-| 168 h | A | 0.859 | 12.445 | 1.248 | 0.625 |
-| 168 h | B | 0.337 | 3.587 | 0.439 | 0.785 |
-| 168 h | C | 0.205 | 6.647 | 0.269 | 0.892 |
-| 168 h | D | 2.302 | 6.970 | 2.878 | 0.806 |
-| 168 h | E | 2.091 | 2.536 | 2.600 | 0.967 |
-| 168 h | F | 0.695 | 6.453 | 0.864 | 0.588 |
-| 168 h | G | 1.155 | 4.340 | 1.469 | 0.878 |
-| 168 h | H | 1.534 | 6.314 | 1.971 | 0.914 |
-| 168 h | I | 1.454 | 5.873 | 1.813 | 0.558 |
-| 168 h | J | 1.601 | 6.874 | 2.018 | 0.714 |
+不要写“STaR-GNN 在 168 h MAE 明显不如 SAS-Norm”，也不要为了排序修改或选择性四舍五入数值。
 
-自动生成文件：`paper/tables/literature/table_star_gnn_dma_common46.*`。
+## 5. Figure 2：模块贡献与长时域行为
 
-需要注意，DMA 间需求规模不同，因此不能只依据绝对 MAE 判断哪个 DMA “更容易预测”；MAPE、RMSE 和 NSE 应联合解释区域异质性。
+最终 Figure 2 不含 STGCN。
 
-## 6. 图件与正文用途
+### Panel (a)
 
-论文主图固定为：
+报告 SAS-Norm、FA-DPR、Full 相对 DCRNN 的 Day-wise publisher-compatible MAE reduction。
 
-- `paper/figures/test_overall_24h.*`、`test_overall_168h.*`：9 模型 publisher-compatible 总体比较；
-- `paper/figures/test_ablation_24h.*`、`test_ablation_168h.*`：STGCN/DCRNN/SAS-Norm/FA-DPR/STaR-GNN publisher-compatible 消融；
-- `paper/figures/test_star_gnn_dma_metrics.*`：STaR-GNN 在 DMA A--J 上的 24 h/168 h MAE、MAPE、RMSE、NSE 四面板图。
+### Panel (b)
 
-以下保留为补充分析/可复现工件：
+报告四个 factorial variants 相对各自 Day 1 的 MAE change。
 
-- `test_day1_day7_models.*`、`test_day1_day7_ablation.*`：168 h 逐日 aggregate-demand 分析；
-- `test_dma_mae_24h.*`、`test_dma_mae_168h.*`：历史多模型 DMA-level MAE 诊断；
-- `pearson_correlation_heatmap.*`：训练期 Pearson 功能关联图。
+Day 7 相对 Day 1：
 
-## 7. 指标与工件来源
+- DCRNN：+38.25%；
+- DCRNN + FA-DPR：+11.93%；
+- DCRNN + SAS-Norm：+2.64%；
+- STaR-GNN：+1.70%。
 
-冻结最佳 checkpoint 重新推理会同时生成：
+该图用于支持“长时域稳定性”与“模块互补性”，而不是放大 0.21% 的整体 MAE 点估计差异。
 
-- `metrics_aggregate_total_common_46.csv`：aggregate-demand 诊断指标；
-- `metrics_common_46.csv`：A--J DMA 指标及 publisher-compatible `total` 行；
-- `predictions.npz`：冻结预测与 common-46 索引；
-- `test_summary.json`：checkpoint/图哈希、样本数、teacher forcing 和 Test 隔离信息。
+## 6. Figure 3：测试起点稳健性
 
-## 8. 一键重新生成与验证
+只比较 DCRNN、STGCN、STaR-GNN：
 
-```bash
-bash scripts/reproduce/verify_pretrained.sh \
-  --re-evaluate \
-  --device cuda:0
+- 24 h vs DCRNN：45/46；
+- 24 h vs STGCN：45/46；
+- 168 h vs DCRNN：46/46；
+- 168 h vs STGCN：40/46。
+
+这是 baseline robustness analysis，不是消融。
+
+## 7. DMA-level 结果
+
+Table 3：`paper/tables/literature/table_star_gnn_dma_common46.*`
+
+Figure 4：`paper/figures/manuscript_fig4_dma_mae_improvement.*`
+
+10 DMA × 2 horizons × 2 graph baselines 的 40 个 MAE comparisons 全部为正，提升范围约 1.26%--61.20%。改善幅度具有空间异质性。
+
+## 8. Representative 168 h trajectory
+
+Figure 5 使用固定 median-error proximity 规则选择 common index 70，而不是挑选最优样本：
+
+- STGCN：14.653；
+- DCRNN：15.517；
+- STaR-GNN：12.182。
+
+图中 aggregate-demand hourly error 与 publisher-compatible sum-of-DMA MAE 属于不同统计量，必须在 caption 中区分。
+
+## 9. 冻结论文设置
+
+`results/paper/frozen_v1/MANIFEST.json` 与 paper config：
+
+```yaml
+learning_rate: 0.0003
+weight_decay: 0.0
+cl_decay_steps: 500
+state_loss_weight: 0.03
+max_epochs: 100
+seed: 0
 ```
 
-如果不重新推理，仅重建论文表和图：
+共同设置还包括：
+
+- 10 DMA；
+- history = 672 h；
+- horizons = 24/168 h；
+- stride = 24 h；
+- hidden = 32；
+- RNN layers = 1；
+- diffusion step K = 2；
+- batch = 16；
+- early stopping patience = 15；
+- Test teacher forcing = 0。
+
+## 10. Pearson 功能图
+
+- 仅训练期 demand；
+- Pearson positive functional dependency；
+- negative correlation clip to zero；
+- zero diagonal；
+- no threshold / Top-K；
+- no self-loop in adjacency；
+- random-walk normalization；
+- 24 h 与 168 h 共用同一静态图。
+
+## 11. 最终自动生成与验证
 
 ```bash
 python scripts/reproduce/build_paper_tables.py \
@@ -158,21 +199,36 @@ python scripts/reproduce/build_paper_tables.py \
   --output paper/tables/literature \
   --frozen-layout
 
-python scripts/reproduce/build_detailed_test_artifacts.py
-
 python scripts/reproduce/build_literature_figures.py \
   --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
   --ablation-table paper/tables/literature/table_ablation_common46.csv \
   --dma-table paper/tables/literature/table_star_gnn_dma_common46.csv \
   --output paper/figures
+
+python scripts/reproduce/build_manuscript_results_figures.py \
+  --release results/paper/frozen_v1 \
+  --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
+  --figure-output paper/figures \
+  --table-output paper/tables/manuscript \
+  --bootstrap-iterations 5000 \
+  --bootstrap-seed 20260820
+
+python scripts/reproduce/refine_manuscript_results_figures.py \
+  --table-dir paper/tables/manuscript \
+  --figure-dir paper/figures \
+  --block-bootstrap-iterations 50000 \
+  --block-bootstrap-length 7 \
+  --block-bootstrap-seed 20260820
 ```
 
-成功时应至少看到：
+成功时至少应看到：
 
 ```text
 Metric convention audit: PASS
-Publisher-compatible ablation audit: 30/32 PASS
-Publisher-compatible figure audit: PASS
+Factorial ablation model-set audit: PASS (4 models, no STGCN)
+Publisher-compatible factorial cell audit: 30/32 PASS
+Refined manuscript Figure 2 and Figure 3: PASS
+Figure 2 factorial-model audit: PASS (4 models, no STGCN)
 ```
 
-正文与补充材料应直接使用自动生成的表和图，不手工改数值形成预期排序。
+最终正文表格统一使用 3 位小数；审计 CSV/JSON 保留完整精度。

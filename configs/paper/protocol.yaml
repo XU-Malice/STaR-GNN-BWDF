@@ -1,6 +1,7 @@
 schema_version: 1
 release_id: star_gnn_common46_seed0_v1
 selection_policy: validation_first_test_once
+
 dataset:
   name: BWDF
   nodes: 10
@@ -23,14 +24,33 @@ variants:
   FA-DPR: fa_dpr
   Full: full
 
+metric_views:
+  expected_common46_test:
+    role: internal_aggregate_demand_diagnostic
+    MAE: metric_on_hourly_sum_of_A_to_J_demand
+    MAPE_RMSE_NSE: metric_on_hourly_sum_of_A_to_J_demand
+  expected_manuscript_common46_test:
+    role: manuscript_publisher_compatible_factorial_ablation
+    MAE: sum_of_A_to_J_dma_mae
+    MAPE_RMSE_NSE: metric_on_hourly_sum_of_A_to_J_demand
+
 selection_evidence:
   candidates_declared_before_test: 3
   validation_relations_passed: 28
   validation_relations_total: 32
+  # Legacy aliases are retained because older release-verification code may
+  # still read these keys. They refer only to the aggregate-demand hierarchy.
   test_relations_passed: 31
   test_relations_total: 32
+  aggregate_demand_test_relations_passed: 31
+  aggregate_demand_test_relations_total: 32
+  manuscript_factorial_cells_passed: 30
+  manuscript_factorial_cells_total: 32
   test_used_for_training_or_selection: false
 
+# Backward-compatible internal aggregate-demand diagnostic. This block is
+# intentionally retained because release verification and historical reports
+# use aggregate-demand MAE. It is not the manuscript Table 2 MAE view.
 expected_common46_test:
   24h:
     Base: {MAE: 5.356315, MAPE: 2.212928, RMSE: 6.848257, NSE: 0.970419}
@@ -42,3 +62,17 @@ expected_common46_test:
     State: {MAE: 5.122511, MAPE: 2.102380, RMSE: 6.468312, NSE: 0.973739}
     FA-DPR: {MAE: 7.578056, MAPE: 3.277716, RMSE: 9.332415, NSE: 0.945334}
     Full: {MAE: 4.919812, MAPE: 2.013774, RMSE: 6.160881, NSE: 0.976176}
+
+# Current manuscript-facing publisher-compatible factorial ablation.
+# Public names are explicit so the registry mirrors Table 2 exactly.
+expected_manuscript_common46_test:
+  24h:
+    DCRNN: {MAE: 11.917304, MAPE: 2.212928, RMSE: 6.848257, NSE: 0.970419}
+    DCRNN + SAS-Norm: {MAE: 10.467994, MAPE: 2.010448, RMSE: 6.133886, NSE: 0.976269}
+    DCRNN + FA-DPR: {MAE: 11.238099, MAPE: 1.944550, RMSE: 6.079036, NSE: 0.976691}
+    STaR-GNN: {MAE: 9.424199, MAPE: 1.804574, RMSE: 5.534656, NSE: 0.980679}
+  168h:
+    DCRNN: {MAE: 16.800744, MAPE: 3.248413, RMSE: 9.817428, NSE: 0.939504}
+    DCRNN + SAS-Norm: {MAE: 12.207835, MAPE: 2.102380, RMSE: 6.468312, NSE: 0.973739}
+    DCRNN + FA-DPR: {MAE: 14.085994, MAPE: 3.277716, RMSE: 9.332415, NSE: 0.945334}
+    STaR-GNN: {MAE: 12.233590, MAPE: 2.013774, RMSE: 6.160881, NSE: 0.976176}

@@ -1,12 +1,12 @@
 | Horizon | Model | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |
 |---|---|---:|---:|---:|---:|
-| 24h | STGCN | 12.357691 | 2.424526 | 7.904592 | 0.960590 |
-| 24h | DCRNN | 11.917304 | 2.212928 | 6.848257 | 0.970419 |
-| 24h | DCRNN + SAS-Norm | 10.467994 | 2.010448 | 6.133886 | 0.976269 |
-| 24h | DCRNN + FA-DPR | 11.238099 | 1.944550 | 6.079036 | 0.976691 |
-| 24h | **STaR-GNN** | **9.424199** | **1.804574** | **5.534656** | **0.980679** |
-| 168h | STGCN | 14.569180 | 3.575848 | 10.305691 | 0.933337 |
-| 168h | DCRNN | 16.800744 | 3.248413 | 9.817428 | 0.939504 |
-| 168h | **DCRNN + SAS-Norm** | **12.207835** | 2.102380 | 6.468312 | 0.973739 |
-| 168h | DCRNN + FA-DPR | 14.085994 | 3.277716 | 9.332415 | 0.945334 |
-| 168h | **STaR-GNN** | 12.233590 | **2.013774** | **6.160881** | **0.976176** |
+| 24 h | DCRNN | 11.917 | 2.213 | 6.848 | 0.970 |
+| 24 h | DCRNN + SAS-Norm | 10.468 | 2.010 | 6.134 | 0.976 |
+| 24 h | DCRNN + FA-DPR | 11.238 | 1.945 | 6.079 | 0.977 |
+| 24 h | **STaR-GNN** | **9.424** | **1.805** | **5.535** | **0.981** |
+| 168 h | DCRNN | 16.801 | 3.248 | 9.817 | 0.940 |
+| 168 h | **DCRNN + SAS-Norm** | **12.208** | 2.102 | 6.468 | 0.974 |
+| 168 h | DCRNN + FA-DPR | 14.086 | 3.278 | 9.332 | 0.945 |
+| 168 h | STaR-GNN | 12.234 | **2.014** | **6.161** | **0.976** |
+
+**Note.** STGCN is an independent graph baseline and is therefore excluded from the factorial ablation. All values are reported with a uniform three-decimal manuscript precision. At 168 h, the publisher-compatible MAE difference between SAS-Norm-only and STaR-GNN is only 0.026 (about 0.21%); the complete model remains better in MAPE, RMSE and NSE.

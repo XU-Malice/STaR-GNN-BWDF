@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
 # ============================================================
-# DCRNN/Base 唯一化后的公开仓库一键收口与验收（不重新训练）
+# STaR-GNN-BWDF 公开仓库一键收口与验收（不重新训练）
 # ============================================================
 #
-# 默认执行：
-#   1. 删除已经合并进4份主文档的旧文档和两份重复 DCRNN 论文入口配置；
-#   2. 保留 star_gnn/Base，删除冻结包中的 baselines/dcrnn；
-#   3. 校验源码、环境和测试套件；
-#   4. 用10个现有 checkpoint 重新执行 common-46 推理（40项指标）；
-#   5. 重建总体/消融/DMA/Day1-Day7/Pearson 表图；
-#   6. 审计 GitHub 发布边界并生成冻结 Release asset。
+# 执行：
+#   1. 清理已弃用旧文档/重复 DCRNN 入口；
+#   2. 保证 DCRNN/Base 冻结工件唯一；
+#   3. 封存并验证当前 public-source SHA；
+#   4. 校验 10 个冻结 checkpoint、协议与内部 aggregate 诊断；
+#   5. 重新执行 10 组 common-46 推理；
+#   6. 重建 Table 1--3、Figure 1--5 与 manuscript audits；
+#   7. 审计 GitHub 发布边界；
+#   8. 可选生成 GitHub Release checkpoint asset。
 #
-# 此脚本不调用任何训练入口。用法：
+# 此脚本不调用训练入口。
+#
+# 用法：
 #   bash scripts/reproduce/finalize_public_release.sh --device cuda:0
 
 set -euo pipefail
@@ -29,7 +33,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --help|-h)
-            sed -n '2,22p' "$0"
+            sed -n '2,26p' "$0"
             exit 0
             ;;
         *)
@@ -50,7 +54,7 @@ import tomllib
 root = Path.cwd()
 payload = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
 if payload.get("project", {}).get("name") != "star-gnn-bwdf":
-    raise SystemExit("ERROR：当前目录不是 STaR-GNN-BWDF，拒绝执行清理。")
+    raise SystemExit("ERROR：当前目录不是 STaR-GNN-BWDF，拒绝执行收口。")
 print("项目身份：STaR-GNN-BWDF PASS")
 PY
 
@@ -78,7 +82,7 @@ stage() {
     echo "============================================================"
 }
 
-stage "[1/8] 清理已合并文档与重复 DCRNN 论文入口"
+stage "[1/8] 清理弃用文档与重复 DCRNN 论文入口"
 rm -f \
     INSTALL_ON_SERVER_CN.md \
     configs/paper/dcrnn_24h.yaml \
@@ -94,20 +98,22 @@ rm -f \
     docs/PAPER_ARTIFACTS_CN.md \
     docs/REPRODUCIBILITY.md \
     docs/RESULTS_PROVENANCE.md
-echo "中文主文档收敛为4份：PASS"
+echo "弃用入口清理：PASS"
 
 stage "[2/8] 合并 DCRNN/Base 冻结工件（不训练）"
 python scripts/reproduce/consolidate_dcrnn_base_release.py
 
-stage "[3/8] 源码SHA、环境、语法与测试套件"
+stage "[3/8] 封存源码 SHA、环境、语法与测试套件"
+python scripts/reproduce/regenerate_source_checksums.py
 bash scripts/reproduce/verify_source.sh
 python -m pip install -e . --no-deps
 bash scripts/reproduce/smoke_test.sh --source-only
+python -m pytest tests/test_paper_release.py tests/test_paper_artifacts.py -q
 
-stage "[4/8] 10组冻结checkpoint、协议、指标与论文层级"
+stage "[4/8] 10组冻结 checkpoint、协议与内部 aggregate 诊断"
 python scripts/reproduce/verify_paper_release.py
 
-stage "[5/8] 10组checkpoint重新执行common-46推理"
+stage "[5/8] 10组 checkpoint 重新执行 common-46 推理"
 python scripts/reproduce/verify_paper_release.py \
     --re-evaluate \
     --device "${DEVICE}" \
@@ -115,23 +121,46 @@ python scripts/reproduce/verify_paper_release.py \
     --reevaluation-relative-tolerance 5e-4 \
     --verification-output "${REEVALUATION_DIR}"
 
-stage "[6/8] 重建并审计论文表格和图件"
+stage "[6/8] 重建 Table 1--3、Figure 1--5 与 manuscript audits"
 python scripts/reproduce/build_paper_tables.py \
     --input results/paper/frozen_v1 \
     --output paper/tables/literature \
     --frozen-layout
+
 python scripts/reproduce/build_detailed_test_artifacts.py
+
+python scripts/reproduce/build_literature_figures.py \
+    --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
+    --ablation-table paper/tables/literature/table_ablation_common46.csv \
+    --dma-table paper/tables/literature/table_star_gnn_dma_common46.csv \
+    --output paper/figures
+
+python scripts/reproduce/build_manuscript_results_figures.py \
+    --release results/paper/frozen_v1 \
+    --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
+    --figure-output paper/figures \
+    --table-output paper/tables/manuscript \
+    --bootstrap-iterations 5000 \
+    --bootstrap-seed 20260820
+
+python scripts/reproduce/refine_manuscript_results_figures.py \
+    --table-dir paper/tables/manuscript \
+    --figure-dir paper/figures \
+    --block-bootstrap-iterations 50000 \
+    --block-bootstrap-length 7 \
+    --block-bootstrap-seed 20260820
+
 python scripts/reproduce/audit_release_inventory.py \
     --require-paper-artifacts \
     --require-reevaluation "${REEVALUATION_DIR}"
 
-stage "[7/8] 公开GitHub仓库结构、泄漏和大文件边界"
+stage "[7/8] 公开 GitHub 结构、指标口径、图表与大文件边界"
 python scripts/reproduce/audit_public_repository.py \
     --require-frozen \
     --require-paper-artifacts \
     --output "${CONTROL_DIR}/repository_audit.json"
 
-stage "[8/8] 生成GitHub Release checkpoint资产"
+stage "[8/8] 生成 GitHub Release checkpoint 资产"
 ASSET_STATUS="跳过"
 if [[ "${PACKAGE}" == "true" ]]; then
     rm -f \
@@ -145,13 +174,16 @@ cat > "${CONTROL_DIR}/FINAL_REPORT.txt" <<EOF
 STaR-GNN-BWDF 公开发布收口验收：PASS
 时间：$(date --iso-8601=seconds)
 重新训练：未执行
-DCRNN/Base唯一化：PASS
-冻结checkpoint/predictions/test_summary：10/10/10
-checkpoint common-46复推理：10/10
+DCRNN/Base 唯一化：PASS
+冻结 checkpoint/predictions/test_summary：10/10/10
+checkpoint common-46 复推理：10/10
 复推理指标：40/40（绝对与相对容差5e-4）
-论文总体/消融/DMA/Day1-Day7/Pearson表图：PASS
-中文主文档：4/4
-公开仓库结构与发布边界：PASS
+Table 1 总体比较：PASS
+Table 2 factorial ablation：4 models / no STGCN / 30/32 PASS
+Table 3 DMA-level：PASS
+Figure 1--5：PASS
+Full-vs-SAS 168 h moving-block bootstrap audit：PASS
+公开文档与发布边界：PASS
 GitHub Release checkpoint资产：${ASSET_STATUS}
 复推理目录：${PROJECT_ROOT}/${REEVALUATION_DIR}
 论文工件目录：${PROJECT_ROOT}/paper
