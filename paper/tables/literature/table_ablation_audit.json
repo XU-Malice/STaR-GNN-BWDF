@@ -1,0 +1,20 @@
+{
+  "protocol": "common_46",
+  "mae_convention": "sum_of_A_to_J_dma_mae",
+  "other_metrics": "metric_on_hourly_sum_of_A_to_J_demand",
+  "passed_relations": "30/32",
+  "relations": {
+    "24h_DCRNN + SAS-Norm_vs_DCRNN": "4/4",
+    "24h_DCRNN + FA-DPR_vs_DCRNN": "4/4",
+    "24h_STaR-GNN_vs_DCRNN + SAS-Norm": "4/4",
+    "24h_STaR-GNN_vs_DCRNN + FA-DPR": "4/4",
+    "168h_DCRNN + SAS-Norm_vs_DCRNN": "4/4",
+    "168h_DCRNN + FA-DPR_vs_DCRNN": "3/4",
+    "168h_STaR-GNN_vs_DCRNN + SAS-Norm": "3/4",
+    "168h_STaR-GNN_vs_DCRNN + FA-DPR": "4/4"
+  },
+  "transparent_exceptions": [
+    "FA-DPR 168h MAPE is slightly worse than DCRNN.",
+    "STaR-GNN 168h sum-of-DMA MAE is slightly higher than SAS-Norm-only (12.233590 vs 12.207835)."
+  ]
+}
