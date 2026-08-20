@@ -296,14 +296,20 @@ def _validate_ablation(ablation: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _write_convention_note(output: Path) -> None:
-    text = """# Metric conventions\n\n"
-    text += "Manuscript-facing overall comparison and ablation tables use one publisher-compatible convention.\n\n"
-    text += "- Total MAE: sum of DMA A--J MAEs.\n"
-    text += "- Total MAPE/RMSE/NSE: metric on the hourly aggregate-demand series.\n"
-    text += "- `table_literature_comparison_common46.*`: nine-model overall comparison.\n"
-    text += "- `table_ablation_common46.*`: STGCN/DCRNN/SAS-Norm/FA-DPR/STaR-GNN publisher-compatible ablation.\n"
-    text += "- `table_star_gnn_dma_common46.*`: STaR-GNN DMA A--J metrics, with no cross-DMA aggregation.\n"
-    text += "- `table_internal_common46.*`: retained only for aggregate-demand operational diagnostics; do not use it for cross-paper MAE comparisons.\n"
+    text = (
+        "# Metric conventions\n\n"
+        "Manuscript-facing overall comparison and ablation tables use one "
+        "publisher-compatible convention.\n\n"
+        "- Total MAE: sum of DMA A--J MAEs.\n"
+        "- Total MAPE/RMSE/NSE: metric on the hourly aggregate-demand series.\n"
+        "- `table_literature_comparison_common46.*`: nine-model overall comparison.\n"
+        "- `table_ablation_common46.*`: STGCN/DCRNN/SAS-Norm/FA-DPR/STaR-GNN "
+        "publisher-compatible ablation.\n"
+        "- `table_star_gnn_dma_common46.*`: STaR-GNN DMA A--J metrics, with no "
+        "cross-DMA aggregation.\n"
+        "- `table_internal_common46.*`: retained only for aggregate-demand "
+        "operational diagnostics; do not use it for cross-paper MAE comparisons.\n"
+    )
     (output / "METRIC_CONVENTIONS.md").write_text(text, encoding="utf-8")
 
 
