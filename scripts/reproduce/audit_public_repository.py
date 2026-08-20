@@ -1,11 +1,5 @@
 #!/usr/bin/env python
-"""审计准备上传 GitHub 的公开仓库内容。
-
-本脚本只检查发布边界，不训练模型，也不读取 Test target 做选择。若当前目录
-已经是 Git 仓库，则审计 ``git ls-files`` 返回的已跟踪文件；否则审计
-``SOURCE_CHECKSUMS.sha256`` 登记的拟发布源码。这样既能用于上传前检查，也能
-用于 GitHub 实际克隆后的第二轮检查。
-"""
+"""Audit the public GitHub repository boundary before release."""
 
 from __future__ import annotations
 
@@ -20,10 +14,15 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_DOCS = {
+    "docs/README.md",
     "docs/FULL_PIPELINE_CN.md",
     "docs/METHOD_CN.md",
     "docs/RELEASE_CN.md",
     "docs/RESULTS_AND_ARTIFACTS_CN.md",
+    "docs/RESULT_CONSISTENCY_AUDIT_CN.md",
+    "docs/MANUSCRIPT_FIGURES_CN.md",
+    "docs/MANUSCRIPT_FIGURES_FINAL_CN.md",
+    "docs/PLOTTING_CN.md",
 }
 DEPRECATED_PUBLIC_FILES = {
     "INSTALL_ON_SERVER_CN.md",
@@ -50,6 +49,7 @@ REQUIRED_PUBLIC_FILES = {
     "README.md",
     "README_EN.md",
     "RELEASE_INFO.json",
+    "SOURCE_CHECKSUMS.sha256",
     "data/README.md",
     *EXPECTED_DOCS,
     "environment.yml",
@@ -57,6 +57,7 @@ REQUIRED_PUBLIC_FILES = {
     "requirements-lock.txt",
     "scripts/reproduce/finalize_public_release.sh",
     "scripts/reproduce/package_frozen_release.py",
+    "scripts/reproduce/regenerate_source_checksums.py",
     "scripts/reproduce/train_from_scratch.sh",
     "scripts/reproduce/verify_pretrained.sh",
 }
@@ -152,9 +153,7 @@ def _audit_frozen(root: Path) -> list[str]:
         f"star_gnn/{model}/{task}"
         for model in ("Base", "State", "FA-DPR", "Full")
         for task in ("24h", "168h")
-    } | {
-        f"baselines/stgcn/{task}" for task in ("24h", "168h")
-    }
+    } | {f"baselines/stgcn/{task}" for task in ("24h", "168h")}
     observed_keys = set(manifest.get("artifacts", {}))
     if observed_keys != expected_keys:
         errors.append(
@@ -192,11 +191,10 @@ def _audit_frozen(root: Path) -> list[str]:
 
 def _audit_paper(root: Path) -> list[str]:
     expected_rows = {
-        "paper/tables/test_all_models_common46.csv": 10,
-        "paper/tables/test_ablation_common46.csv": 8,
-        "paper/tables/test_dma_metrics_long.csv": 100,
-        "paper/tables/test_day1_day7_metrics.csv": 35,
-        "paper/tables/pearson_correlation.csv": 10,
+        "paper/tables/literature/table_literature_comparison_common46.csv": 18,
+        "paper/tables/literature/table_ablation_common46.csv": 8,
+        "paper/tables/literature/table_star_gnn_dma_common46.csv": 20,
+        "paper/tables/manuscript/fig4_dma_mae_improvement.csv": 40,
     }
     errors: list[str] = []
     for relative, expected in expected_rows.items():
@@ -208,11 +206,51 @@ def _audit_paper(root: Path) -> list[str]:
             count = sum(1 for _ in csv.DictReader(handle))
         if count != expected:
             errors.append(f"论文表格行数错误：{relative}={count}，期望{expected}")
-    figures = list((root / "paper/figures").glob("*.png")) + list(
-        (root / "paper/figures").glob("*.pdf")
+
+    ablation = root / "paper/tables/literature/table_ablation_common46.csv"
+    if ablation.is_file():
+        with ablation.open("r", encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        expected_models = (
+            "DCRNN",
+            "DCRNN + SAS-Norm",
+            "DCRNN + FA-DPR",
+            "STaR-GNN",
+        )
+        for task in ("24h", "168h"):
+            observed = tuple(row["model"] for row in rows if row["task"] == task)
+            if observed != expected_models:
+                errors.append(f"factorial ablation 模型集合错误：{task}={observed}")
+            if "STGCN" in observed:
+                errors.append(f"STGCN 不应出现在 factorial ablation：{task}")
+
+    required_figures = [
+        root / f"paper/figures/manuscript_fig{index}_{suffix}.{ext}"
+        for index, suffix in (
+            (1, "relative_improvement"),
+            (2, "day1_day7_publisher_mae"),
+            (3, "origin_ecdf"),
+            (4, "dma_mae_improvement"),
+            (5, "representative_168h_trajectory"),
+        )
+        for ext in ("png", "pdf")
+    ]
+    missing_figures = [str(path.relative_to(root)) for path in required_figures if not path.is_file()]
+    if missing_figures:
+        errors.append(f"正文 Figure 1--5 缺失：{missing_figures}")
+    empty_figures = [str(path.relative_to(root)) for path in required_figures if path.is_file() and path.stat().st_size == 0]
+    if empty_figures:
+        errors.append(f"正文 Figure 文件为空：{empty_figures}")
+
+    required_audits = (
+        "paper/tables/manuscript/fig2_ablation_daywise_reduction_vs_dcrnn.csv",
+        "paper/tables/manuscript/fig2_full_vs_sas_block_bootstrap.json",
+        "paper/tables/manuscript/fig3_origin_win_rates.csv",
+        "paper/tables/manuscript/manuscript_empirical_figure_audit.json",
     )
-    if not figures or any(path.stat().st_size == 0 for path in figures):
-        errors.append("论文 PNG/PDF 图件缺失或为空")
+    for relative in required_audits:
+        if not (root / relative).is_file():
+            errors.append(f"缺少正文图件审计：{relative}")
     return errors
 
 
@@ -226,8 +264,6 @@ def main() -> None:
     root = PROJECT_ROOT
     source_files, errors = _manifest_files(root)
     git_files = _git_files(root)
-    # SOURCE_CHECKSUMS 是 clean-room 和 GitHub 源码发布的注册边界。Git 已初始化
-    # 时额外扫描“仍存在的已跟踪文件”，但不要求新补丁文件在验收前已经 git add。
     tracked_existing = {
         relative
         for relative in (git_files or set())
@@ -237,8 +273,6 @@ def main() -> None:
     mode = "source-manifest+git" if git_files is not None else "source-manifest"
 
     missing = REQUIRED_PUBLIC_FILES - publish_files
-    if not (root / "SOURCE_CHECKSUMS.sha256").is_file():
-        errors.append("缺少 SOURCE_CHECKSUMS.sha256")
     if missing:
         errors.append(f"拟发布文件缺失：{sorted(missing)}")
     deprecated = DEPRECATED_PUBLIC_FILES & publish_files
@@ -247,7 +281,7 @@ def main() -> None:
     docs = {path for path in publish_files if path.startswith("docs/")}
     if docs != EXPECTED_DOCS:
         errors.append(
-            "docs/ 应只保留4份中文主文档："
+            "docs/ 文档集合与最终设计不一致："
             f"missing={sorted(EXPECTED_DOCS - docs)}, "
             f"extra={sorted(docs - EXPECTED_DOCS)}"
         )
@@ -281,31 +315,38 @@ def main() -> None:
         "source_manifest_file_count": len(source_files),
         "docs": sorted(docs),
         "canonical_models": [
-            "STGCN",
+            "STGCN (independent graph baseline)",
             "DCRNN (Base)",
-            "DCRNN + State",
+            "DCRNN + SAS-Norm",
+            "DCRNN + FA-DPR",
+            "STaR-GNN",
+        ],
+        "factorial_ablation_models": [
+            "DCRNN",
+            "DCRNN + SAS-Norm",
             "DCRNN + FA-DPR",
             "STaR-GNN",
         ],
         "frozen_checkpoint_count": 10 if args.require_frozen else None,
         "errors": errors,
     }
-    output = args.output
-    if output is not None:
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(
+    if args.output is not None:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(
             json.dumps(report, indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",
         )
     if errors:
         raise SystemExit("公开仓库审计失败：\n- " + "\n- ".join(errors))
+
     print("公开仓库结构与发布边界：PASS")
     print(f"审计口径：{mode}，文件数：{len(publish_files)}")
-    print("中文主文档：4/4")
+    print(f"docs 文档集合：{len(EXPECTED_DOCS)}/{len(EXPECTED_DOCS)} PASS")
+    print("factorial ablation：4 models, no STGCN PASS")
     if args.require_frozen:
         print("唯一 checkpoint：10/10；DCRNN/Base无重复")
     if args.require_paper_artifacts:
-        print("总体/消融/DMA/Day1-Day7/Pearson表图：PASS")
+        print("Table 1--3 / Figure 1--5 / manuscript audits：PASS")
 
 
 if __name__ == "__main__":
