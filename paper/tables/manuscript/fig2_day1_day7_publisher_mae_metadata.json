@@ -1,0 +1,11 @@
+{
+  "protocol": "common_46",
+  "n_origins": 46,
+  "horizon_hours": 168,
+  "day_width_hours": 24,
+  "mae_convention": "sum_of_DMA_level_MAE_within_each_day",
+  "aggregation": "mean_across_46_origins",
+  "ci": "nonparametric bootstrap 95% CI of origin-level mean",
+  "bootstrap_iterations": 5000,
+  "bootstrap_seed": 20260820
+}
