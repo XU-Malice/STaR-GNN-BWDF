@@ -1,0 +1,23 @@
+{
+  "comparison": "STaR-GNN minus DCRNN + SAS-Norm",
+  "task": "168h",
+  "metric": "publisher-compatible sum-of-DMA MAE",
+  "n_origins": 46,
+  "full_mean_MAE": 12.233590399391307,
+  "sas_mean_MAE": 12.20783511506522,
+  "mean_difference_full_minus_sas": 0.02575528432608681,
+  "relative_difference_percent_of_sas": 0.21097339604712717,
+  "full_lower_origins": 19,
+  "sas_lower_origins": 27,
+  "moving_block_bootstrap": {
+    "block_length_origins": 7,
+    "iterations": 50000,
+    "seed": 20260820,
+    "ci95_mean_difference": [
+      -0.1287760413972825,
+      0.1774752647619561
+    ],
+    "contains_zero": true,
+    "rationale": "168 h forecasts are started 24 h apart and overlap strongly; ordered moving blocks preserve local dependence better than an IID bootstrap."
+  }
+}
