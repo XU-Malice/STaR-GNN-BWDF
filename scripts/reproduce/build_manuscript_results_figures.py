@@ -150,7 +150,6 @@ def _publisher_mae_per_origin(truth: np.ndarray, prediction: np.ndarray) -> np.n
     """Per-origin publisher-compatible MAE: sum of DMA-level MAEs."""
     if truth.shape != prediction.shape or truth.ndim != 3:
         raise ValueError("Expected [origin, horizon, dma] arrays")
-    # MAE for each origin and each DMA over the local forecast window, then sum A--J.
     return np.mean(np.abs(prediction - truth), axis=1).sum(axis=1)
 
 
@@ -211,7 +210,14 @@ def _figure1_relative_improvement(
 ) -> None:
     rows: list[dict[str, Any]] = []
     for baseline in OVERALL_BASELINES:
-        row: dict[str, Any] = {"baseline": baseline.replace(" (reported)", "")}
+        row: dict[str, Any] = {
+            "baseline": baseline.replace(" (reported)", ""),
+            "source": (
+                "reported_Que_et_al_2024"
+                if baseline.endswith(" (reported)")
+                else "common_46_re_evaluated"
+            ),
+        }
         for task in TASKS:
             task_frame = overall.loc[overall["task"] == task].set_index("model")
             base = task_frame.loc[baseline]
@@ -223,7 +229,11 @@ def _figure1_relative_improvement(
             row[f"{task}_NSE_gain"] = float(star["NSE"]) - float(base["NSE"])
         rows.append(row)
     derived = pd.DataFrame(rows)
-    derived.to_csv(table_dir / "fig1_relative_improvement.csv", index=False, float_format="%.9f")
+    derived.to_csv(
+        table_dir / "fig1_relative_improvement.csv",
+        index=False,
+        float_format="%.9f",
+    )
 
     error_cols = [
         "24h_MAE_reduction_pct",
@@ -250,8 +260,12 @@ def _figure1_relative_improvement(
 
     limit = max(5.0, float(np.nanmax(np.abs(matrix))))
     image = ax_hm.imshow(matrix, aspect="auto", cmap="RdBu_r", vmin=-limit, vmax=limit)
+    display_labels = [
+        f"{name}†" if source == "reported_Que_et_al_2024" else name
+        for name, source in zip(derived["baseline"], derived["source"])
+    ]
     ax_hm.set_xticks(np.arange(len(error_labels)), error_labels)
-    ax_hm.set_yticks(np.arange(len(derived)), derived["baseline"].tolist())
+    ax_hm.set_yticks(np.arange(len(derived)), display_labels)
     ax_hm.set_title("(a) Relative reduction in error metrics")
     ax_hm.set_xlabel("Forecast horizon and metric")
     for i in range(matrix.shape[0]):
@@ -268,14 +282,30 @@ def _figure1_relative_improvement(
     ax_nse.scatter(nse24, y - 0.12, marker="o", label="24 h")
     ax_nse.scatter(nse168, y + 0.12, marker="s", label="168 h")
     for i in range(len(y)):
-        ax_nse.plot([nse24[i], nse168[i]], [y[i] - 0.12, y[i] + 0.12], linewidth=0.8, alpha=0.5)
+        ax_nse.plot(
+            [nse24[i], nse168[i]],
+            [y[i] - 0.12, y[i] + 0.12],
+            linewidth=0.8,
+            alpha=0.5,
+        )
     ax_nse.set_yticks(y, [""] * len(y))
     ax_nse.invert_yaxis()
     ax_nse.set_xlabel("ΔNSE (STaR-GNN − baseline)")
     ax_nse.set_title("(b) Absolute NSE gain")
     ax_nse.grid(axis="x", alpha=0.25)
     ax_nse.legend(frameon=False)
-    fig.suptitle("Relative performance improvement of STaR-GNN over competing models", fontsize=14)
+    fig.suptitle(
+        "Relative performance improvement of STaR-GNN over competing models",
+        fontsize=14,
+    )
+    fig.text(
+        0.01,
+        0.005,
+        "† Reported results from Que et al. (2024); DCRNN and STGCN are "
+        "re-evaluated on the common-46 protocol.",
+        fontsize=8,
+        ha="left",
+    )
     _save(fig, figure_dir / "manuscript_fig1_relative_improvement")
 
 
@@ -312,7 +342,11 @@ def _figure2_day1_day7(
                 }
             )
     derived = pd.DataFrame(rows)
-    derived.to_csv(table_dir / "fig2_day1_day7_publisher_mae_ci.csv", index=False, float_format="%.9f")
+    derived.to_csv(
+        table_dir / "fig2_day1_day7_publisher_mae_ci.csv",
+        index=False,
+        float_format="%.9f",
+    )
 
     fig, ax = plt.subplots(figsize=(9.4, 5.9))
     for model in GRAPH_MODELS:
@@ -367,14 +401,15 @@ def _figure3_origin_ecdf(
     table_dir: Path,
 ) -> None:
     rows: list[dict[str, Any]] = []
-    reference: dict[str, np.ndarray] = {}
     for task in TASKS:
         truth_ref: np.ndarray | None = None
         for model in GRAPH_MODELS:
             truth, pred, common = _load_common_predictions(release, model, task)
             truth_ref = _ensure_same_truth(truth_ref, truth, f"{model}/{task}")
             values = _publisher_mae_per_origin(truth, pred)
-            for rank_index, (origin_index, value) in enumerate(zip(common.tolist(), values.tolist())):
+            for rank_index, (origin_index, value) in enumerate(
+                zip(common.tolist(), values.tolist())
+            ):
                 rows.append(
                     {
                         "task": task,
@@ -385,13 +420,15 @@ def _figure3_origin_ecdf(
                         "publisher_MAE": float(value),
                     }
                 )
-        if truth_ref is not None:
-            reference[task] = truth_ref
     derived = pd.DataFrame(rows)
-    derived.to_csv(table_dir / "fig3_origin_publisher_mae.csv", index=False, float_format="%.9f")
+    derived.to_csv(
+        table_dir / "fig3_origin_publisher_mae.csv",
+        index=False,
+        float_format="%.9f",
+    )
 
     fig, axes = plt.subplots(1, 2, figsize=(12.6, 5.2), sharey=True)
-    for ax, task in zip(axes, TASKS):
+    for panel_index, (ax, task) in enumerate(zip(axes, TASKS)):
         for model in GRAPH_MODELS:
             values = derived.loc[
                 (derived["task"] == task) & (derived["internal_model"] == model),
@@ -407,11 +444,14 @@ def _figure3_origin_ecdf(
                 linewidth=2.2 if model == "Full" else 1.5,
             )
         ax.set_xlabel("Per-origin publisher-compatible MAE")
-        ax.set_title(f"({chr(97 + list(TASKS).index(task))}) {task.replace('h', ' h')}")
+        ax.set_title(f"({chr(97 + panel_index)}) {task.replace('h', ' h')}")
         ax.grid(alpha=0.25)
     axes[0].set_ylabel("Empirical cumulative probability")
     axes[1].legend(frameon=False, loc="lower right")
-    fig.suptitle("Distribution of forecast errors across the 46 common test origins", fontsize=14)
+    fig.suptitle(
+        "Distribution of forecast errors across the 46 common test origins",
+        fontsize=14,
+    )
     _save(fig, figure_dir / "manuscript_fig3_origin_ecdf")
 
 
@@ -437,7 +477,11 @@ def _figure4_dma_improvement(
                     }
                 )
     derived = pd.DataFrame(rows)
-    derived.to_csv(table_dir / "fig4_dma_mae_improvement.csv", index=False, float_format="%.9f")
+    derived.to_csv(
+        table_dir / "fig4_dma_mae_improvement.csv",
+        index=False,
+        float_format="%.9f",
+    )
 
     column_keys = [
         ("24h", "DCRNN"),
@@ -521,16 +565,26 @@ def _figure5_representative_trajectory(
             "STaR-GNN": model_series["Full"],
         }
     )
-    trajectory.to_csv(table_dir / "fig5_representative_168h_trajectory.csv", index=False, float_format="%.9f")
+    trajectory.to_csv(
+        table_dir / "fig5_representative_168h_trajectory.csv",
+        index=False,
+        float_format="%.9f",
+    )
 
     metadata = {
-        "selection_rule": "STaR-GNN origin whose publisher-compatible 168h MAE is closest to the median among the 46 common test origins",
+        "selection_rule": (
+            "STaR-GNN origin whose publisher-compatible 168h MAE is closest "
+            "to the median among the 46 common test origins"
+        ),
         "selected_origin_position_zero_based": selected_position,
         "selected_common_index": selected_common_index,
         "median_star_publisher_mae": median_value,
         "selected_star_publisher_mae": float(star_origin_mae[selected_position]),
         "selected_origin_model_publisher_mae": selected_model_mae,
-        "note": "Selection is deterministic and based only on STaR-GNN median-error proximity, not visual appearance.",
+        "note": (
+            "Selection is deterministic and based only on STaR-GNN median-error "
+            "proximity, not visual appearance."
+        ),
     }
     (table_dir / "fig5_representative_168h_selection.json").write_text(
         json.dumps(metadata, indent=2, ensure_ascii=False) + "\n",
@@ -577,15 +631,17 @@ def _figure5_representative_trajectory(
 
 
 def _write_readme(table_dir: Path) -> None:
-    text = """# Manuscript result-figure audit artifacts\n\n"
-    text += "These files are generated by `scripts/reproduce/build_manuscript_results_figures.py`.\n\n"
-    text += "- `fig1_relative_improvement.csv`: relative reductions in MAE/MAPE/RMSE and absolute NSE gains versus eight baselines.\n"
-    text += "- `fig2_day1_day7_publisher_mae_ci.csv`: day-wise publisher-compatible MAE and bootstrap 95% CI for the 168 h task.\n"
-    text += "- `fig2_day1_day7_publisher_mae_metadata.json`: deterministic bootstrap settings and metric definition.\n"
-    text += "- `fig3_origin_publisher_mae.csv`: per-origin publisher-compatible MAE for 46 common test origins.\n"
-    text += "- `fig4_dma_mae_improvement.csv`: DMA-level STaR-GNN MAE reduction versus DCRNN/STGCN.\n"
-    text += "- `fig5_representative_168h_trajectory.csv`: observed/predicted aggregate-demand trajectory for the pre-specified median-error origin.\n"
-    text += "- `fig5_representative_168h_selection.json`: exact selection rule, origin index, and model errors.\n"
+    text = (
+        "# Manuscript result-figure audit artifacts\n\n"
+        "These files are generated by `scripts/reproduce/build_manuscript_results_figures.py`.\n\n"
+        "- `fig1_relative_improvement.csv`: relative reductions in MAE/MAPE/RMSE and absolute NSE gains versus eight baselines.\n"
+        "- `fig2_day1_day7_publisher_mae_ci.csv`: day-wise publisher-compatible MAE and bootstrap 95% CI for the 168 h task.\n"
+        "- `fig2_day1_day7_publisher_mae_metadata.json`: deterministic bootstrap settings and metric definition.\n"
+        "- `fig3_origin_publisher_mae.csv`: per-origin publisher-compatible MAE for 46 common test origins.\n"
+        "- `fig4_dma_mae_improvement.csv`: DMA-level STaR-GNN MAE reduction versus DCRNN/STGCN.\n"
+        "- `fig5_representative_168h_trajectory.csv`: observed/predicted aggregate-demand trajectory for the pre-specified median-error origin.\n"
+        "- `fig5_representative_168h_selection.json`: exact selection rule, origin index, and model errors.\n"
+    )
     (table_dir / "README.md").write_text(text, encoding="utf-8")
 
 
