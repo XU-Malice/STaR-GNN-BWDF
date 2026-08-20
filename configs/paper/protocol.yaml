@@ -38,15 +38,19 @@ selection_evidence:
   candidates_declared_before_test: 3
   validation_relations_passed: 28
   validation_relations_total: 32
+  # Legacy aliases are retained because older release-verification code may
+  # still read these keys. They refer only to the aggregate-demand hierarchy.
+  test_relations_passed: 31
+  test_relations_total: 32
   aggregate_demand_test_relations_passed: 31
   aggregate_demand_test_relations_total: 32
   manuscript_factorial_cells_passed: 30
   manuscript_factorial_cells_total: 32
   test_used_for_training_or_selection: false
 
-# Backward-compatible internal aggregate-demand diagnostic.  This block is
+# Backward-compatible internal aggregate-demand diagnostic. This block is
 # intentionally retained because release verification and historical reports
-# use aggregate-demand MAE.  It is not the manuscript Table 2 MAE view.
+# use aggregate-demand MAE. It is not the manuscript Table 2 MAE view.
 expected_common46_test:
   24h:
     Base: {MAE: 5.356315, MAPE: 2.212928, RMSE: 6.848257, NSE: 0.970419}
@@ -60,7 +64,7 @@ expected_common46_test:
     Full: {MAE: 4.919812, MAPE: 2.013774, RMSE: 6.160881, NSE: 0.976176}
 
 # Current manuscript-facing publisher-compatible factorial ablation.
-# Public names are kept explicit here so the registry mirrors Table 2.
+# Public names are explicit so the registry mirrors Table 2 exactly.
 expected_manuscript_common46_test:
   24h:
     DCRNN: {MAE: 11.917304, MAPE: 2.212928, RMSE: 6.848257, NSE: 0.970419}
