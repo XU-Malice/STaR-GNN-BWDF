@@ -60,6 +60,14 @@ MARKERS = {
     "STaR-GNN": "o",
 }
 
+MODEL_COLORS = {
+    "DCRNN": "#1f77b4",
+    "STGCN": "#ff7f0e",
+    "DCRNN + SAS-Norm": "#d62728",
+    "DCRNN + FA-DPR": "#9467bd",
+    "STaR-GNN": "#2ca02c",
+}
+
 
 def _save(fig: plt.Figure, base: Path) -> None:
     fig.tight_layout()
@@ -143,6 +151,7 @@ def _plot_ablation(
             marker=MARKERS[model],
             linestyle=LINESTYLES[model],
             linewidth=2.2 if model == "STaR-GNN" else 1.6,
+            color=MODEL_COLORS[model],
         )
     ax_gain.axhline(0.0, linewidth=0.8, color="black", alpha=0.55)
     ax_gain.set_xticks(range(1, 8), [f"Day {i}" for i in range(1, 8)])
@@ -161,6 +170,7 @@ def _plot_ablation(
             marker=MARKERS[model],
             linestyle=LINESTYLES[model],
             linewidth=2.2 if model == "STaR-GNN" else 1.5,
+            color=MODEL_COLORS[model],
         )
     ax_deg.axhline(0.0, linewidth=0.8, color="black", alpha=0.55)
     ax_deg.set_xticks(range(1, 8), [f"Day {i}" for i in range(1, 8)])
@@ -319,6 +329,7 @@ def _plot_ecdf(frame: pd.DataFrame, figure_dir: Path) -> None:
                 label=model,
                 linestyle=LINESTYLES[model],
                 linewidth=2.2 if model == "STaR-GNN" else 1.6,
+            color=MODEL_COLORS[model],
             )
         ax.set_xlabel("Per-origin publisher-compatible MAE")
         ax.set_title(f"({panel}) {task.replace('h', ' h')}")

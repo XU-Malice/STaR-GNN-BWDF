@@ -77,6 +77,14 @@ MARKERS = {
     "Full": "o",
 }
 
+MODEL_COLORS = {
+    "DCRNN": "#1f77b4",
+    "STGCN": "#ff7f0e",
+    "State": "#d62728",
+    "FA-DPR": "#9467bd",
+    "Full": "#2ca02c",
+}
+
 
 def _evaluation_dir(release: Path, model: str, task: str) -> Path:
     prefix = release / "models" if (release / "models").is_dir() else release
@@ -362,8 +370,9 @@ def _figure2_day1_day7(
             marker=MARKERS[model],
             linestyle=LINE_STYLES[model],
             linewidth=2.2 if model == "Full" else 1.5,
+            color=MODEL_COLORS[model],
         )
-        ax.fill_between(x, lo, hi, alpha=0.10)
+        ax.fill_between(x, lo, hi, alpha=0.10, color=MODEL_COLORS[model])
     ax.set_xticks(range(1, 8), [f"Day {i}" for i in range(1, 8)])
     ax.set_xlabel("Forecast day within the 168 h horizon")
     ax.set_ylabel("Publisher-compatible MAE")
@@ -442,6 +451,7 @@ def _figure3_origin_ecdf(
                 label=PUBLIC_LABEL[model],
                 linestyle=LINE_STYLES[model],
                 linewidth=2.2 if model == "Full" else 1.5,
+            color=MODEL_COLORS[model],
             )
         ax.set_xlabel("Per-origin publisher-compatible MAE")
         ax.set_title(f"({chr(97 + panel_index)}) {task.replace('h', ' h')}")
@@ -607,6 +617,7 @@ def _figure5_representative_trajectory(
             label=PUBLIC_LABEL[model],
             linestyle=LINE_STYLES[model],
             linewidth=2.0 if model == "Full" else 1.4,
+            color=MODEL_COLORS[model],
         )
         bottom.plot(
             hours,
@@ -614,6 +625,7 @@ def _figure5_representative_trajectory(
             label=PUBLIC_LABEL[model],
             linestyle=LINE_STYLES[model],
             linewidth=2.0 if model == "Full" else 1.3,
+            color=MODEL_COLORS[model],
         )
     for boundary in range(24, 168, 24):
         top.axvline(boundary + 0.5, linewidth=0.7, alpha=0.25, color="black")
