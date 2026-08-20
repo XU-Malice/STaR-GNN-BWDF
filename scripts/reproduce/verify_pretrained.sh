@@ -3,21 +3,18 @@
 # 冻结 checkpoint 验证入口（不训练）
 # ============================================================
 #
-# 默认执行：
-#   1. 校验 Python 环境和冻结发布目录；
-#   2. 缺少处理数据时，按论文协议自动运行数据预处理；
-#   3. 缺少 Pearson 图或数据刚重建时，自动重建训练期功能图；
-#   4. 校验冻结发布内每个文件的 SHA-256；
-#   5. 校验 10 个 checkpoint 的任务、seed、模型和冻结超参数；
-#   6. 校验 common-46、Test 隔离和冻结指标；
-#   7. 生成 publisher-compatible 主比较/消融表及 STaR-GNN DMA 表；
-#   8. 生成内部逐日/Pearson 等诊断工件；
-#   9. 最后覆盖生成论文主图：9 模型总体、publisher 消融、STaR-GNN DMA 四指标。
+# 默认：
+#   1. 检查环境、处理数据与训练期 Pearson 图；
+#   2. 验证冻结文件 SHA、10 个 checkpoint、common-46 与 Test 隔离；
+#   3. 可选重新执行全部 checkpoint 推理；
+#   4. 重建 manuscript-facing Table 1--3；
+#   5. 重建 legacy aggregate-demand 诊断工件；
+#   6. 重建最终 Figure 1--5 与 moving-block bootstrap audit。
 #
-# 内部 aggregate-demand 消融关系仍作为冻结工件审计；论文正文消融采用
-# publisher-compatible 口径，并由 build_paper_tables.py 单独审计为 30/32。
+# 内部 aggregate-demand hierarchy 保留 31/32 作为冻结诊断；
+# 当前 manuscript-facing factorial ablation 为 4 models / no STGCN / 30/32。
 #
-# 如需重新执行全部 checkpoint 推理：
+# 用法：
 #   bash scripts/reproduce/verify_pretrained.sh \
 #       --re-evaluate --device cuda:0
 
@@ -58,7 +55,7 @@ done
 DATA_REBUILT=false
 if [[ ${#MISSING_DATA[@]} -gt 0 ]]; then
   echo "============================================"
-  echo "检测到全新服务器缺少论文处理数据，将自动执行预处理"
+  echo "缺少论文处理数据，将按注册协议自动执行预处理"
   printf 'MISSING: %s\n' "${MISSING_DATA[@]}"
   echo "============================================"
   bash scripts/data/run_pipeline.sh
@@ -84,22 +81,42 @@ for path in "${REQUIRED_DATA[@]}" "${GRAPH_PATH}"; do
 done
 
 python scripts/reproduce/verify_paper_release.py "$@"
+
 python scripts/reproduce/build_paper_tables.py \
   --input results/paper/frozen_v1 \
   --output paper/tables/literature \
   --frozen-layout
+
 python scripts/reproduce/build_detailed_test_artifacts.py
+
 python scripts/reproduce/build_literature_figures.py \
   --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
   --ablation-table paper/tables/literature/table_ablation_common46.csv \
   --dma-table paper/tables/literature/table_star_gnn_dma_common46.csv \
   --output paper/figures
 
+python scripts/reproduce/build_manuscript_results_figures.py \
+  --release results/paper/frozen_v1 \
+  --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
+  --figure-output paper/figures \
+  --table-output paper/tables/manuscript \
+  --bootstrap-iterations 5000 \
+  --bootstrap-seed 20260820
+
+python scripts/reproduce/refine_manuscript_results_figures.py \
+  --table-dir paper/tables/manuscript \
+  --figure-dir paper/figures \
+  --block-bootstrap-iterations 50000 \
+  --block-bootstrap-length 7 \
+  --block-bootstrap-seed 20260820
+
 echo "============================================"
-echo "冻结 checkpoint、common-46 Test 与论文图表：PASS"
-echo "论文主比较：publisher-compatible 9 模型口径"
-echo "论文消融：publisher-compatible 图模型/模块口径（30/32）"
-echo "论文 DMA：STaR-GNN DMA-level MAE/MAPE/RMSE/NSE"
-echo "内部逐日分析：aggregate-demand 口径"
+echo "冻结 checkpoint、common-46 Test 与 manuscript artifacts：PASS"
+echo "Table 1：publisher-compatible 9-model overall comparison"
+echo "Table 2：4-model factorial ablation / no STGCN / 30/32"
+echo "Table 3：STaR-GNN DMA-level metrics"
+echo "Figure 1--5：final manuscript design"
+echo "168 h Full-vs-SAS：7-origin moving-block bootstrap guardrail"
+echo "legacy aggregate-demand hierarchy：31/32 internal diagnostic only"
 echo "结果说明：docs/RESULTS_AND_ARTIFACTS_CN.md"
 echo "============================================"
