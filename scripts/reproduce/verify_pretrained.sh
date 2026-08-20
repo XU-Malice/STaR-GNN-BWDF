@@ -9,19 +9,17 @@
 #   3. 缺少 Pearson 图或数据刚重建时，自动重建训练期功能图；
 #   4. 校验冻结发布内每个文件的 SHA-256；
 #   5. 校验 10 个 checkpoint 的任务、seed、模型和冻结超参数；
-#   6. 校验每次评估都使用 common-46 且 Test 未参与训练/选参；
-#   7. 校验注册的四指标与 31/32 消融关系；
-#   8. 生成统一 aggregate-demand 表图、DMA/逐日/Pearson 图；
-#   9. 生成与 MSCMNet 补充材料同口径的 9 模型总体比较图。
+#   6. 校验 common-46、Test 隔离和冻结指标；
+#   7. 生成 publisher-compatible 主比较/消融表及 STaR-GNN DMA 表；
+#   8. 生成内部逐日/Pearson 等诊断工件；
+#   9. 最后覆盖生成论文主图：9 模型总体、publisher 消融、STaR-GNN DMA 四指标。
+#
+# 内部 aggregate-demand 消融关系仍作为冻结工件审计；论文正文消融采用
+# publisher-compatible 口径，并由 build_paper_tables.py 单独审计为 30/32。
 #
 # 如需重新执行全部 checkpoint 推理：
 #   bash scripts/reproduce/verify_pretrained.sh \
 #       --re-evaluate --device cuda:0
-#
-# 说明：
-#   GitHub Release 不重新分发上游 BWDF 原始/处理数据。因此，全新服务器
-#   首次运行时需要能够访问 environment.yml 中固定版本的 wf4bwdf 上游源。
-#   已存在并通过路径检查的数据和图会直接复用，不会重新训练任何模型。
 
 set -euo pipefail
 
@@ -92,13 +90,16 @@ python scripts/reproduce/build_paper_tables.py \
   --frozen-layout
 python scripts/reproduce/build_detailed_test_artifacts.py
 python scripts/reproduce/build_literature_figures.py \
-  --table paper/tables/literature/table_literature_comparison_common46.csv \
+  --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
+  --ablation-table paper/tables/literature/table_ablation_common46.csv \
+  --dma-table paper/tables/literature/table_star_gnn_dma_common46.csv \
   --output paper/figures
 
 echo "============================================"
 echo "冻结 checkpoint、common-46 Test 与论文图表：PASS"
-echo "总体比较图：publisher-compatible 9 模型口径"
-echo "消融/逐日图：aggregate-demand 口径"
-echo "DMA 图：DMA-level 口径"
-echo "结果说明：paper/reports/TEST_RESULTS_CN.md"
+echo "论文主比较：publisher-compatible 9 模型口径"
+echo "论文消融：publisher-compatible 图模型/模块口径（30/32）"
+echo "论文 DMA：STaR-GNN DMA-level MAE/MAPE/RMSE/NSE"
+echo "内部逐日分析：aggregate-demand 口径"
+echo "结果说明：docs/RESULTS_AND_ARTIFACTS_CN.md"
 echo "============================================"

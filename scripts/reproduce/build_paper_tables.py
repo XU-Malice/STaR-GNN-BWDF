@@ -1,27 +1,28 @@
 #!/usr/bin/env python
-"""Build submission-ready CSV/Markdown tables from evaluated checkpoints.
+"""Build submission-ready paper tables from evaluated common-46 checkpoints.
 
-Two metric views are intentionally kept separate:
+Manuscript-facing model comparison and ablation tables use the MSCMNet
+publisher-compatible ``total`` convention:
 
-1. Internal/common-46 comparison: all metrics are computed on the hourly
-   aggregate demand series obtained by summing DMA A--J first.
-2. Literature comparison: matches the mixed ``total`` convention used in the
-   MSCMNet supplementary tables, where total MAE is the sum of DMA-level MAEs
-   while MAPE/RMSE/NSE are computed on the hourly aggregate demand series.
+- total MAE = sum of DMA A--J MAEs;
+- total MAPE/RMSE/NSE = metric on the hourly aggregate-demand series.
 
-The script never mixes the two MAE definitions in one comparison column.
+The pure aggregate-demand view is retained only as an internal/operational
+artifact.  STaR-GNN DMA-level metrics are reported separately without any
+cross-DMA aggregation.
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import json
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from paper_release_lib import METRICS, PROJECT_ROOT, STAR_VARIANTS, TASKS, read_metrics
+from paper_release_lib import METRICS, PROJECT_ROOT, TASKS, better, read_metrics
 
 
 LITERATURE_TOTALS = PROJECT_ROOT / "configs/evaluation/mscmnet_literature_totals.yaml"
@@ -34,6 +35,13 @@ INTERNAL_MODELS = (
 PUBLISHER_MODELS = (
     ("DCRNN", "star_gnn", "Base"),
     ("STGCN", "baselines", "stgcn"),
+    ("STaR-GNN", "star_gnn", "Full"),
+)
+PUBLISHER_ABLATION_MODELS = (
+    ("STGCN", "baselines", "stgcn"),
+    ("DCRNN", "star_gnn", "Base"),
+    ("DCRNN + SAS-Norm", "star_gnn", "State"),
+    ("DCRNN + FA-DPR", "star_gnn", "FA-DPR"),
     ("STaR-GNN", "star_gnn", "Full"),
 )
 
@@ -79,6 +87,29 @@ def _read_publisher_total(path: Path) -> dict[str, float]:
     }
 
 
+def _read_dma_rows(path: Path) -> list[dict[str, float | str]]:
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    selected = [row for row in rows if row.get("entity", "") in list("ABCDEFGHIJ")]
+    if [row["entity"] for row in selected] != list("ABCDEFGHIJ"):
+        raise ValueError(f"DMA A-J rows missing or out of order: {path}")
+    output: list[dict[str, float | str]] = []
+    for row in selected:
+        mape = float(row["MAPE"])
+        if mape < 1.0:
+            mape *= 100.0
+        output.append(
+            {
+                "DMA": row["entity"],
+                "MAE": float(row["MAE"]),
+                "MAPE": mape,
+                "RMSE": float(row["RMSE"]),
+                "NSE": float(row["NSE"]),
+            }
+        )
+    return output
+
+
 def _load_literature_reference() -> dict[str, Any]:
     reference = yaml.safe_load(LITERATURE_TOTALS.read_text(encoding="utf-8"))
     paper = reference["paper"]
@@ -87,10 +118,7 @@ def _load_literature_reference() -> dict[str, Any]:
         "total_MAPE_RMSE_NSE": "metric_on_hourly_sum_of_A_to_J_demand",
     }
     if paper.get("metric_conventions") != expected_conventions:
-        raise ValueError(
-            "Unexpected literature metric conventions: "
-            f"{paper.get('metric_conventions')!r}"
-        )
+        raise ValueError(f"Unexpected literature metric conventions: {paper.get('metric_conventions')!r}")
     if paper.get("protocol") != "common_46" or int(paper.get("expected_sequences", 0)) != 46:
         raise ValueError("Literature comparison must use the common-46 protocol.")
     expected_models = ["GRU", "LSTM", "MSNet", "MSCMNet_WM", "MSCMNet_M", "MSCMNet_W"]
@@ -108,12 +136,6 @@ def _load_literature_reference() -> dict[str, Any]:
 
 
 def _validate_against_detailed_mscmnet(reference: dict[str, Any]) -> None:
-    """Cross-check the compact literature totals against detailed publisher data.
-
-    The detailed audit file contains DMA A--J rows for MSCMNet_W and
-    MSCMNet_WM. Their displayed total MAE must equal the A--J MAE sum within
-    the three-decimal rounding used by the supplementary material.
-    """
     detailed = yaml.safe_load(MSCMNET_DETAILED.read_text(encoding="utf-8"))
     for task in TASKS:
         for model in ("MSCMNet_WM", "MSCMNet_W"):
@@ -155,6 +177,19 @@ def _markdown(rows: list[dict[str, Any]]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _markdown_dma(rows: list[dict[str, Any]]) -> str:
+    lines = [
+        "| Horizon | DMA | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |",
+        "|---|---|---:|---:|---:|---:|",
+    ]
+    for row in rows:
+        lines.append(
+            "| {task} | {DMA} | {MAE:.6f} | {MAPE:.6f} | "
+            "{RMSE:.6f} | {NSE:.6f} |".format(**row)
+        )
+    return "\n".join(lines) + "\n"
+
+
 def _build_internal(root: Path, frozen: bool) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for task in TASKS:
@@ -164,11 +199,7 @@ def _build_internal(root: Path, frozen: bool) -> list[dict[str, Any]]:
     return rows
 
 
-def _build_literature(
-    root: Path,
-    frozen: bool,
-    reference: dict[str, Any],
-) -> list[dict[str, Any]]:
+def _build_literature(root: Path, frozen: bool, reference: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     reported_models = list(reference["paper"]["model_order"])
     for task in TASKS:
@@ -187,44 +218,92 @@ def _build_literature(
 def _build_ablation(root: Path, frozen: bool) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for task in TASKS:
-        for label in STAR_VARIANTS:
-            values = read_metrics(_metric_path(root, "star_gnn", label, task, frozen))
-            public_name = "DCRNN" if label == "Base" else label
+        for public_name, family, model in PUBLISHER_ABLATION_MODELS:
+            values = _read_publisher_total(
+                _publisher_total_path(root, family, model, task, frozen)
+            )
             rows.append({"task": task, "model": public_name, **values})
     return rows
 
 
-def _validate_no_mae_mixing(
-    internal: list[dict[str, Any]],
-    literature: list[dict[str, Any]],
-) -> None:
+def _build_star_dma(root: Path, frozen: bool) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for task in TASKS:
+        path = _publisher_total_path(root, "star_gnn", "Full", task, frozen)
+        for values in _read_dma_rows(path):
+            rows.append({"task": task, **values})
+    return rows
+
+
+def _validate_no_mae_mixing(internal: list[dict[str, Any]], literature: list[dict[str, Any]]) -> None:
     internal_lookup = {(row["task"], row["model"]): row for row in internal}
     literature_lookup = {(row["task"], row["model"]): row for row in literature}
     for task in TASKS:
         for model in ("DCRNN", "STGCN", "STaR-GNN"):
             internal_row = internal_lookup[(task, model)]
             literature_row = literature_lookup[(task, model)]
-            # MAPE/RMSE/NSE share the aggregate-demand convention in both views.
             for metric in ("MAPE", "RMSE", "NSE"):
                 if abs(float(internal_row[metric]) - float(literature_row[metric])) > 1.0e-8:
                     raise ValueError(
                         f"Unexpected {metric} convention drift for {task}/{model}: "
                         f"{internal_row[metric]} vs {literature_row[metric]}."
                     )
-            # MAE is intentionally different: aggregate-demand MAE internally,
-            # sum-of-DMA MAEs for the publisher-compatible literature table.
             if abs(float(internal_row["MAE"]) - float(literature_row["MAE"])) < 1.0e-8:
-                raise ValueError(
-                    f"MAE conventions were accidentally collapsed for {task}/{model}."
-                )
+                raise ValueError(f"MAE conventions accidentally collapsed for {task}/{model}.")
+
+
+def _validate_ablation(ablation: list[dict[str, Any]]) -> dict[str, Any]:
+    lookup = {(row["task"], row["model"]): row for row in ablation}
+    relations = (
+        ("DCRNN + SAS-Norm", "DCRNN"),
+        ("DCRNN + FA-DPR", "DCRNN"),
+        ("STaR-GNN", "DCRNN + SAS-Norm"),
+        ("STaR-GNN", "DCRNN + FA-DPR"),
+    )
+    details: dict[str, str] = {}
+    passed = 0
+    for task in TASKS:
+        for left, right in relations:
+            count = sum(
+                int(better(metric, float(lookup[(task, left)][metric]), float(lookup[(task, right)][metric])))
+                for metric in METRICS
+            )
+            passed += count
+            details[f"{task}_{left}_vs_{right}"] = f"{count}/4"
+    expected = {
+        "24h_DCRNN + SAS-Norm_vs_DCRNN": "4/4",
+        "24h_DCRNN + FA-DPR_vs_DCRNN": "4/4",
+        "24h_STaR-GNN_vs_DCRNN + SAS-Norm": "4/4",
+        "24h_STaR-GNN_vs_DCRNN + FA-DPR": "4/4",
+        "168h_DCRNN + SAS-Norm_vs_DCRNN": "4/4",
+        "168h_DCRNN + FA-DPR_vs_DCRNN": "3/4",
+        "168h_STaR-GNN_vs_DCRNN + SAS-Norm": "3/4",
+        "168h_STaR-GNN_vs_DCRNN + FA-DPR": "4/4",
+    }
+    if details != expected or passed != 30:
+        raise ValueError(f"Publisher-compatible ablation audit drift: {passed}/32, {details}")
+    return {
+        "protocol": "common_46",
+        "mae_convention": "sum_of_A_to_J_dma_mae",
+        "other_metrics": "metric_on_hourly_sum_of_A_to_J_demand",
+        "passed_relations": "30/32",
+        "relations": details,
+        "transparent_exceptions": [
+            "FA-DPR 168h MAPE is slightly worse than DCRNN.",
+            "STaR-GNN 168h sum-of-DMA MAE is slightly higher than SAS-Norm-only (12.233590 vs 12.207835).",
+        ],
+    }
 
 
 def _write_convention_note(output: Path) -> None:
     text = """# Metric conventions\n\n"
-    text += "Two MAE definitions are intentionally retained and must not be mixed.\n\n"
-    text += "- `table_internal_common46.*`: all four metrics are calculated on the hourly aggregate-demand series after summing DMA A--J.\n"
-    text += "- `table_literature_comparison_common46.*`: follows Que et al. (2024) supplementary Tables S1-1--S1-8. Total MAE is the sum of DMA-level MAEs; MAPE, RMSE and NSE are calculated on the hourly aggregate-demand series.\n"
-    text += "- `table_comparison_common46.*` is retained as a backward-compatible alias of the literature-comparison table.\n"
+    text += "Manuscript-facing overall comparison and ablation tables use one publisher-compatible convention.\n\n"
+    text += "- Total MAE: sum of DMA A--J MAEs.\n"
+    text += "- Total MAPE/RMSE/NSE: metric on the hourly aggregate-demand series.\n"
+    text += "- `table_literature_comparison_common46.*`: nine-model overall comparison.\n"
+    text += "- `table_ablation_common46.*`: STGCN/DCRNN/SAS-Norm/FA-DPR/STaR-GNN publisher-compatible ablation.\n"
+    text += "- `table_star_gnn_dma_common46.*`: STaR-GNN DMA A--J metrics, with no cross-DMA aggregation.\n"
+    text += "- `table_internal_common46.*`: retained only for aggregate-demand operational diagnostics; do not use it for cross-paper MAE comparisons.\n"
     (output / "METRIC_CONVENTIONS.md").write_text(text, encoding="utf-8")
 
 
@@ -241,33 +320,34 @@ def main() -> None:
     reference = _load_literature_reference()
     _validate_against_detailed_mscmnet(reference)
 
-    ablation = _build_ablation(root, args.frozen_layout)
     internal = _build_internal(root, args.frozen_layout)
     literature = _build_literature(root, args.frozen_layout, reference)
-    _validate_no_mae_mixing(internal, literature)
+    ablation = _build_ablation(root, args.frozen_layout)
+    star_dma = _build_star_dma(root, args.frozen_layout)
 
-    _write_csv(output / "table_ablation_common46.csv", ablation)
+    _validate_no_mae_mixing(internal, literature)
+    ablation_audit = _validate_ablation(ablation)
+
     _write_csv(output / "table_internal_common46.csv", internal)
     _write_csv(output / "table_literature_comparison_common46.csv", literature)
-    # Backward-compatible alias; this table now means literature comparison.
     _write_csv(output / "table_comparison_common46.csv", literature)
+    _write_csv(output / "table_ablation_common46.csv", ablation)
+    _write_csv(output / "table_star_gnn_dma_common46.csv", star_dma)
 
-    (output / "table_ablation_common46.md").write_text(
-        _markdown(ablation), encoding="utf-8"
-    )
-    (output / "table_internal_common46.md").write_text(
-        _markdown(internal), encoding="utf-8"
-    )
-    (output / "table_literature_comparison_common46.md").write_text(
-        _markdown(literature), encoding="utf-8"
-    )
-    (output / "table_comparison_common46.md").write_text(
-        _markdown(literature), encoding="utf-8"
+    (output / "table_internal_common46.md").write_text(_markdown(internal), encoding="utf-8")
+    (output / "table_literature_comparison_common46.md").write_text(_markdown(literature), encoding="utf-8")
+    (output / "table_comparison_common46.md").write_text(_markdown(literature), encoding="utf-8")
+    (output / "table_ablation_common46.md").write_text(_markdown(ablation), encoding="utf-8")
+    (output / "table_star_gnn_dma_common46.md").write_text(_markdown_dma(star_dma), encoding="utf-8")
+    (output / "table_ablation_audit.json").write_text(
+        json.dumps(ablation_audit, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
     )
     _write_convention_note(output)
 
     print(f"Paper tables: {output}")
     print("Metric convention audit: PASS")
+    print("Publisher-compatible ablation audit: 30/32 PASS")
 
 
 if __name__ == "__main__":
