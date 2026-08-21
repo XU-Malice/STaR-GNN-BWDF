@@ -1,186 +1,73 @@
-# Journal of Hydrology 最终结果图表方案
+# 上一版五图结果方案（历史记录，已被替代）
 
-本文档固定 STaR-GNN 投稿 **Journal of Hydrology** 时的最终结果组织。原则是：**表格负责精确数值，图件负责回答科学问题；消融与外部 baseline 分开；不通过选择性四舍五入、截断坐标或删结果制造排序。**
+> **状态：LEGACY / SUPERSEDED。** 本文件记录 2026-08-20 完成的上一版 Journal of Hydrology 五张结果图方案，用于审计和历史复现。它已经被新的 claim-driven 投稿设计替代，**不得再作为当前投稿图权威说明**。
 
-## 1. Table 1：总体模型比较
+当前权威实验与图表设计：
 
-文件：`paper/tables/literature/table_literature_comparison_common46.*`
+- [`EXPERIMENT_DESIGN_FINAL_CN.md`](EXPERIMENT_DESIGN_FINAL_CN.md) — 最终 Results evidence architecture；
+- [`PLOTTING_CN.md`](PLOTTING_CN.md) — canonical submission renderer 教程；
+- [`../paper/README.md`](../paper/README.md) — 当前投稿表图路径；
+- [`../paper/captions/SUBMISSION_RESULT_FIGURE_CAPTIONS.md`](../paper/captions/SUBMISSION_RESULT_FIGURE_CAPTIONS.md) — 当前投稿 caption。
 
-包含 9 个模型：GRU、LSTM、MSNet、MSCMNet_WM、MSCMNet_M、MSCMNet_W、DCRNN、STGCN、STaR-GNN。
+## 历史版本曾采用的五张结果图
 
-- GRU/LSTM/MSNet/MSCMNet variants：Que et al. (2024) reported results；
-- DCRNN/STGCN/STaR-GNN：common-46 下重新评估；
-- 跨论文比较采用 publisher-compatible total：MAE 为 DMA A--J MAE 之和，MAPE/RMSE/NSE 在小时级总需求序列上计算。
-
-STaR-GNN：
-
-| Horizon | MAE | MAPE (%) | RMSE | NSE |
-|---|---:|---:|---:|---:|
-| 24 h | 9.424 | 1.805 | 5.535 | 0.981 |
-| 168 h | 12.234 | 2.014 | 6.161 | 0.976 |
-
-## 2. Table 2：四模型 factorial ablation
-
-文件：`paper/tables/literature/table_ablation_common46.*`
-
-**只包含：**
-
-1. DCRNN；
-2. DCRNN + SAS-Norm；
-3. DCRNN + FA-DPR；
-4. STaR-GNN。
-
-STGCN 是独立图时空 baseline，不属于组件消融，不能出现在 Table 2。
-
-### 24 h
-
-| Model | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |
-|---|---:|---:|---:|---:|
-| DCRNN | 11.917 | 2.213 | 6.848 | 0.970 |
-| DCRNN + SAS-Norm | 10.468 | 2.010 | 6.134 | 0.976 |
-| DCRNN + FA-DPR | 11.238 | 1.945 | 6.079 | 0.977 |
-| **STaR-GNN** | **9.424** | **1.805** | **5.535** | **0.981** |
-
-### 168 h
-
-| Model | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |
-|---|---:|---:|---:|---:|
-| DCRNN | 16.801 | 3.248 | 9.817 | 0.940 |
-| **DCRNN + SAS-Norm** | **12.208** | 2.102 | 6.468 | 0.974 |
-| DCRNN + FA-DPR | 14.086 | 3.278 | 9.332 | 0.945 |
-| STaR-GNN | 12.234 | **2.014** | **6.161** | **0.976** |
-
-168 h 的 SAS-Norm-only 与 STaR-GNN publisher-compatible MAE 仅相差 0.025755（约 0.21%）。由于 168 h forecast origins 每 24 h 启动一次并强烈重叠，最终审计使用 7-origin moving-block bootstrap；`Full - SAS` 均值差的 95% CI 跨过 0。因此正文应写“MAE 点估计近似持平”，而不是写成 Full 明显退化或明显优于 SAS-Norm。
-
-## 3. Figure 1：跨模型相对优势
-
-文件：`manuscript_fig1_relative_improvement.*`
-
-- Panel (a)：MAE/MAPE/RMSE 相对降低率；
-- Panel (b)：NSE 绝对增益。
-
-Figure 1 回答：STaR-GNN 的优势是否跨不同 baseline、指标和预测时域持续存在。
-
-MAE 相对提升：
-
-- 24 h vs sequence/multiscale reported models：34.9%--46.7%；
-- 24 h vs DCRNN/STGCN：20.9%--23.7%；
-- 168 h vs sequence/multiscale reported models：18.2%--34.5%；
-- 168 h vs DCRNN/STGCN：16.0%--27.2%。
-
-## 4. Figure 2：四模型消融与 168 h 长时域行为
-
-文件：`manuscript_fig2_day1_day7_publisher_mae.*`
-
-Figure 2 **不包含 STGCN**。
-
-### Panel (a)：Day-wise MAE reduction relative to DCRNN
-
-比较：
-
-- DCRNN + SAS-Norm；
-- DCRNN + FA-DPR；
-- STaR-GNN。
-
-纵轴：
-
-\[
-\Delta MAE_d=\frac{MAE_{DCRNN,d}-MAE_{model,d}}{MAE_{DCRNN,d}}\times100\%.
-\]
-
-该 panel 直接回答“每个模块在不同 forecast lead 上带来了多少改善”，避免把 0.02 左右的绝对 MAE 点估计差异放大成主视觉。
-
-### Panel (b)：MAE change relative to Day 1
-
-比较全部四个 factorial variants。
-
-\[
-G_d=\frac{MAE_d-MAE_{Day1}}{MAE_{Day1}}\times100\%.
-\]
-
-Day 7 相对 Day 1：
-
-- DCRNN：+38.25%；
-- DCRNN + FA-DPR：+11.93%；
-- DCRNN + SAS-Norm：+2.64%；
-- STaR-GNN：+1.70%。
-
-该结果支持：SAS-Norm 是降低长时域绝对误差的主要贡献模块；FA-DPR 可减缓误差随 lead time 增长；两者结合后 Full 获得最小的 Day-1-to-Day-7 相对退化，并在 168 h 的 MAPE、RMSE、NSE 和 aggregate-demand MAE 上表现更好。
-
-## 5. Figure 3：46 个测试起点上的稳健性
-
-文件：`manuscript_fig3_origin_ecdf.*`
-
-只比较 DCRNN、STGCN、STaR-GNN。这里回答的是 baseline robustness，不是消融。
-
-paired win rates：
-
-- 24 h vs DCRNN：45/46；
-- 24 h vs STGCN：45/46；
-- 168 h vs DCRNN：46/46；
-- 168 h vs STGCN：40/46。
-
-## 6. Table 3 + Figure 4：DMA 空间一致性
-
-Table 3：`table_star_gnn_dma_common46.*`
-
-Figure 4：`manuscript_fig4_dma_mae_improvement.*`
-
-10 DMA × 2 horizons × 2 graph baselines = 40 个 MAE comparisons，全部为正改善，范围约 1.26%--61.20%。正文宜写“consistent positive improvements across all DMAs with heterogeneous magnitudes”，不要写“uniformly large improvements”。
-
-## 7. Figure 5：代表性 168 h 轨迹
-
-文件：`manuscript_fig5_representative_168h_trajectory.*`
-
-使用预先固定的 median-error proximity 规则，而不是挑最好看的样本。当前 common index = 70：
-
-- STGCN：14.653；
-- DCRNN：15.517；
-- STaR-GNN：12.182。
-
-下 panel 的 hourly absolute error 是 aggregate-demand diagnostic，与 publisher-compatible sum-of-DMA MAE 不同，图注必须明确。
-
-## 8. 论文 Results 的最终证据链
-
-1. **Overall predictive accuracy**：Table 1 + Figure 1；
-2. **Ablation and long-horizon behavior**：Table 2 + Figure 2；
-3. **Robustness across forecast origins**：Figure 3；
-4. **Spatial consistency across DMAs**：Table 3 + Figure 4；
-5. **Representative weekly forecasting behavior**：Figure 5。
-
-这种组织避免把 baseline comparison、factorial ablation、样本稳健性和空间异质性混在一张图里，更适合 Journal of Hydrology 的工程与水文叙事。
-
-## 9. 生成命令
-
-第一阶段：
-
-```bash
-python scripts/reproduce/build_manuscript_results_figures.py \
-  --release results/paper/frozen_v1 \
-  --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
-  --figure-output paper/figures \
-  --table-output paper/tables/manuscript \
-  --bootstrap-iterations 5000 \
-  --bootstrap-seed 20260820
+```text
+manuscript_fig1_relative_improvement.*
+manuscript_fig2_day1_day7_publisher_mae.*
+manuscript_fig3_origin_ecdf.*
+manuscript_fig4_dma_mae_improvement.*
+manuscript_fig5_representative_168h_trajectory.*
 ```
 
-第二阶段：
+这些图仍保留在 `paper/figures/`，因为它们对应已审计的历史结果表示，并可用于 Supplementary/diagnostic 对照；但当前正文已经重新组织为：
 
-```bash
-python scripts/reproduce/refine_manuscript_results_figures.py \
-  --table-dir paper/tables/manuscript \
-  --figure-dir paper/figures \
-  --block-bootstrap-iterations 50000 \
-  --block-bootstrap-length 7 \
-  --block-bootstrap-seed 20260820
+```text
+Main Table 1
+  overall predictive performance
+        ↓
+Main Table 2 + Main Fig. 1
+  factorial ablation + lead-time stability
+        ↓
+Main Fig. 2
+  temporal + spatial robustness
+        ↓
+Main Fig. 3
+  population-to-instance week-ahead dynamics
 ```
 
-第二阶段额外生成：
+新的投稿图位于：
 
-- `fig2_ablation_daywise_reduction_vs_dcrnn.csv`；
-- `fig2_day1_day7_degradation.csv`；
-- `fig2_full_vs_sas_block_bootstrap.json`；
-- `fig3_origin_win_rates.csv`；
-- `manuscript_empirical_figure_audit.json`。
+```text
+paper/figures/submission/
+paper/figures/supplementary/
+```
 
-最终 PNG 使用 300 dpi；PDF 保留矢量格式。正文表格统一采用 3 位小数，审计 CSV/JSON 保留完整精度。
+## 为什么替代上一版五图结构
+
+上一版五张图在数值和科学事实上没有错误，但按更高标准的 claim-driven evidence architecture 复审后存在三个信息组织问题：
+
+1. relative-improvement heatmap 与 Table 1 都主要证明“总体性能更好”，独立 inference gain 有限；
+2. ECDF 与 DMA heatmap 分成两张主图，但它们可以共同回答“优势是否跨时间和空间稳定”这一更强的 Results-level question；
+3. representative trajectory 只给单个 instance，缺少全体测试样本上的 population-level 日内误差证据。
+
+因此最终设计做了以下升级：
+
+- 原 relative-improvement 图 → **Supplementary Fig. S1**；
+- 原 ECDF → **Supplementary Fig. S2**；
+- paired origin-level improvement + DMA heatmap → **Main Fig. 2**；
+- population diurnal error + representative trajectory + local error → **Main Fig. 3**；
+- ablation 图重新设计为 absolute Day-wise MAE + lead-time degradation → **Main Fig. 1**。
+
+## 历史结果仍然有效
+
+替换的是**证据组织和视觉表达**，不是冻结 prediction 或指标数值。以下结果仍保持不变：
+
+- STaR-GNN publisher-compatible MAE：24 h `9.424199`，168 h `12.233590`；
+- 四模型 factorial ablation，STGCN 不属于消融；
+- 168 h SAS-Norm-only publisher MAE `12.207835`，与 Full 相差约 0.21%；
+- Day 7 relative-to-Day 1：DCRNN约 `+38.25%`、FA-DPR约 `+11.93%`、SAS-Norm约 `+2.64%`、STaR-GNN约 `+1.70%`；
+- paired win counts：`45/46, 45/46, 46/46, 40/46`；
+- 40/40 DMA-horizon-baseline MAE comparisons 为正；
+- representative origin 继续使用预先固定的 median-error proximity rule。
+
+旧图不得被用于制造与新投稿图不同的指标口径或结论；两套图只是对同一冻结结果采用不同的信息架构。
