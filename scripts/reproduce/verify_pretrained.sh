@@ -7,12 +7,12 @@
 #   1. 检查环境、处理数据与训练期 Pearson 图；
 #   2. 验证冻结文件 SHA、10 个 checkpoint、common-46 与 Test 隔离；
 #   3. 可选重新执行全部 checkpoint 推理；
-#   4. 重建 manuscript-facing Table 1--3；
-#   5. 重建 legacy aggregate-demand 诊断工件；
-#   6. 重建最终 Figure 1--5 与 moving-block bootstrap audit。
+#   4. 重建全精度论文源表和 legacy aggregate-demand 诊断；
+#   5. 生成投稿显示 Table 1--2 / Table S1；
+#   6. 通过唯一 canonical renderer 生成 Main Fig. 1--3 / Fig. S1--S2。
 #
 # 内部 aggregate-demand hierarchy 保留 31/32 作为冻结诊断；
-# 当前 manuscript-facing factorial ablation 为 4 models / no STGCN / 30/32。
+# manuscript-facing factorial ablation 为 4 models / no STGCN / 30/32。
 #
 # 用法：
 #   bash scripts/reproduce/verify_pretrained.sh \
@@ -82,41 +82,40 @@ done
 
 python scripts/reproduce/verify_paper_release.py "$@"
 
+# Full-precision source tables.
 python scripts/reproduce/build_paper_tables.py \
   --input results/paper/frozen_v1 \
   --output paper/tables/literature \
   --frozen-layout
 
+# Legacy aggregate-demand diagnostics retained for backward-compatible audit.
 python scripts/reproduce/build_detailed_test_artifacts.py
 
-python scripts/reproduce/build_literature_figures.py \
-  --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
-  --ablation-table paper/tables/literature/table_ablation_common46.csv \
-  --dma-table paper/tables/literature/table_star_gnn_dma_common46.csv \
-  --output paper/figures
+# Submission-display tables: 2 main + 1 supplementary.
+python scripts/reproduce/render_submission_tables.py \
+  --source-dir paper/tables/literature \
+  --output-dir paper/tables/submission
 
-python scripts/reproduce/build_manuscript_results_figures.py \
+# Canonical submission figures: no Stage-1/Stage-2 overwrite chain.
+python scripts/reproduce/render_submission_figures.py \
   --release results/paper/frozen_v1 \
   --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
-  --figure-output paper/figures \
-  --table-output paper/tables/manuscript \
-  --bootstrap-iterations 5000 \
-  --bootstrap-seed 20260820
-
-python scripts/reproduce/refine_manuscript_results_figures.py \
-  --table-dir paper/tables/manuscript \
-  --figure-dir paper/figures \
-  --block-bootstrap-iterations 50000 \
-  --block-bootstrap-length 7 \
-  --block-bootstrap-seed 20260820
+  --main-output paper/figures/submission \
+  --supp-output paper/figures/supplementary \
+  --audit-output paper/tables/manuscript/submission \
+  --block-length 7 \
+  --bootstrap-iterations 50000 \
+  --bootstrap-seed 20260821
 
 echo "============================================"
-echo "冻结 checkpoint、common-46 Test 与 manuscript artifacts：PASS"
-echo "Table 1：publisher-compatible 9-model overall comparison"
-echo "Table 2：4-model factorial ablation / no STGCN / 30/32"
-echo "Table 3：STaR-GNN DMA-level metrics"
-echo "Figure 1--5：final manuscript design"
-echo "168 h Full-vs-SAS：7-origin moving-block bootstrap guardrail"
+echo "冻结 checkpoint、common-46 Test 与 submission artifacts：PASS"
+echo "Main Table 1：publisher-compatible overall comparison"
+echo "Main Table 2：4-model factorial ablation / no STGCN / 30/32"
+echo "Supplementary Table S1：STaR-GNN DMA-level metrics"
+echo "Main Fig. 1：ablation mechanism + lead-time stability"
+echo "Main Fig. 2：temporal + spatial robustness"
+echo "Main Fig. 3：week-ahead demand dynamics"
+echo "Fig. S1--S2：overall relative improvement + origin ECDF"
 echo "legacy aggregate-demand hierarchy：31/32 internal diagnostic only"
-echo "结果说明：docs/RESULTS_AND_ARTIFACTS_CN.md"
+echo "实验设计：docs/EXPERIMENT_DESIGN_FINAL_CN.md"
 echo "============================================"
