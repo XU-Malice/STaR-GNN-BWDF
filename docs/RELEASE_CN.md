@@ -1,6 +1,6 @@
 # GitHub 发布与独立复现指南
 
-本文件面向仓库维护者。普通使用者的环境、训练和冻结 checkpoint 验证见 [`FULL_PIPELINE_CN.md`](FULL_PIPELINE_CN.md)；结果口径见 [`RESULTS_AND_ARTIFACTS_CN.md`](RESULTS_AND_ARTIFACTS_CN.md)。
+本文件面向仓库维护者。普通使用者的环境、训练和冻结 checkpoint 验证见 [`FULL_PIPELINE_CN.md`](FULL_PIPELINE_CN.md)；最终实验设计见 [`EXPERIMENT_DESIGN_FINAL_CN.md`](EXPERIMENT_DESIGN_FINAL_CN.md)；结果口径见 [`RESULTS_AND_ARTIFACTS_CN.md`](RESULTS_AND_ARTIFACTS_CN.md)。
 
 ## 1. 发布边界
 
@@ -8,31 +8,45 @@ Git 仓库包含：
 
 - `configs/`、`src/`、`scripts/`、`tests/`；
 - README、`docs/`、环境/许可/引用信息；
-- `paper/` 中可审计的小型表格、caption、PNG/PDF；
+- `paper/` 中可审计的小型表格、caption、submission PNG/PDF/SVG 和 legacy diagnostics；
 - `SOURCE_CHECKSUMS.sha256`。
 
 大型冻结 checkpoint 与预测作为 GitHub Release asset 发布，不写入普通 Git 历史。原始/处理 BWDF 数据遵循上游许可和可重建原则。
 
-## 2. 当前正式论文口径
+## 2. 当前正式 manuscript contract
 
-- Table 1：9-model overall comparison；
-- Table 2：**4-model factorial ablation** = DCRNN / DCRNN + SAS-Norm / DCRNN + FA-DPR / STaR-GNN；
-- STGCN 是独立 graph baseline，不进入 Table 2 / Figure 2；
-- manuscript-facing MAE = sum of DMA A--J MAEs；
-- internal aggregate-demand MAE 单独保留；
-- manuscript factorial cell audit = 30/32；
-- legacy aggregate-demand hierarchy = 31/32，仅内部诊断。
+- **Main Table 1**：9-model overall comparison；
+- **Main Table 2**：4-model factorial ablation = DCRNN / DCRNN + SAS-Norm / DCRNN + FA-DPR / STaR-GNN；
+- **Supplementary Table S1**：DMA A--J detailed metrics；
+- **Main Fig. 1**：ablation mechanism + lead-time stability；
+- **Main Fig. 2**：temporal + spatial robustness；
+- **Main Fig. 3**：population-to-instance week-ahead dynamics；
+- **Fig. S1**：relative improvement over all baselines；
+- **Fig. S2**：per-origin ECDF。
+
+STGCN 是独立 graph baseline，不进入 factorial ablation。Manuscript MAE = DMA A--J MAE 之和；internal aggregate-demand MAE 单独保留。Manuscript factorial cell audit = 30/32；legacy aggregate-demand hierarchy = 31/32，仅内部诊断。
+
+投稿版权威目录：
+
+```text
+paper/tables/submission/
+paper/figures/submission/
+paper/figures/supplementary/
+paper/tables/manuscript/submission/
+```
+
+旧 `paper/figures/manuscript_fig1...5` 和 `test_*` 继续保留，但不是投稿版权威图件。
 
 ## 3. 源码 SHA 的正确使用
 
-修改任何已登记源码、配置、测试或文档后，旧 `SOURCE_CHECKSUMS.sha256` 必然失效。发布维护者应在**确认当前分支内容就是准备发布的版本后**重新封存：
+修改任何已登记源码、配置、测试或文档后，旧 `SOURCE_CHECKSUMS.sha256` 必然失效。确认当前分支就是准备发布的版本后重新封存：
 
 ```bash
 python scripts/reproduce/regenerate_source_checksums.py
 bash scripts/reproduce/verify_source.sh
 ```
 
-`regenerate_source_checksums.py` 只用于发布准备；发布后的用户正常只执行 `verify_source.sh`，不应先重新生成清单。
+发布后的普通用户只执行 `verify_source.sh`，不应先重生成清单。
 
 ## 4. 推荐的一键最终收口
 
@@ -47,22 +61,27 @@ bash scripts/reproduce/finalize_public_release.sh \
 
 1. 清理弃用入口；
 2. DCRNN/Base 唯一化；
-3. 重新封存并验证 source SHA；
-4. 校验冻结 checkpoint 与内部 aggregate 诊断；
+3. 重生成并验证 source SHA；
+4. 校验 10 组冻结 checkpoint、协议和 internal aggregate diagnostics；
 5. 重新执行 10 组 common-46 推理；
-6. 重建 Table 1--3、Figure 1--5 和 manuscript audits；
-7. 审计公开仓库结构、四模型消融、图表与大文件边界；
+6. 重建 full-precision source tables、submission display tables、Main Fig. 1--3 / Fig. S1--S2 和独立审计 CSV/JSON；
+7. 审计公开仓库结构、四模型消融、submission artifacts 与大文件边界；
 8. 生成 Release asset（除非使用 `--skip-package`）。
 
-成功报告应明确包含：
+成功报告应包含：
 
 ```text
-Table 2 factorial ablation: 4 models / no STGCN / 30/32 PASS
-Figure 1--5: PASS
-Full-vs-SAS 168 h moving-block bootstrap audit: PASS
+Main Table 1 overall: PASS
+Main Table 2 factorial ablation: 4 models / no STGCN / 30/32 PASS
+Supplementary Table S1 DMA metrics: PASS
+Main Fig. 1 ablation + lead-time: PASS
+Main Fig. 2 temporal + spatial robustness: PASS
+Main Fig. 3 week-ahead dynamics: PASS
+Supplementary Fig. S1--S2: PASS
+7-origin moving-block bootstrap: PASS
 ```
 
-## 5. 只做冻结验证与重建表图
+## 5. 只做冻结验证与重建投稿表图
 
 ```bash
 bash scripts/reproduce/verify_pretrained.sh \
@@ -70,22 +89,40 @@ bash scripts/reproduce/verify_pretrained.sh \
   --device cuda:0
 ```
 
-该入口现在同样会重建最终 Figure 1--5，而不是只生成旧 absolute reference figures。
+该入口使用同一个 canonical submission renderer，不再执行旧 Stage-1/Stage-2 同名覆盖流程。
+
+只想重建表图时：
+
+```bash
+python scripts/reproduce/build_paper_tables.py \
+  --input results/paper/frozen_v1 \
+  --output paper/tables/literature \
+  --frozen-layout
+
+python scripts/reproduce/render_submission_tables.py
+
+python scripts/reproduce/render_submission_figures.py \
+  --release results/paper/frozen_v1 \
+  --block-length 7 \
+  --bootstrap-iterations 50000 \
+  --bootstrap-seed 20260821
+```
 
 ## 6. 修改后最低限度本地检查
 
 ```bash
 python -m py_compile \
   scripts/reproduce/build_paper_tables.py \
-  scripts/reproduce/build_literature_figures.py \
-  scripts/reproduce/build_manuscript_results_figures.py \
-  scripts/reproduce/refine_manuscript_results_figures.py \
+  scripts/reproduce/manuscript_plot_style.py \
+  scripts/reproduce/render_submission_tables.py \
+  scripts/reproduce/render_submission_figures.py \
   scripts/reproduce/audit_public_repository.py \
   scripts/reproduce/regenerate_source_checksums.py
 
 python -m pytest \
   tests/test_paper_release.py \
   tests/test_paper_artifacts.py \
+  tests/test_submission_artifacts.py \
   -q
 ```
 
@@ -110,14 +147,16 @@ git diff --stat
 git diff -- SOURCE_CHECKSUMS.sha256
 ```
 
-不要使用 `git add .` 或 `git add -A`。只暂存本次确认的源文件、最终表图和重新生成的 SOURCE_CHECKSUMS。
+不要使用 `git add .` 或 `git add -A`。只暂存本次确认的源文件、submission 表图、审计工件和重新生成的 SOURCE_CHECKSUMS。
 
-最终 Figure 2 应满足：
+最终主图必须满足：
 
-- 不含 STGCN；
-- Panel (a) 为 SAS-Norm / FA-DPR / STaR-GNN 相对 DCRNN 的 day-wise MAE reduction；
-- Panel (b) 为四个 factorial variants 相对 Day 1 的 MAE change；
-- 168 h Full−SAS block-bootstrap 95% CI 跨 0。
+- Main Fig. 1：严格四模型 factorial ablation，无 STGCN；absolute day-wise MAE + lead-time degradation；
+- Main Fig. 2a：46 origins 的 paired differences，而非只比较边际 ECDF；
+- Main Fig. 2b：40-cell sequential-blue DMA improvement heatmap，全部 positive；
+- Main Fig. 3：population diurnal profile + deterministic representative trajectory + local error；
+- STaR-GNN 全文固定 deep-blue hero visual role；
+- PDF/SVG 文字可编辑，PNG 300 dpi 仅作预览。
 
 ## 8. GitHub Release
 
@@ -149,4 +188,4 @@ bash scripts/reproduce/verify_pretrained.sh \
 
 需要最高强度复现时，再在独立路径执行 clean-room，从原始数据重新预处理、构图、训练和 Test。不要通过修改 Test 样本、指标定义或 Test 后重选参数来消除差异。
 
-最终发布原则：**冻结预测不为排序而修改；两套 MAE 明确分离；四模型消融与外部 baseline 分开；表格统一精度；图件回答科学问题而不是放大微小差异。**
+最终发布原则：**冻结预测不为排序而修改；两套 MAE 明确分离；四模型消融与外部 baseline 分开；每张主图回答一个独立 Results-level question；表格负责精确值，主图负责不可替代的推理证据。**

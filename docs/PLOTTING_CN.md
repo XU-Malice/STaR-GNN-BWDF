@@ -1,31 +1,30 @@
-# Journal of Hydrology 最终论文作图教程
+# Journal of Hydrology 投稿版作图教程
 
-本文档只说明最终正文 Figure 1--5 的生成与检查。最终结果见 [`RESULTS_AND_ARTIFACTS_CN.md`](RESULTS_AND_ARTIFACTS_CN.md)，图表设计见 [`MANUSCRIPT_FIGURES_FINAL_CN.md`](MANUSCRIPT_FIGURES_FINAL_CN.md)。
+本教程只描述最终投稿版权威图表。实验逻辑见 [`EXPERIMENT_DESIGN_FINAL_CN.md`](EXPERIMENT_DESIGN_FINAL_CN.md)。
+
+> **权威规则：**旧 `manuscript_fig1...5` 与 `test_*` 图继续保留用于历史复现/诊断；真正用于投稿的图只由 `render_submission_figures.py` 生成。
+
+---
 
 ## 1. 两套 MAE 必须分开
 
-正文总体比较、消融、Figure 1--3 使用 publisher-compatible MAE：
+正文总体比较和 factorial ablation 使用 publisher-compatible MAE：
 
 \[
-MAE_{publisher}=\sum_{i=A}^{J} MAE_i.
+MAE_{publisher}=\sum_{i=A}^{J}MAE_i.
 \]
 
-内部 aggregate-demand MAE：
+内部系统总需求诊断：
 
 \[
 MAE_{agg}=MAE\left(\sum_i\hat y_i,\sum_i y_i\right).
 \]
 
-STaR-GNN：
+两者都合法，但回答不同问题，不得混合排序。
 
-| Horizon | aggregate-demand MAE | publisher-compatible MAE |
-|---|---:|---:|
-| 24 h | 4.360841 | 9.424199 |
-| 168 h | 4.919812 | 12.233590 |
+---
 
-不要把两套 MAE 放在同一横向比较中。
-
-## 2. 先重建论文表格
+## 2. 先重建全精度审计表
 
 ```bash
 python scripts/reproduce/build_paper_tables.py \
@@ -34,7 +33,7 @@ python scripts/reproduce/build_paper_tables.py \
   --frozen-layout
 ```
 
-成功标志：
+预期：
 
 ```text
 Metric convention audit: PASS
@@ -42,14 +41,72 @@ Factorial ablation model-set audit: PASS (4 models, no STGCN)
 Publisher-compatible factorial cell audit: 30/32 PASS
 ```
 
-检查：
+原始 CSV/JSON 保留全精度。
+
+---
+
+## 3. 生成投稿显示表
 
 ```bash
-cat paper/tables/literature/table_ablation_common46.csv
-cat paper/tables/literature/table_ablation_audit.json
+python scripts/reproduce/render_submission_tables.py \
+  --source-dir paper/tables/literature \
+  --output-dir paper/tables/submission
 ```
 
-Table 2 必须只有：
+生成：
+
+```text
+paper/tables/submission/table1_overall_performance.md
+paper/tables/submission/table2_factorial_ablation.md
+paper/tables/submission/tableS1_dma_metrics.md
+```
+
+正文表统一 3 位小数；Table 1 用 `†` 区分 Que et al. (2024) 已发表结果和 common-46 重新评价的 graph models。
+
+---
+
+## 4. 一次性生成最终投稿图
+
+```bash
+python scripts/reproduce/render_submission_figures.py \
+  --release results/paper/frozen_v1 \
+  --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
+  --main-output paper/figures/submission \
+  --supp-output paper/figures/supplementary \
+  --audit-output paper/tables/manuscript/submission \
+  --block-length 7 \
+  --bootstrap-iterations 50000 \
+  --bootstrap-seed 20260821
+```
+
+成功标志：
+
+```text
+Submission figure renderer: PASS
+Main figures:
+  Main Fig. 1 — ablation and lead-time stability
+  Main Fig. 2 — temporal and spatial robustness
+  Main Fig. 3 — week-ahead demand dynamics
+Supplementary figures:
+  Fig. S1 — relative improvement over all baselines
+  Fig. S2 — per-origin ECDF
+```
+
+每张图同时输出：
+
+```text
+PDF  — 投稿/排版用矢量图
+SVG  — 可编辑文字矢量图
+PNG  — 300 dpi 预览
+```
+
+---
+
+## 5. Main Figure 1
+
+### Panel a — Absolute day-wise publisher-compatible MAE
+
+四个 factorial variants：
 
 ```text
 DCRNN
@@ -58,115 +115,15 @@ DCRNN + FA-DPR
 STaR-GNN
 ```
 
-如果出现 STGCN，说明仍在使用旧生成器或旧分支。
+展示 Day 1--Day 7 绝对 MAE，并使用 ordered 7-origin moving-block bootstrap 95% CI。
 
-## 3. 生成总体/消融/DMA 绝对指标图
-
-```bash
-python scripts/reproduce/build_literature_figures.py \
-  --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
-  --ablation-table paper/tables/literature/table_ablation_common46.csv \
-  --dma-table paper/tables/literature/table_star_gnn_dma_common46.csv \
-  --output paper/figures
-```
-
-成功标志：
-
-```text
-Overall figure audit: PASS
-Factorial ablation figure audit: PASS (4 models, no STGCN)
-```
-
-这些绝对柱状图主要作为 supplementary/reference；正文优先使用下一节 Figure 1--5。
-
-## 4. 第一阶段：生成 Figure 1--5 的基础审计工件
-
-```bash
-python scripts/reproduce/build_manuscript_results_figures.py \
-  --release results/paper/frozen_v1 \
-  --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
-  --figure-output paper/figures \
-  --table-output paper/tables/manuscript \
-  --bootstrap-iterations 5000 \
-  --bootstrap-seed 20260820
-```
-
-该阶段生成：
-
-- Figure 1 relative improvement；
-- Figure 2/3 基础数据；
-- Figure 4 DMA improvement；
-- Figure 5 representative 168 h trajectory；
-- `paper/tables/manuscript/` 下的可复算 CSV/JSON。
-
-第一阶段 Figure 2/3 会被第二阶段覆盖；不要在第二阶段前把它们视为最终投稿图。
-
-## 5. 第二阶段：生成最终 Figure 2 与 Figure 3
-
-```bash
-python scripts/reproduce/refine_manuscript_results_figures.py \
-  --table-dir paper/tables/manuscript \
-  --figure-dir paper/figures \
-  --block-bootstrap-iterations 50000 \
-  --block-bootstrap-length 7 \
-  --block-bootstrap-seed 20260820
-```
-
-成功标志：
-
-```text
-Refined manuscript Figure 2 and Figure 3: PASS
-Figure 2 factorial-model audit: PASS (4 models, no STGCN)
-```
-
-该阶段会生成/覆盖：
-
-```text
-paper/figures/manuscript_fig2_day1_day7_publisher_mae.png
-paper/figures/manuscript_fig2_day1_day7_publisher_mae.pdf
-paper/figures/manuscript_fig3_origin_ecdf.png
-paper/figures/manuscript_fig3_origin_ecdf.pdf
-```
-
-并生成：
-
-```text
-paper/tables/manuscript/fig2_ablation_daywise_reduction_vs_dcrnn.csv
-paper/tables/manuscript/fig2_day1_day7_degradation.csv
-paper/tables/manuscript/fig2_full_vs_sas_block_bootstrap.json
-paper/tables/manuscript/fig3_origin_win_rates.csv
-paper/tables/manuscript/manuscript_empirical_figure_audit.json
-```
-
-## 6. 最终 Figure 2 的科学问题
-
-### Panel (a)
-
-比较：
-
-```text
-DCRNN + SAS-Norm
-DCRNN + FA-DPR
-STaR-GNN
-```
-
-纵轴：相对 DCRNN 的 day-wise MAE reduction：
+### Panel b — Lead-time degradation
 
 \[
-\frac{MAE_{DCRNN,d}-MAE_{model,d}}{MAE_{DCRNN,d}}\times100\%.
+100\times\frac{MAE_d-MAE_{Day1}}{MAE_{Day1}}.
 \]
 
-DCRNN 本身作为 0% reference，不需要再画一条重复的 baseline 曲线。
-
-### Panel (b)
-
-比较四个 factorial variants 的 Day-1-relative MAE change：
-
-\[
-\frac{MAE_d-MAE_{Day1}}{MAE_{Day1}}\times100\%.
-\]
-
-Day 7：
+只在 Day 7 标关键端点。历史冻结结果应接近：
 
 ```text
 DCRNN                 +38.25%
@@ -175,110 +132,158 @@ DCRNN + SAS-Norm       +2.64%
 STaR-GNN               +1.70%
 ```
 
-因此 Figure 2 强调的是模块贡献和 lead-time robustness，而不是放大 168 h overall MAE 的 0.21% 点估计差异。
+Main Fig. 1 的目的不是隐藏 168 h `12.208 vs 12.234`，而是把 absolute accuracy 与 lead-time stability 分成两个不同 inferential roles。
 
-## 7. 为什么使用 7-origin moving-block bootstrap
+---
 
-168 h 预测每 24 h 启动一次，相邻 forecast origins 共享大量预测时段，不能简单把 46 origins 当作相互独立。
+## 6. Main Figure 2
 
-`refine_manuscript_results_figures.py` 对 Full−SAS 的 168 h per-origin publisher MAE 差使用 ordered moving-block bootstrap：
+### Panel a — Paired forecast-origin improvement
 
-- block length = 7 origins；
-- circular moving blocks；
-- iterations = 50,000；
-- seed = 20260820。
+对同一 forecast origin：
 
-当前均值差约：
+\[
+\Delta MAE_s=MAE_{baseline,s}-MAE_{STaR,s}.
+\]
 
-```text
-Full - SAS ≈ +0.025755
-```
-
-相当于约 +0.21%，bootstrap 95% CI 跨过 0。该审计用于限制论文措辞：不把 0.21% 解释为稳定显著差异。
-
-## 8. Figure 3 检查
-
-Figure 3 只比较：
+正值表示 STaR-GNN 更好。四组比较：
 
 ```text
-DCRNN
-STGCN
-STaR-GNN
+24 h vs DCRNN
+24 h vs STGCN
+168 h vs DCRNN
+168 h vs STGCN
 ```
 
-这是 baseline robustness，不是消融。
-
-预期 paired win rates：
+每组画 46 个 paired differences、moving-block mean 95% CI，并标 win count。预期：
 
 ```text
-24 h  vs DCRNN: 45/46
-24 h  vs STGCN: 45/46
-168 h vs DCRNN: 46/46
-168 h vs STGCN: 40/46
+45/46
+45/46
+46/46
+40/46
 ```
 
-## 9. Figure 4 检查
+### Panel b — DMA robustness
 
-```bash
-cat paper/tables/manuscript/fig4_dma_mae_improvement.csv
-```
+10 DMA × 2 horizons × 2 graph baselines = 40 cells。
 
-应有 40 rows，且全部 `MAE_reduction_pct > 0`。
+所有单元格应 `MAE_reduction_pct > 0`，范围约 `1.26%--61.20%`。使用单向 sequential blue heatmap；不要使用正负 diverging colormap。
 
-范围约：
+---
+
+## 7. Main Figure 3
+
+采用 scale-to-instance 结构。
+
+### Panel a
+
+全部 46 origins × 7 forecast days 折叠成 24 h 日内周期，比较 DCRNN、STGCN、STaR-GNN 的 aggregate-demand absolute error，单位为 `L s⁻¹`，CI 使用 moving-block bootstrap。
+
+### Panel b
+
+median-error proximity rule 选出的 representative 168 h aggregate-demand trajectory。
+
+### Panel c
+
+同一 origin 的 hourly aggregate-demand absolute error。
+
+需求单位来自 BWDF 原始 net inflow 定义：`L/s`。
+
+---
+
+## 8. Supplementary figures
+
+### Figure S1
+
+原 relative-improvement heatmap。因为所有 improvement 均为正，使用 sequential blue，不再使用 `RdBu_r`。Published reference models 与 re-evaluated graph baselines 用分隔线区分。
+
+### Figure S2
+
+DCRNN、STGCN、STaR-GNN 的 24 h/168 h per-origin ECDF，作为 Main Fig. 2a paired analysis 的 distributional reassurance。
+
+---
+
+## 9. 统一视觉系统
+
+由：
 
 ```text
-1.26% -- 61.20%
+scripts/reproduce/manuscript_plot_style.py
 ```
 
-不要写成“各 DMA 均有同等幅度提升”。
+集中管理。
 
-## 10. Figure 5 检查
-
-```bash
-cat paper/tables/manuscript/fig5_representative_168h_selection.json
-```
-
-应为：
+最终颜色：
 
 ```text
-selected_common_index = 70
-STGCN     ≈ 14.653
-DCRNN     ≈ 15.517
-STaR-GNN  ≈ 12.182
+STaR-GNN              #0F4D92  deep blue, hero
+DCRNN                  #5C5C5C  dark gray
+STGCN                  #A6A6A6  light gray
+DCRNN + SAS-Norm       #8FB6D5  soft blue
+DCRNN + FA-DPR         #9A86B8  muted violet
+Observed               #1F1F1F  near-black
 ```
 
-选择规则是 STaR-GNN per-origin publisher MAE 最接近 46 origins 中位数，不依赖视觉效果。
+规则：
 
-## 11. 投稿图件格式
+- 同一模型在所有 panel 中固定颜色、线型和 marker；
+- baseline 降低视觉权重，hero method 最突出；
+- top/right spines 关闭；
+- legend 无边框；
+- 主图宽度按约 7.4 in（约 188 mm）直接设计；
+- 图内不放长标题，完整描述放 caption；
+- 不通过截断坐标或选择性小数位夸大差异。
 
-正文图统一：
+---
 
-- PDF 矢量；
-- PNG 300 dpi；
-- 白底；
-- 不使用 3D、渐变、雷达图；
-- 线型和 marker 同时区分模型，兼顾灰度打印；
-- 坐标轴写清单位/统计量；
-- 不通过截断 y 轴夸大 0.21% 差异；
-- 表格正文统一 3 位小数，CSV/JSON 审计保留完整精度。
+## 10. 审计数据
 
-## 12. 最终一次性检查
+新的投稿图审计文件在：
+
+```text
+paper/tables/manuscript/submission/
+```
+
+包括：
+
+```text
+main_fig1_daywise_block_ci.csv
+main_fig1_day7_degradation.csv
+main_fig2_origin_paired_improvement.csv
+main_fig2_origin_paired_summary.csv
+main_fig2_dma_improvement.csv
+main_fig3_diurnal_aggregate_error.csv
+main_fig3_representative_trajectory.csv
+main_fig3_representative_selection.json
+submission_figure_audit.json
+```
+
+不要只看 PNG；关键结论必须能从 CSV/JSON 独立复算。
+
+---
+
+## 11. 最终 QA
 
 ```bash
 python -m py_compile \
-  scripts/reproduce/build_paper_tables.py \
-  scripts/reproduce/build_literature_figures.py \
-  scripts/reproduce/build_manuscript_results_figures.py \
-  scripts/reproduce/refine_manuscript_results_figures.py
+  scripts/reproduce/manuscript_plot_style.py \
+  scripts/reproduce/render_submission_tables.py \
+  scripts/reproduce/render_submission_figures.py
 
-python -m pytest tests/test_paper_artifacts.py -q
+python -m pytest \
+  tests/test_paper_release.py \
+  tests/test_paper_artifacts.py \
+  -q
+
+git diff --check
 ```
 
-然后：
+重建源码校验：
 
 ```bash
-git status --short
+python scripts/reproduce/regenerate_source_checksums.py
+bash scripts/reproduce/verify_source.sh
 ```
 
-只在确认最终 PNG/PDF、CSV/JSON 与脚本均已重新生成后再提交。
+只有在图、表、CSV/JSON 与源码审计全部通过后再提交。

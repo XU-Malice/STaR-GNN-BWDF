@@ -6,7 +6,6 @@
     "DCRNN + FA-DPR",
     "STaR-GNN"
   ],
-  "stgcn_in_ablation": false,
   "mae_convention": "sum_of_A_to_J_dma_mae",
   "other_metrics": "metric_on_hourly_sum_of_A_to_J_demand",
   "passed_relations": "30/32",
@@ -21,8 +20,8 @@
     "168h_STaR-GNN_vs_DCRNN + FA-DPR": "4/4"
   },
   "interpretation": {
-    "24h": "STaR-GNN is best on MAE, MAPE, RMSE and NSE.",
-    "168h": "STaR-GNN is best on MAPE, RMSE and NSE; SAS-Norm-only has a 0.025755 lower publisher-compatible MAE, a difference of about 0.21%."
+    "24h": "STaR-GNN is best on all four metrics.",
+    "168h": "STaR-GNN is best on MAPE/RMSE/NSE; SAS-Norm-only has a 0.025755 lower sum-of-DMA MAE (about 0.21%)."
   },
   "transparent_exceptions": [
     "FA-DPR 168h MAPE is slightly worse than DCRNN.",

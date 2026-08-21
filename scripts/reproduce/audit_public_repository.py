@@ -1,5 +1,11 @@
 #!/usr/bin/env python
-"""Audit the public GitHub repository boundary before release."""
+"""Audit the public GitHub repository boundary before release.
+
+The audit distinguishes frozen scientific artifacts from submission-facing
+presentation artifacts. Legacy diagnostic figures may remain tracked, but the
+canonical manuscript contract is 2 main tables + 3 main result figures,
+Supplementary Fig. S1--S2, and Supplementary Table S1.
+"""
 
 from __future__ import annotations
 
@@ -13,17 +19,20 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
 EXPECTED_DOCS = {
     "docs/README.md",
+    "docs/EXPERIMENT_DESIGN_FINAL_CN.md",
     "docs/FULL_PIPELINE_CN.md",
+    "docs/MANUSCRIPT_FIGURES_CN.md",
+    "docs/MANUSCRIPT_FIGURES_FINAL_CN.md",
     "docs/METHOD_CN.md",
+    "docs/PLOTTING_CN.md",
     "docs/RELEASE_CN.md",
     "docs/RESULTS_AND_ARTIFACTS_CN.md",
     "docs/RESULT_CONSISTENCY_AUDIT_CN.md",
-    "docs/MANUSCRIPT_FIGURES_CN.md",
-    "docs/MANUSCRIPT_FIGURES_FINAL_CN.md",
-    "docs/PLOTTING_CN.md",
 }
+
 DEPRECATED_PUBLIC_FILES = {
     "INSTALL_ON_SERVER_CN.md",
     "configs/paper/dcrnn_24h.yaml",
@@ -40,6 +49,7 @@ DEPRECATED_PUBLIC_FILES = {
     "docs/REPRODUCIBILITY.md",
     "docs/RESULTS_PROVENANCE.md",
 }
+
 REQUIRED_PUBLIC_FILES = {
     ".github/workflows/ci.yml",
     ".gitattributes",
@@ -53,23 +63,22 @@ REQUIRED_PUBLIC_FILES = {
     "data/README.md",
     *EXPECTED_DOCS,
     "environment.yml",
+    "paper/README.md",
+    "paper/captions/SUBMISSION_RESULT_FIGURE_CAPTIONS.md",
     "pyproject.toml",
     "requirements-lock.txt",
     "scripts/reproduce/finalize_public_release.sh",
+    "scripts/reproduce/manuscript_plot_style.py",
     "scripts/reproduce/package_frozen_release.py",
     "scripts/reproduce/regenerate_source_checksums.py",
+    "scripts/reproduce/render_submission_figures.py",
+    "scripts/reproduce/render_submission_tables.py",
     "scripts/reproduce/train_from_scratch.sh",
     "scripts/reproduce/verify_pretrained.sh",
 }
+
 FORBIDDEN_SUFFIXES = (
-    ".tar",
-    ".tar.gz",
-    ".tgz",
-    ".zip",
-    ".7z",
-    ".log",
-    ".pid",
-    ".pyc",
+    ".tar", ".tar.gz", ".tgz", ".zip", ".7z", ".log", ".pid", ".pyc"
 )
 SECRET_PATTERNS = (
     re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
@@ -189,27 +198,31 @@ def _audit_frozen(root: Path) -> list[str]:
     return errors
 
 
+def _row_count(path: Path) -> int:
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        return sum(1 for _ in csv.DictReader(handle))
+
+
 def _audit_paper(root: Path) -> list[str]:
-    expected_rows = {
+    errors: list[str] = []
+
+    source_tables = {
         "paper/tables/literature/table_literature_comparison_common46.csv": 18,
         "paper/tables/literature/table_ablation_common46.csv": 8,
         "paper/tables/literature/table_star_gnn_dma_common46.csv": 20,
-        "paper/tables/manuscript/fig4_dma_mae_improvement.csv": 40,
     }
-    errors: list[str] = []
-    for relative, expected in expected_rows.items():
+    for relative, expected in source_tables.items():
         path = root / relative
         if not path.is_file():
-            errors.append(f"缺少论文表格：{relative}")
-            continue
-        with path.open("r", encoding="utf-8", newline="") as handle:
-            count = sum(1 for _ in csv.DictReader(handle))
-        if count != expected:
-            errors.append(f"论文表格行数错误：{relative}={count}，期望{expected}")
+            errors.append(f"缺少论文源表：{relative}")
+        elif _row_count(path) != expected:
+            errors.append(
+                f"论文源表行数错误：{relative}={_row_count(path)}，期望{expected}"
+            )
 
-    ablation = root / "paper/tables/literature/table_ablation_common46.csv"
-    if ablation.is_file():
-        with ablation.open("r", encoding="utf-8", newline="") as handle:
+    ablation_path = root / "paper/tables/literature/table_ablation_common46.csv"
+    if ablation_path.is_file():
+        with ablation_path.open("r", encoding="utf-8", newline="") as handle:
             rows = list(csv.DictReader(handle))
         expected_models = (
             "DCRNN",
@@ -218,39 +231,90 @@ def _audit_paper(root: Path) -> list[str]:
             "STaR-GNN",
         )
         for task in ("24h", "168h"):
-            observed = tuple(row["model"] for row in rows if row["task"] == task)
+            observed = tuple(
+                row["model"] for row in rows if row["task"] == task
+            )
             if observed != expected_models:
-                errors.append(f"factorial ablation 模型集合错误：{task}={observed}")
+                errors.append(
+                    f"factorial ablation 模型集合错误：{task}={observed}"
+                )
             if "STGCN" in observed:
                 errors.append(f"STGCN 不应出现在 factorial ablation：{task}")
 
-    required_figures = [
-        root / f"paper/figures/manuscript_fig{index}_{suffix}.{ext}"
-        for index, suffix in (
-            (1, "relative_improvement"),
-            (2, "day1_day7_publisher_mae"),
-            (3, "origin_ecdf"),
-            (4, "dma_mae_improvement"),
-            (5, "representative_168h_trajectory"),
-        )
-        for ext in ("png", "pdf")
-    ]
-    missing_figures = [str(path.relative_to(root)) for path in required_figures if not path.is_file()]
-    if missing_figures:
-        errors.append(f"正文 Figure 1--5 缺失：{missing_figures}")
-    empty_figures = [str(path.relative_to(root)) for path in required_figures if path.is_file() and path.stat().st_size == 0]
-    if empty_figures:
-        errors.append(f"正文 Figure 文件为空：{empty_figures}")
+    required_submission_tables = (
+        "paper/tables/submission/table1_overall_performance.md",
+        "paper/tables/submission/table2_factorial_ablation.md",
+        "paper/tables/submission/tableS1_dma_metrics.md",
+    )
+    for relative in required_submission_tables:
+        if not (root / relative).is_file():
+            errors.append(f"缺少投稿显示表：{relative}")
+
+    required_main = (
+        "main_fig1_ablation_leadtime",
+        "main_fig2_temporal_spatial_robustness",
+        "main_fig3_week_ahead_dynamics",
+    )
+    required_supp = (
+        "supp_figS1_relative_improvement",
+        "supp_figS2_origin_ecdf",
+    )
+    for stem in required_main:
+        for ext in ("pdf", "svg", "png"):
+            path = root / f"paper/figures/submission/{stem}.{ext}"
+            if not path.is_file():
+                errors.append(f"缺少主图：{path.relative_to(root)}")
+            elif path.stat().st_size == 0:
+                errors.append(f"主图为空：{path.relative_to(root)}")
+    for stem in required_supp:
+        for ext in ("pdf", "svg", "png"):
+            path = root / f"paper/figures/supplementary/{stem}.{ext}"
+            if not path.is_file():
+                errors.append(f"缺少补充图：{path.relative_to(root)}")
+            elif path.stat().st_size == 0:
+                errors.append(f"补充图为空：{path.relative_to(root)}")
 
     required_audits = (
-        "paper/tables/manuscript/fig2_ablation_daywise_reduction_vs_dcrnn.csv",
-        "paper/tables/manuscript/fig2_full_vs_sas_block_bootstrap.json",
-        "paper/tables/manuscript/fig3_origin_win_rates.csv",
-        "paper/tables/manuscript/manuscript_empirical_figure_audit.json",
+        "paper/tables/manuscript/submission/main_fig1_daywise_block_ci.csv",
+        "paper/tables/manuscript/submission/main_fig1_day7_degradation.csv",
+        "paper/tables/manuscript/submission/main_fig2_origin_paired_improvement.csv",
+        "paper/tables/manuscript/submission/main_fig2_origin_paired_summary.csv",
+        "paper/tables/manuscript/submission/main_fig2_dma_improvement.csv",
+        "paper/tables/manuscript/submission/main_fig3_diurnal_aggregate_error.csv",
+        "paper/tables/manuscript/submission/main_fig3_representative_trajectory.csv",
+        "paper/tables/manuscript/submission/main_fig3_representative_selection.json",
+        "paper/tables/manuscript/submission/submission_figure_audit.json",
     )
     for relative in required_audits:
         if not (root / relative).is_file():
-            errors.append(f"缺少正文图件审计：{relative}")
+            errors.append(f"缺少投稿图件审计：{relative}")
+
+    audit_path = root / (
+        "paper/tables/manuscript/submission/submission_figure_audit.json"
+    )
+    if audit_path.is_file():
+        audit = json.loads(audit_path.read_text(encoding="utf-8"))
+        dma = audit.get("main_fig2_dma", {})
+        if dma.get("n_cells") != 40 or dma.get("all_positive") is not True:
+            errors.append(
+                "Main Fig. 2b DMA audit 必须为 40 cells 且全部 positive"
+            )
+        summary = audit.get("main_fig2_origin_summary", [])
+        expected_wins = {
+            ("24h", "DCRNN"): 45,
+            ("24h", "STGCN"): 45,
+            ("168h", "DCRNN"): 46,
+            ("168h", "STGCN"): 40,
+        }
+        observed_wins = {
+            (str(row.get("task")), str(row.get("baseline"))): int(row.get("wins"))
+            for row in summary
+        }
+        if observed_wins != expected_wins:
+            errors.append(
+                f"Main Fig. 2a paired win counts drift：{observed_wins}"
+            )
+
     return errors
 
 
@@ -278,6 +342,7 @@ def main() -> None:
     deprecated = DEPRECATED_PUBLIC_FILES & publish_files
     if deprecated:
         errors.append(f"仍拟发布已合并文档/重复配置：{sorted(deprecated)}")
+
     docs = {path for path in publish_files if path.startswith("docs/")}
     if docs != EXPECTED_DOCS:
         errors.append(
@@ -327,6 +392,12 @@ def main() -> None:
             "DCRNN + FA-DPR",
             "STaR-GNN",
         ],
+        "submission_contract": {
+            "main_tables": 2,
+            "main_result_figures": 3,
+            "supplementary_figures": 2,
+            "supplementary_tables": 1,
+        },
         "frozen_checkpoint_count": 10 if args.require_frozen else None,
         "errors": errors,
     }
@@ -346,7 +417,7 @@ def main() -> None:
     if args.require_frozen:
         print("唯一 checkpoint：10/10；DCRNN/Base无重复")
     if args.require_paper_artifacts:
-        print("Table 1--3 / Figure 1--5 / manuscript audits：PASS")
+        print("Submission Table 1--2 / Main Fig. 1--3 / Fig. S1--S2：PASS")
 
 
 if __name__ == "__main__":

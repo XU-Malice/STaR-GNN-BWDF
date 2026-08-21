@@ -1,14 +1,12 @@
 # STaR-GNN for Multi-DMA Water-Demand Forecasting
 
-[中文](README.md) | [Documentation](docs/README.md) | [Full reproduction](docs/FULL_PIPELINE_CN.md) | [Method](docs/METHOD_CN.md) | [Results](docs/RESULTS_AND_ARTIFACTS_CN.md) | [Final figure plan](docs/MANUSCRIPT_FIGURES_FINAL_CN.md)
+[中文](README.md) | [Documentation](docs/README.md) | [Method](docs/METHOD_CN.md) | [Final experiment design](docs/EXPERIMENT_DESIGN_FINAL_CN.md) | [Results](docs/RESULTS_AND_ARTIFACTS_CN.md) | [Submission plotting guide](docs/PLOTTING_CN.md)
 
-This repository provides the reproducible implementation of STaR-GNN for 24 h day-ahead and 168 h week-ahead hourly water-demand forecasting over ten district metered areas (DMAs). It includes split-aware preprocessing, a training-only Pearson functional graph, DCRNN/STGCN baselines, the SAS-Norm and FA-DPR factorial ablation, frozen common-46 test artifacts, and the tables/figures used by the Journal of Hydrology manuscript.
+This repository provides the reproducible implementation of STaR-GNN for 24 h day-ahead and 168 h week-ahead hourly water-demand forecasting over ten district metered areas (DMAs). It includes split-aware preprocessing, a training-only Pearson functional graph, DCRNN/STGCN baselines, SAS-Norm and FA-DPR factorial ablations, frozen common-46 test artifacts, and the submission tables/figures used by the Journal of Hydrology manuscript.
 
-> **Manuscript-facing results use a publisher-compatible total convention.** Internal aggregate-demand MAE is retained for diagnostics but must not be mixed with manuscript total MAE.
+> **Manuscript-facing results use a publisher-compatible total convention.** Internal aggregate-demand MAE is retained for diagnostics but is never mixed with the manuscript total MAE.
 
-## Factorial ablation
-
-The formal ablation contains exactly four variants:
+## Formal factorial ablation
 
 | Model | Internal variant | SAS-Norm | FA-DPR |
 |---|---|:---:|:---:|
@@ -38,7 +36,7 @@ Final STaR-GNN manuscript-facing results:
 
 Internal aggregate-demand MAE is `4.360841 / 4.919812` and is used only for aggregate-demand diagnostics.
 
-## Four-model ablation results
+## Four-model ablation
 
 | Horizon | Model | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |
 |---|---|---:|---:|---:|---:|
@@ -51,38 +49,80 @@ Internal aggregate-demand MAE is `4.360841 / 4.919812` and is used only for aggr
 | 168 h | DCRNN + FA-DPR | 14.086 | 3.278 | 9.332 | 0.945 |
 | 168 h | STaR-GNN | 12.234 | **2.014** | **6.161** | **0.976** |
 
-The 168 h publisher-compatible MAE point estimates of SAS-Norm-only and STaR-GNN differ by only `0.025755` (about `0.21%`). Because the 168 h forecast origins start 24 h apart and strongly overlap, the manuscript audit uses a seven-origin moving-block bootstrap rather than treating all 46 origins as independent. The confidence interval for the Full-minus-SAS mean difference includes zero. The repository therefore reports this as a small point-estimate difference, not as a stable performance gap.
+The 168 h publisher-compatible MAE point estimates of SAS-Norm-only and STaR-GNN differ by only `0.025755` (about `0.21%`). Because adjacent week-ahead forecast origins strongly overlap, the manuscript uses an ordered seven-origin moving-block bootstrap to bound interpretation. The mean-difference interval includes zero, so the repository does not describe the point-estimate difference as a stable performance gap.
 
-## Main manuscript figures
+## Journal of Hydrology submission evidence chain
 
-- **Figure 1:** relative error reductions and NSE gains versus competing models;
-- **Figure 2:** pure four-model factorial ablation over Day 1--Day 7; STGCN is excluded;
-- **Figure 3:** DCRNN/STGCN/STaR-GNN ECDF robustness over the 46 common origins;
-- **Figure 4:** DMA-level MAE improvements versus DCRNN/STGCN;
-- **Figure 5:** a representative 168 h trajectory selected by a pre-specified median-error rule.
+The final Results section no longer spreads the story over five separate main-result figures. The canonical submission structure is **two main tables + three main result figures**:
 
-## Data and graph protocol
+```text
+Main Table 1
+Overall predictive performance
+        ↓
+Main Table 2 + Main Fig. 1
+Factorial ablation + lead-time stability
+        ↓
+Main Fig. 2
+Temporal + spatial robustness
+        ↓
+Main Fig. 3
+Population-to-instance week-ahead dynamics
+```
+
+### Main Figure 1 — Ablation mechanism and lead-time stability
+
+- absolute Day-1--Day-7 publisher-compatible MAE for the four factorial variants with seven-origin moving-block 95% CIs;
+- Day-1-relative degradation, with Day-7 changes of approximately `+38.25%`, `+11.93%`, `+2.64%`, and `+1.70%` for DCRNN, FA-DPR, SAS-Norm, and STaR-GNN, respectively.
+
+### Main Figure 2 — Temporal and spatial robustness
+
+- paired MAE improvements across the 46 common forecast origins, with win counts `45/46`, `45/46`, `46/46`, and `40/46` against DCRNN/STGCN at 24/168 h;
+- DMA-level robustness over 10 DMAs × 2 horizons × 2 graph baselines: all 40 comparisons are positive, ranging from about `1.26%` to `61.20%`.
+
+### Main Figure 3 — Week-ahead demand dynamics
+
+- population-level diurnal aggregate-demand error profile over 46 origins × 7 forecast days;
+- a representative 168 h trajectory selected with a pre-specified median-error rule;
+- the corresponding hourly aggregate-demand absolute error. Demand units are `L s⁻¹`.
+
+Supplementary material:
+
+- **Table S1**: detailed DMA A--J metrics;
+- **Fig. S1**: relative improvement over all comparison models;
+- **Fig. S2**: per-origin ECDF.
+
+See [`docs/EXPERIMENT_DESIGN_FINAL_CN.md`](docs/EXPERIMENT_DESIGN_FINAL_CN.md) for the complete claim-driven design.
+
+## Submission artifact paths
+
+```text
+paper/tables/submission/
+  table1_overall_performance.md
+  table2_factorial_ablation.md
+  tableS1_dma_metrics.md
+
+paper/figures/submission/
+  main_fig1_ablation_leadtime.{pdf,svg,png}
+  main_fig2_temporal_spatial_robustness.{pdf,svg,png}
+  main_fig3_week_ahead_dynamics.{pdf,svg,png}
+
+paper/figures/supplementary/
+  supp_figS1_relative_improvement.{pdf,svg,png}
+  supp_figS2_origin_ecdf.{pdf,svg,png}
+```
+
+STaR-GNN is the visual hero method (`#0F4D92` deep blue); DCRNN/STGCN use gray baselines, while SAS-Norm and FA-DPR use restrained variant colors. The shared style is centralized in `scripts/reproduce/manuscript_plot_style.py`.
+
+## Data, graph, and frozen setting
 
 - hourly period: 2021-01-01 to 2023-03-05;
 - train through 2022-12-15 23:00; test from 2022-12-16;
 - 10 DMAs; 672 h history; 24 h and 168 h horizons; 24 h stride;
 - training-only Pearson functional graph;
 - negative correlations clipped to zero; zero diagonal; no threshold or Top-K;
-- random-walk normalization; one static graph shared by both tasks;
-- diffusion step `K=2`.
-
-## Frozen manuscript setting
-
-```yaml
-learning_rate: 0.0003
-weight_decay: 0.0
-cl_decay_steps: 500
-state_loss_weight: 0.03
-max_epochs: 100
-seed: 0
-```
-
-Shared model settings include hidden size 32, one recurrent layer, batch size 16, and early-stopping patience 15.
+- random-walk normalization; one static graph shared by both tasks; diffusion step `K=2`;
+- hidden size 32; one recurrent layer; batch size 16; early-stopping patience 15;
+- learning rate `3e-4`; weight decay `0`; curriculum decay `500`; state-loss weight `0.03`; seed `0`.
 
 ## Reproduce and verify
 
@@ -96,7 +136,7 @@ bash scripts/reproduce/verify_pretrained.sh \
   --device cuda:0
 ```
 
-Regenerate the final manuscript tables and figures:
+Regenerate only the submission tables and figures:
 
 ```bash
 python scripts/reproduce/build_paper_tables.py \
@@ -104,28 +144,17 @@ python scripts/reproduce/build_paper_tables.py \
   --output paper/tables/literature \
   --frozen-layout
 
-python scripts/reproduce/build_manuscript_results_figures.py \
+python scripts/reproduce/render_submission_tables.py
+
+python scripts/reproduce/render_submission_figures.py \
   --release results/paper/frozen_v1 \
-  --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
-  --figure-output paper/figures \
-  --table-output paper/tables/manuscript \
-  --bootstrap-iterations 5000 \
-  --bootstrap-seed 20260820
-
-python scripts/reproduce/refine_manuscript_results_figures.py \
-  --table-dir paper/tables/manuscript \
-  --figure-dir paper/figures \
-  --block-bootstrap-iterations 50000 \
-  --block-bootstrap-length 7 \
-  --block-bootstrap-seed 20260820
+  --block-length 7 \
+  --bootstrap-iterations 50000 \
+  --bootstrap-seed 20260821
 ```
 
-Expected final guards include:
+Final figures are exported as vector PDF, editable SVG, and 300 dpi PNG previews.
 
-```text
-Factorial ablation model-set audit: PASS (4 models, no STGCN)
-Publisher-compatible factorial cell audit: 30/32 PASS
-Figure 2 factorial-model audit: PASS (4 models, no STGCN)
-```
+Reported GRU/LSTM/MSNet/MSCMNet values are literature results from Que et al. (2024); DCRNN/STGCN/STaR-GNN are re-evaluated on common-46. These source categories are never described as having been retrained under identical code conditions.
 
-Reported GRU/LSTM/MSNet/MSCMNet values are literature results from Que et al. (2024); DCRNN/STGCN/STaR-GNN are re-evaluated on common-46. These two source categories are never described as having been retrained under identical code conditions.
+Legacy `paper/figures/manuscript_fig1...5`, `paper/figures/test_*`, and old captions are retained for historical reproduction/diagnostics but are no longer the authoritative submission artifacts.

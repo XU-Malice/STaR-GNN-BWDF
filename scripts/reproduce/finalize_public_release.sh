@@ -9,7 +9,7 @@
 #   3. 封存并验证当前 public-source SHA；
 #   4. 校验 10 个冻结 checkpoint、协议与内部 aggregate 诊断；
 #   5. 重新执行 10 组 common-46 推理；
-#   6. 重建 Table 1--3、Figure 1--5 与 manuscript audits；
+#   6. 重建源表、submission tables、Main Fig. 1--3 / Fig. S1--S2；
 #   7. 审计 GitHub 发布边界；
 #   8. 可选生成 GitHub Release checkpoint asset。
 #
@@ -108,7 +108,7 @@ python scripts/reproduce/regenerate_source_checksums.py
 bash scripts/reproduce/verify_source.sh
 python -m pip install -e . --no-deps
 bash scripts/reproduce/smoke_test.sh --source-only
-python -m pytest tests/test_paper_release.py tests/test_paper_artifacts.py -q
+python -m pytest tests/test_paper_release.py tests/test_paper_artifacts.py tests/test_submission_artifacts.py -q
 
 stage "[4/8] 10组冻结 checkpoint、协议与内部 aggregate 诊断"
 python scripts/reproduce/verify_paper_release.py
@@ -121,40 +121,34 @@ python scripts/reproduce/verify_paper_release.py \
     --reevaluation-relative-tolerance 5e-4 \
     --verification-output "${REEVALUATION_DIR}"
 
-stage "[6/8] 重建 Table 1--3、Figure 1--5 与 manuscript audits"
+stage "[6/8] 重建审计源表、submission tables 与 canonical figures"
 python scripts/reproduce/build_paper_tables.py \
     --input results/paper/frozen_v1 \
     --output paper/tables/literature \
     --frozen-layout
 
+# 保留 legacy aggregate-demand 诊断工件，但不再作为投稿图权威入口。
 python scripts/reproduce/build_detailed_test_artifacts.py
 
-python scripts/reproduce/build_literature_figures.py \
-    --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
-    --ablation-table paper/tables/literature/table_ablation_common46.csv \
-    --dma-table paper/tables/literature/table_star_gnn_dma_common46.csv \
-    --output paper/figures
+python scripts/reproduce/render_submission_tables.py \
+    --source-dir paper/tables/literature \
+    --output-dir paper/tables/submission
 
-python scripts/reproduce/build_manuscript_results_figures.py \
+python scripts/reproduce/render_submission_figures.py \
     --release results/paper/frozen_v1 \
     --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
-    --figure-output paper/figures \
-    --table-output paper/tables/manuscript \
-    --bootstrap-iterations 5000 \
-    --bootstrap-seed 20260820
-
-python scripts/reproduce/refine_manuscript_results_figures.py \
-    --table-dir paper/tables/manuscript \
-    --figure-dir paper/figures \
-    --block-bootstrap-iterations 50000 \
-    --block-bootstrap-length 7 \
-    --block-bootstrap-seed 20260820
+    --main-output paper/figures/submission \
+    --supp-output paper/figures/supplementary \
+    --audit-output paper/tables/manuscript/submission \
+    --block-length 7 \
+    --bootstrap-iterations 50000 \
+    --bootstrap-seed 20260821
 
 python scripts/reproduce/audit_release_inventory.py \
     --require-paper-artifacts \
     --require-reevaluation "${REEVALUATION_DIR}"
 
-stage "[7/8] 公开 GitHub 结构、指标口径、图表与大文件边界"
+stage "[7/8] 公开 GitHub 结构、指标口径、submission 图表与大文件边界"
 python scripts/reproduce/audit_public_repository.py \
     --require-frozen \
     --require-paper-artifacts \
@@ -178,11 +172,14 @@ DCRNN/Base 唯一化：PASS
 冻结 checkpoint/predictions/test_summary：10/10/10
 checkpoint common-46 复推理：10/10
 复推理指标：40/40（绝对与相对容差5e-4）
-Table 1 总体比较：PASS
-Table 2 factorial ablation：4 models / no STGCN / 30/32 PASS
-Table 3 DMA-level：PASS
-Figure 1--5：PASS
-Full-vs-SAS 168 h moving-block bootstrap audit：PASS
+Main Table 1 overall：PASS
+Main Table 2 factorial ablation：4 models / no STGCN / 30/32 PASS
+Supplementary Table S1 DMA metrics：PASS
+Main Fig. 1 ablation + lead-time：PASS
+Main Fig. 2 temporal + spatial robustness：PASS
+Main Fig. 3 week-ahead dynamics：PASS
+Supplementary Fig. S1--S2：PASS
+7-origin moving-block bootstrap：PASS
 公开文档与发布边界：PASS
 GitHub Release checkpoint资产：${ASSET_STATUS}
 复推理目录：${PROJECT_ROOT}/${REEVALUATION_DIR}
