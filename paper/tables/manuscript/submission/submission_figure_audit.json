@@ -1,0 +1,85 @@
+{
+  "figure_architecture": {
+    "main_fig1": "Ablation mechanism and lead-time stability; four factorial variants only, no STGCN.",
+    "main_fig2": "Temporal and spatial robustness; paired forecast-origin improvements plus DMA-level improvement.",
+    "main_fig3": "Scale-to-instance week-ahead dynamics; population diurnal error profile plus deterministic representative trajectory.",
+    "supp_figS1": "Overall relative improvement over eight baselines.",
+    "supp_figS2": "Per-origin ECDF as supplementary distributional evidence."
+  },
+  "block_bootstrap": {
+    "block_length_origins": 7,
+    "iterations": 50000,
+    "seed": 20260821,
+    "rationale": "Ordered forecast origins preserve weekly dependence; the 168 h origins also overlap strongly because they start 24 h apart."
+  },
+  "main_fig1_day7_relative_to_day1_pct": {
+    "DCRNN": 38.245219681874296,
+    "DCRNN + SAS-Norm": 2.642989241545783,
+    "DCRNN + FA-DPR": 11.934031316562242,
+    "STaR-GNN": 1.698386096468021
+  },
+  "main_fig2_origin_summary": [
+    {
+      "task": "24h",
+      "baseline": "DCRNN",
+      "mean_improvement": 2.4931044809628227,
+      "ci95_lower": 2.0755867860077517,
+      "ci95_upper": 2.8545220230692547,
+      "wins": 45,
+      "losses": 1,
+      "ties": 0,
+      "n_origins": 46
+    },
+    {
+      "task": "24h",
+      "baseline": "STGCN",
+      "mean_improvement": 2.933491837935171,
+      "ci95_lower": 2.6404829741010194,
+      "ci95_upper": 3.2824399411786294,
+      "wins": 45,
+      "losses": 1,
+      "ties": 0,
+      "n_origins": 46
+    },
+    {
+      "task": "168h",
+      "baseline": "DCRNN",
+      "mean_improvement": 4.567153465951452,
+      "ci95_lower": 3.97223270675611,
+      "ci95_upper": 5.208140342330895,
+      "wins": 46,
+      "losses": 0,
+      "ties": 0,
+      "n_origins": 46
+    },
+    {
+      "task": "168h",
+      "baseline": "STGCN",
+      "mean_improvement": 2.335589606754528,
+      "ci95_lower": 1.504355101783299,
+      "ci95_upper": 3.1540987419546838,
+      "wins": 40,
+      "losses": 6,
+      "ties": 0,
+      "n_origins": 46
+    }
+  ],
+  "main_fig2_dma": {
+    "all_positive": true,
+    "n_cells": 40,
+    "min_reduction_pct": 1.2610835902931052,
+    "max_reduction_pct": 61.198078451376
+  },
+  "main_fig3_representative": {
+    "selection_rule": "STaR-GNN origin whose 168 h publisher-compatible MAE is closest to the median among the 46 common test origins",
+    "selected_origin_position_zero_based": 42,
+    "selected_common_index": 70,
+    "median_star_publisher_mae": 12.192746334132693,
+    "selected_star_publisher_mae": 12.182449728960082,
+    "selected_origin_model_publisher_mae": {
+      "DCRNN": 15.516927143647557,
+      "STGCN": 14.653121023660615,
+      "STaR-GNN": 12.182449728960082
+    }
+  }
+}

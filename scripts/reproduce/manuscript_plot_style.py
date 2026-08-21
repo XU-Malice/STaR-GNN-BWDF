@@ -109,6 +109,14 @@ def save_publication_figure(fig: plt.Figure, base: Path) -> None:
     """Save vector PDF + editable SVG + 300 dpi PNG preview."""
     base.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(base.with_suffix(".pdf"), bbox_inches="tight")
-    fig.savefig(base.with_suffix(".svg"), bbox_inches="tight")
+    svg_path = base.with_suffix(".svg")
+    fig.savefig(svg_path, bbox_inches="tight")
+    # Matplotlib may emit trailing whitespace in SVG path lines.
+    # Normalize generated SVGs so repository checks remain clean.
+    svg_text = svg_path.read_text(encoding="utf-8")
+    svg_path.write_text(
+        "\n".join(line.rstrip() for line in svg_text.splitlines()) + "\n",
+        encoding="utf-8",
+    )
     fig.savefig(base.with_suffix(".png"), dpi=300, bbox_inches="tight")
     plt.close(fig)
