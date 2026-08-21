@@ -11,6 +11,18 @@ import pandas as pd
 
 METRICS = ("MAE", "MAPE", "RMSE", "NSE")
 REPORTED_SUFFIX = " (reported)"
+DISPLAY_NAMES = {
+    "MSCMNet_WM": "MSCMNet-WM",
+    "MSCMNet_M": "MSCMNet-M",
+    "MSCMNet_W": "MSCMNet-W",
+}
+
+
+def _display_name(name: str) -> str:
+    reported = name.endswith(REPORTED_SUFFIX)
+    base = name.removesuffix(REPORTED_SUFFIX)
+    base = DISPLAY_NAMES.get(base, base)
+    return f"{base}†" if reported else base
 
 
 def _best(frame: pd.DataFrame, metric: str) -> float:
@@ -33,11 +45,13 @@ def _overall_markdown(frame: pd.DataFrame) -> str:
         task_frame = frame.loc[frame["task"] == task].copy()
         best = {metric: _best(task_frame, metric) for metric in METRICS}
 
-        lines.append(f"| **{task.replace('h', ' h')}** | **Published reference models** |  |  |  |  |")
+        lines.append(
+            f"| **{task.replace('h', ' h')}** | **Published reference models** |  |  |  |  |"
+        )
         for _, row in task_frame.loc[
             task_frame["model"].astype(str).str.endswith(REPORTED_SUFFIX)
         ].iterrows():
-            name = str(row["model"]).replace(REPORTED_SUFFIX, "†")
+            name = _display_name(str(row["model"]))
             vals = [
                 _fmt(row[m], bold=abs(float(row[m]) - best[m]) < 1e-12)
                 for m in METRICS
@@ -47,11 +61,11 @@ def _overall_markdown(frame: pd.DataFrame) -> str:
                 f"{vals[0]} | {vals[1]} | {vals[2]} | {vals[3]} |"
             )
 
-        lines.append(f"|  | **Re-evaluated graph models** |  |  |  |  |")
+        lines.append("|  | **Re-evaluated graph models** |  |  |  |  |")
         for _, row in task_frame.loc[
             ~task_frame["model"].astype(str).str.endswith(REPORTED_SUFFIX)
         ].iterrows():
-            name = str(row["model"])
+            name = _display_name(str(row["model"]))
             vals = [
                 _fmt(row[m], bold=abs(float(row[m]) - best[m]) < 1e-12)
                 for m in METRICS
