@@ -129,7 +129,7 @@ figures/submission/main_fig3_week_ahead_dynamics.png
 
 # Supplementary figures
 
-## Figure S1 — Relative improvement over all baselines
+## Supplementary Figure S1 — Relative improvement over all baselines
 
 ```text
 figures/supplementary/supp_figS1_relative_improvement.*
@@ -137,7 +137,7 @@ figures/supplementary/supp_figS1_relative_improvement.*
 
 原总体 relative-improvement heatmap 降级为 Supplementary，并改为单向 sequential-blue 编码。
 
-## Figure S2 — Per-origin ECDF
+## Supplementary Figure S2 — Per-origin ECDF
 
 ```text
 figures/supplementary/supp_figS2_origin_ecdf.*
