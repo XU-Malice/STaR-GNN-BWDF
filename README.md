@@ -58,39 +58,35 @@ STaR-GNN：
 ```text
 Main Table 1 + Main Fig. 1  Overall four-metric performance
         ↓
-Main Table 2 + Main Fig. 2  Factorial ablation + lead-time stability
+Main Fig. 2 + Table S1       DMA-level performance breadth
         ↓
-Main Fig. 3                 Temporal + spatial robustness
+Main Table 2 + Main Fig. 3  Factorial ablation + lead-time stability
         ↓
 Main Fig. 4                 Population-to-instance week-ahead dynamics
 ```
 
 ### Main Figure 1 — Overall four-metric performance
 
-- 相对六个 published reference models 与 DCRNN、STGCN 的 MAE/MAPE/RMSE 降幅；
+- 相对六个时序模型与 DCRNN、STGCN 的 MAE/MAPE/RMSE 降幅；
 - 对应的 NSE 绝对增益，24 h 与 168 h 并列。
 
-### Main Figure 2 — Four-metric ablation and lead-time stability
+### Main Figure 2 — DMA-level performance breadth
+
+- 九种模型在 24 h 与 168 h 下的逐 DMA、逐指标排名分布；
+- STaR-GNN 在每个 DMA 上四项指标的首位覆盖数，完整绝对值见 Table S1。
+
+### Main Figure 3 — Four-metric ablation and lead-time stability
 
 - MAE、MAPE、RMSE、NSE 的逐日 paired improvement 与 moving-block 95% CI；
 - 同日水平错位、marker 和 linestyle 共同解决 SAS-Norm 与 STaR-GNN 的视觉重合。
 
-### Main Figure 3 — Four-metric temporal and spatial robustness
-
-- 46 common origins 和 10 DMAs 上的四指标 mean improvement 与 win count；
-- 160 个 DMA–horizon–baseline–metric 比较中 158 个改善；两个例外为 168 h DMA G 相对 STGCN 的 RMSE/NSE。
-
 ### Main Figure 4 — Week-ahead demand dynamics
 
-- 46 origins × 7 forecast days 的日内 aggregate-demand error profile；
+- 全部测试窗口 × 7 forecast days 的日内 aggregate-demand error profile；
 - 预先固定 median-error rule 选出的 representative 168 h trajectory；
 - 对应 hourly absolute error。需求单位为 `L s⁻¹`。
 
-Supplementary：
-
-- **Table S1**：三个 graph models 的 DMA A--J 详细四指标；
-- **Fig. S1**：逐 DMA 四指标 improvement；
-- **Fig. S2**：per-origin ECDF。
+Supplementary Table S1 给出全部九种模型的 DMA A--J 详细四指标。
 
 最终设计见 [`docs/EXPERIMENT_DESIGN_FINAL_CN.md`](docs/EXPERIMENT_DESIGN_FINAL_CN.md)。
 
@@ -104,13 +100,9 @@ paper/tables/submission/
 
 paper/figures/submission/
   main_fig1_overall_performance.{pdf,svg,png}
-  main_fig2_ablation_leadtime.{pdf,svg,png}
-  main_fig3_temporal_spatial_robustness.{pdf,svg,png}
+  main_fig2_dma_performance.{pdf,svg,png}
+  main_fig3_ablation_leadtime.{pdf,svg,png}
   main_fig4_week_ahead_dynamics.{pdf,svg,png}
-
-paper/figures/supplementary/
-  supp_figS1_dma_improvement.{pdf,svg,png}
-  supp_figS2_origin_ecdf.{pdf,svg,png}
 ```
 
 图中 STaR-GNN 使用深蓝 `#0F4D92` 作为唯一 hero color；DCRNN/STGCN 使用灰度 baseline，SAS-Norm/FA-DPR 使用低饱和 variant colors。统一样式由 `scripts/reproduce/manuscript_plot_style.py` 管理。

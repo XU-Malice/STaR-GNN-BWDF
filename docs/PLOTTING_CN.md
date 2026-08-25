@@ -40,7 +40,7 @@ paper/tables/submission/table2_factorial_ablation.md
 paper/tables/submission/tableS1_dma_metrics.md
 ```
 
-Table 1 使用行分组和表注区分 Que et al. (2024) 报告值与 common-46 graph-model 复评，不使用符号。Table S1 并列报告 DCRNN、STGCN、STaR-GNN 的逐 DMA 四指标。
+Table 1 通过表注说明 Que et al. (2024) 数值与本文流程结果的来源，不使用符号。Table S1 并列报告全部九种模型的逐 DMA 四指标；时序模型 MAPE 已统一转换为百分数。
 
 ## 3. 一次性生成最终图
 
@@ -48,8 +48,8 @@ Table 1 使用行分组和表注区分 Que et al. (2024) 报告值与 common-46 
 MPLCONFIGDIR=/tmp/star_gnn_mpl python scripts/reproduce/render_submission_figures.py \
   --release results/paper/frozen_v1 \
   --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
+  --dma-table paper/tables/literature/table_all_models_dma.csv \
   --main-output paper/figures/submission \
-  --supp-output paper/figures/supplementary \
   --audit-output paper/tables/manuscript/submission \
   --block-length 7 \
   --bootstrap-iterations 50000 \
@@ -62,12 +62,9 @@ MPLCONFIGDIR=/tmp/star_gnn_mpl python scripts/reproduce/render_submission_figure
 Submission figure renderer: PASS
 Main figures:
   Main Fig. 1 — overall four-metric performance
-  Main Fig. 2 — four-metric ablation and lead-time stability
-  Main Fig. 3 — four-metric temporal and spatial robustness
+  Main Fig. 2 — all-model DMA-level performance ranks
+  Main Fig. 3 — four-metric ablation and lead-time stability
   Main Fig. 4 — week-ahead demand dynamics
-Supplementary figures:
-  Fig. S1 — detailed four-metric DMA improvements
-  Fig. S2 — per-origin total-MAE ECDF
 ```
 
 每张图同时输出 PDF、editable SVG 和 300 dpi PNG。
@@ -76,29 +73,21 @@ Supplementary figures:
 
 ### Main Figure 1
 
-Panel a 为 STaR-GNN 相对六个 published reference models 与 DCRNN/STGCN 的 MAE、MAPE、RMSE 降幅；Panel b 为 NSE 绝对增益。模型名不带额外符号。
+Panel a 为 STaR-GNN 相对六个时序模型与 DCRNN/STGCN 的 MAE、MAPE、RMSE 降幅；Panel b 为 NSE 绝对增益。模型名不带额外符号。
 
 ### Main Figure 2
 
-四个 panel 分别为 MAE、MAPE、RMSE、NSE。SAS-Norm-only、FA-DPR-only 与 Full 均相对 DCRNN 做逐日 paired improvement；误差指标为相对降幅，NSE 为绝对增益。
-
-同一 forecast day 内三个模型使用轻微水平错位，并固定 color、marker、linestyle。这样 SAS-Norm 与 STaR-GNN 即使数值接近也能辨认；误差棒为 ordered seven-origin moving-block 95% CI。
+Panel a–b 为九种模型在 24 h 与 168 h 下的逐 DMA、逐指标排名分布。每个 horizon–DMA–metric 组合独立排序；箱体给中位数与四分位距，散点保留全部 40 个组合。Panel c 给出 STaR-GNN 在每个 DMA 的四项指标中排名第一的数量。完整绝对数值见 Supplementary Table S1。
 
 ### Main Figure 3
 
-Panel a 汇总 46 个 common forecast origins，Panel b 汇总 10 个 DMA。颜色编码 improved-comparison rate，单元格同时给 mean improvement 与 wins/comparisons。逐 DMA 共 160 个比较，158 个改善；两个例外必须保留。
+四个 panel 分别为 MAE、MAPE、RMSE、NSE。SAS-Norm-only、FA-DPR-only 与 Full 均相对 DCRNN 做逐日 paired improvement；误差指标为相对降幅，NSE 为绝对增益。
+
+同一 forecast day 内三个模型使用轻微水平错位，并固定 color、marker、linestyle。这样 SAS-Norm 与 STaR-GNN 即使数值接近也能辨认；误差棒为 ordered seven-window moving-block 95% CI。
 
 ### Main Figure 4
 
-采用 scale-to-instance 结构：46 origins × 7 days 的日内 aggregate-demand error profile、预先规定 median-total-MAE rule 的 representative 168 h trajectory，以及同一 origin 的 hourly absolute error。
-
-### Supplementary Figure S1
-
-逐 DMA 展示四指标 improvement。由于存在两个真实负值，使用以 0 为中心的发散配色：蓝色改善、红色退化。
-
-### Supplementary Figure S2
-
-DCRNN、STGCN、STaR-GNN 的 24 h / 168 h per-origin total-MAE ECDF，作为 Main Fig. 3a 的分布证据。
+采用 scale-to-instance 结构：全部测试窗口 × 7 days 的日内 aggregate-demand error profile、预先规定 median-total-MAE rule 的 representative 168 h trajectory，以及同一窗口的 hourly absolute error。
 
 ## 5. 统一视觉系统
 
@@ -127,6 +116,6 @@ python scripts/reproduce/audit_public_repository.py \
 
 - 最终表图中没有额外符号和内部工程措辞；
 - PDF/SVG/PNG 均可打开，SVG 文字可编辑；
-- Main Fig. 2 的三条 variant series 可分辨；
-- Main Fig. 3b 与 Supplementary Fig. S1 如实显示两个非改善比较；
+- Main Fig. 2 的排名轴、模型轴、DMA 轴和颜色含义完整，绝对值可由 Table S1 核查；
+- Main Fig. 3 的三条 variant series 可分辨；
 - caption、审计 CSV/JSON 与图中数值一致。
