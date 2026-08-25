@@ -90,7 +90,7 @@ figures/submission/main_fig1_overall_performance.png
 ```
 
 - Panel a：STaR-GNN 相对六个 published models 与两个 graph baselines 的 MAE/MAPE/RMSE 降幅；
-- Panel b：对应的 NSE 增益。
+- Panel b：对应的 NSE 绝对提升（$\Delta$NSE）。
 
 回答：**STaR-GNN 是否在 24 h 与 168 h、四个互补指标上都保持总体优势？**
 

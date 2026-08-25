@@ -27,17 +27,18 @@ def test_submission_visual_hierarchy_is_frozen():
     assert "STGCN" not in figures.ABLATION_MODELS
 
 
-def test_submission_overall_table_uses_dagger_and_three_decimals():
+def test_submission_overall_table_uses_plain_model_names_and_three_decimals():
     frame = pd.read_csv(
         ROOT / "paper/tables/literature/table_literature_comparison_common46.csv"
     )
     text = tables._overall_markdown(frame)
-    assert "GRU†" in text
+    assert "| 24 h | GRU |" in text
+    assert "†" not in text
     assert "GRU (reported)" not in text
     assert "9.424" in text
     assert "9.424199" not in text
-    assert "Published reference models" in text
-    assert "Re-evaluated graph models" in text
+    assert "Published reference models" not in text
+    assert "Re-evaluated graph models" not in text
 
 
 def test_submission_ablation_table_is_four_model_factorial():
@@ -57,8 +58,9 @@ def test_submission_ablation_table_is_four_model_factorial():
 
 def test_submission_contract_is_documented():
     paper_readme = (ROOT / "paper/README.md").read_text(encoding="utf-8")
-    assert "Main Figure 1 — Ablation mechanism and lead-time stability" in paper_readme
-    assert "Main Figure 2 — Temporal and spatial robustness" in paper_readme
-    assert "Main Figure 3 — Week-ahead demand dynamics" in paper_readme
+    assert "Main Figure 1 — Overall four-metric performance" in paper_readme
+    assert "Main Figure 2 — Four-metric ablation and lead-time stability" in paper_readme
+    assert "Main Figure 3 — Four-metric temporal and spatial robustness" in paper_readme
+    assert "Main Figure 4 — Week-ahead demand dynamics" in paper_readme
     assert "Supplementary Figure S1" in paper_readme
     assert "Supplementary Figure S2" in paper_readme
