@@ -4,7 +4,7 @@
 
 This repository provides the reproducible implementation of STaR-GNN for 24 h day-ahead and 168 h week-ahead hourly water-demand forecasting over ten district metered areas (DMAs). It includes split-aware preprocessing, a training-only Pearson functional graph, DCRNN/STGCN baselines, SAS-Norm and FA-DPR factorial ablations, frozen common-46 test artifacts, and the submission tables/figures used by the Journal of Hydrology manuscript.
 
-> **Manuscript-facing results use a publisher-compatible total convention.** Internal aggregate-demand MAE is retained for diagnostics but is never mixed with the manuscript total MAE.
+> **Manuscript-facing results use a unified total convention.** Internal aggregate-demand MAE is retained for diagnostics but is never mixed with the manuscript total MAE.
 
 ## Formal factorial ablation
 
@@ -49,37 +49,38 @@ Internal aggregate-demand MAE is `4.360841 / 4.919812` and is used only for aggr
 | 168 h | DCRNN + FA-DPR | 14.086 | 3.278 | 9.332 | 0.945 |
 | 168 h | STaR-GNN | 12.234 | **2.014** | **6.161** | **0.976** |
 
-The 168 h publisher-compatible MAE point estimates of SAS-Norm-only and STaR-GNN differ by only `0.025755` (about `0.21%`). Because adjacent week-ahead forecast origins strongly overlap, the manuscript uses an ordered seven-origin moving-block bootstrap to bound interpretation. The mean-difference interval includes zero, so the repository does not describe the point-estimate difference as a stable performance gap.
+The 168 h total-MAE point estimates of SAS-Norm-only and STaR-GNN differ by only `0.025755` (about `0.21%`). Because adjacent week-ahead forecast origins strongly overlap, the manuscript uses an ordered seven-origin moving-block bootstrap to bound interpretation. The mean-difference interval includes zero, so the repository does not describe the point-estimate difference as a stable performance gap.
 
 ## Journal of Hydrology submission evidence chain
 
-The final Results section no longer spreads the story over five separate main-result figures. The canonical submission structure is **two main tables + three main result figures**:
+The canonical submission structure is **two main tables + four main result figures**:
 
 ```text
-Main Table 1
-Overall predictive performance
+Main Table 1 + Main Fig. 1  Overall four-metric performance
         ↓
-Main Table 2 + Main Fig. 1
-Factorial ablation + lead-time stability
+Main Table 2 + Main Fig. 2  Factorial ablation + lead-time stability
         ↓
-Main Fig. 2
-Temporal + spatial robustness
+Main Fig. 3                 Temporal + spatial robustness
         ↓
-Main Fig. 3
-Population-to-instance week-ahead dynamics
+Main Fig. 4                 Population-to-instance week-ahead dynamics
 ```
 
-### Main Figure 1 — Ablation mechanism and lead-time stability
+### Main Figure 1 — Overall four-metric performance
 
-- absolute Day-1--Day-7 publisher-compatible MAE for the four factorial variants with seven-origin moving-block 95% CIs;
-- Day-1-relative degradation, with Day-7 changes of approximately `+38.25%`, `+11.93%`, `+2.64%`, and `+1.70%` for DCRNN, FA-DPR, SAS-Norm, and STaR-GNN, respectively.
+- MAE/MAPE/RMSE reductions against six published reference models and two graph baselines;
+- the corresponding absolute NSE gains at 24 h and 168 h.
 
-### Main Figure 2 — Temporal and spatial robustness
+### Main Figure 2 — Four-metric ablation and lead-time stability
 
-- paired MAE improvements across the 46 common forecast origins, with win counts `45/46`, `45/46`, `46/46`, and `40/46` against DCRNN/STGCN at 24/168 h;
-- DMA-level robustness over 10 DMAs × 2 horizons × 2 graph baselines: all 40 comparisons are positive, ranging from about `1.26%` to `61.20%`.
+- day-wise paired improvements and moving-block 95% CIs for MAE, MAPE, RMSE and NSE;
+- within-day offsets, markers and line styles keep SAS-Norm and STaR-GNN legible when their estimates are close.
 
-### Main Figure 3 — Week-ahead demand dynamics
+### Main Figure 3 — Four-metric temporal and spatial robustness
+
+- mean improvements and win counts over 46 common origins and ten DMAs;
+- 158 improvements among 160 DMA–horizon–baseline–metric comparisons, with the two exceptions reported explicitly.
+
+### Main Figure 4 — Week-ahead demand dynamics
 
 - population-level diurnal aggregate-demand error profile over 46 origins × 7 forecast days;
 - a representative 168 h trajectory selected with a pre-specified median-error rule;
@@ -87,8 +88,8 @@ Population-to-instance week-ahead dynamics
 
 Supplementary material:
 
-- **Table S1**: detailed DMA A--J metrics;
-- **Fig. S1**: relative improvement over all comparison models;
+- **Table S1**: detailed four-metric DMA A--J results for all three graph models;
+- **Fig. S1**: detailed four-metric DMA improvements;
 - **Fig. S2**: per-origin ECDF.
 
 See [`docs/EXPERIMENT_DESIGN_FINAL_CN.md`](docs/EXPERIMENT_DESIGN_FINAL_CN.md) for the complete claim-driven design.
@@ -102,12 +103,13 @@ paper/tables/submission/
   tableS1_dma_metrics.md
 
 paper/figures/submission/
-  main_fig1_ablation_leadtime.{pdf,svg,png}
-  main_fig2_temporal_spatial_robustness.{pdf,svg,png}
-  main_fig3_week_ahead_dynamics.{pdf,svg,png}
+  main_fig1_overall_performance.{pdf,svg,png}
+  main_fig2_ablation_leadtime.{pdf,svg,png}
+  main_fig3_temporal_spatial_robustness.{pdf,svg,png}
+  main_fig4_week_ahead_dynamics.{pdf,svg,png}
 
 paper/figures/supplementary/
-  supp_figS1_relative_improvement.{pdf,svg,png}
+  supp_figS1_dma_improvement.{pdf,svg,png}
   supp_figS2_origin_ecdf.{pdf,svg,png}
 ```
 

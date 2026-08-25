@@ -25,9 +25,7 @@ tables/submission/table1_overall_performance.md
 tables/literature/table_literature_comparison_common46.csv
 ```
 
-包含 GRU†、LSTM†、MSNet†、MSCMNet variants†、DCRNN、STGCN、STaR-GNN。
-
-† 为 Que et al. (2024) reported results；DCRNN、STGCN、STaR-GNN 为 common-46 协议下重新评价。
+包含 GRU、LSTM、MSNet、MSCMNet variants、DCRNN、STGCN、STaR-GNN。前六个时序/多尺度模型取自 Que et al. (2024) 的报告值；DCRNN、STGCN、STaR-GNN 为 common-46 协议下重新评价。
 
 ---
 
@@ -57,7 +55,7 @@ STaR-GNN
 
 STGCN 是独立 graph baseline，不属于消融。
 
-168 h publisher-compatible MAE：SAS-Norm-only `12.208`，STaR-GNN `12.234`；差约 `0.21%`。该点估计差异由 Main Fig. 1 的 ordered moving-block evidence 限定解释；完整模型在 168 h 的 MAPE、RMSE、NSE 以及 aggregate-demand MAE 上更优。
+168 h total MAE：SAS-Norm-only `12.208`，STaR-GNN `12.234`；差约 `0.21%`。该点估计差异由 Main Fig. 2 的 ordered moving-block evidence 限定解释；完整模型在 168 h 的 MAPE、RMSE、NSE 以及 aggregate-demand MAE 上更优。
 
 ---
 
@@ -75,50 +73,63 @@ tables/submission/tableS1_dma_metrics.md
 tables/literature/table_star_gnn_dma_common46.csv
 ```
 
-正文不再用一张 20-row 表重复 Main Fig. 2b 的空间结论。
+表中并列给出 DCRNN、STGCN、STaR-GNN 在 10 个 DMA、两个预测时域和四个指标上的绝对结果，用于支撑 Main Fig. 3b 与 Supplementary Fig. S1。
 
 ---
 
 # Main result figures
 
-最终正文只保留三张核心结果图。
+最终正文保留四张核心结果图，按“总体优势—组件作用—稳健性—实际轨迹”展开。
 
-## Main Figure 1 — Ablation mechanism and lead-time stability
-
-```text
-figures/submission/main_fig1_ablation_leadtime.pdf
-figures/submission/main_fig1_ablation_leadtime.svg
-figures/submission/main_fig1_ablation_leadtime.png
-```
-
-- Panel a：四个 factorial variants 的 Day 1--Day 7 absolute publisher-compatible MAE + moving-block 95% CI；
-- Panel b：相对自身 Day 1 的 lead-time degradation，并直接标 Day 7 端点。
-
-回答：**SAS-Norm 与 FA-DPR 分别如何影响周尺度准确性与 lead-time 稳定性？**
-
-## Main Figure 2 — Temporal and spatial robustness
+## Main Figure 1 — Overall four-metric performance
 
 ```text
-figures/submission/main_fig2_temporal_spatial_robustness.pdf
-figures/submission/main_fig2_temporal_spatial_robustness.svg
-figures/submission/main_fig2_temporal_spatial_robustness.png
+figures/submission/main_fig1_overall_performance.pdf
+figures/submission/main_fig1_overall_performance.svg
+figures/submission/main_fig1_overall_performance.png
 ```
 
-- Panel a：46 common origins 上的 paired MAE improvement + moving-block mean CI + win count；
-- Panel b：10 DMA × 2 horizons × 2 graph baselines 的 sequential-blue improvement heatmap。
+- Panel a：STaR-GNN 相对六个 published models 与两个 graph baselines 的 MAE/MAPE/RMSE 降幅；
+- Panel b：对应的 NSE 增益。
+
+回答：**STaR-GNN 是否在 24 h 与 168 h、四个互补指标上都保持总体优势？**
+
+## Main Figure 2 — Four-metric ablation and lead-time stability
+
+```text
+figures/submission/main_fig2_ablation_leadtime.pdf
+figures/submission/main_fig2_ablation_leadtime.svg
+figures/submission/main_fig2_ablation_leadtime.png
+```
+
+- 四个 panel 分别给出 MAE、MAPE、RMSE、NSE；
+- SAS-Norm、FA-DPR、Full 均相对 DCRNN 做 paired improvement；同一天内用水平错位的点和置信区间避免 SAS-Norm 与 Full 重叠。
+
+回答：**SAS-Norm 与 FA-DPR 分别如何影响周尺度准确性与 lead-time stability？**
+
+## Main Figure 3 — Four-metric temporal and spatial robustness
+
+```text
+figures/submission/main_fig3_temporal_spatial_robustness.pdf
+figures/submission/main_fig3_temporal_spatial_robustness.svg
+figures/submission/main_fig3_temporal_spatial_robustness.png
+```
+
+- Panel a：46 个 common origins 上四指标的 mean improvement 与 win count；
+- Panel b：10 个 DMA 上四指标的 mean improvement 与 win count。
 
 回答：**平均优势是否只来自少数有利日期或少数 DMA？**
 
-## Main Figure 3 — Week-ahead demand dynamics
+## Main Figure 4 — Week-ahead demand dynamics
 
 ```text
-figures/submission/main_fig3_week_ahead_dynamics.pdf
-figures/submission/main_fig3_week_ahead_dynamics.svg
-figures/submission/main_fig3_week_ahead_dynamics.png
+figures/submission/main_fig4_week_ahead_dynamics.pdf
+figures/submission/main_fig4_week_ahead_dynamics.svg
+figures/submission/main_fig4_week_ahead_dynamics.png
 ```
 
 - Panel a：46 origins × 7 days 的 diurnal aggregate-demand absolute-error profile；
-- Panel b：预先规定 median-error rule 选出的 representative 168 h trajectory；
+- Panel b：预先规定 median-total-MAE rule 选出的 representative 168 h trajectory；
 - Panel c：同一 representative origin 的 aggregate-demand hourly absolute error。
 
 回答：**统计优势在真实一周需求轨迹中具体表现为什么？**
@@ -129,13 +140,13 @@ figures/submission/main_fig3_week_ahead_dynamics.png
 
 # Supplementary figures
 
-## Supplementary Figure S1 — Relative improvement over all baselines
+## Supplementary Figure S1 — Detailed DMA improvements
 
 ```text
-figures/supplementary/supp_figS1_relative_improvement.*
+figures/supplementary/supp_figS1_dma_improvement.*
 ```
 
-原总体 relative-improvement heatmap 降级为 Supplementary，并改为单向 sequential-blue 编码。
+逐 DMA 展示 MAE、MAPE、RMSE 的相对降幅和 NSE 的绝对增益；发散配色如实保留 168 h / DMA G / STGCN 下 RMSE 与 NSE 的两个例外。
 
 ## Supplementary Figure S2 — Per-origin ECDF
 
@@ -143,7 +154,7 @@ figures/supplementary/supp_figS1_relative_improvement.*
 figures/supplementary/supp_figS2_origin_ecdf.*
 ```
 
-保留 DCRNN / STGCN / STaR-GNN 的 per-origin ECDF，作为 Main Fig. 2a paired-difference analysis 的 distributional reassurance。
+保留 DCRNN / STGCN / STaR-GNN 的 per-origin total-MAE ECDF，作为 Main Fig. 3a 的 distributional reassurance。
 
 ---
 
@@ -156,14 +167,13 @@ tables/manuscript/submission/
 包含：
 
 ```text
-main_fig1_daywise_block_ci.csv
-main_fig1_day7_degradation.csv
-main_fig2_origin_paired_improvement.csv
-main_fig2_origin_paired_summary.csv
-main_fig2_dma_improvement.csv
-main_fig3_diurnal_aggregate_error.csv
-main_fig3_representative_trajectory.csv
-main_fig3_representative_selection.json
+main_fig2_daywise_paired_improvement.csv
+main_fig3_origin_paired_improvement.csv
+main_fig3_origin_paired_summary.csv
+main_fig3_dma_improvement.csv
+main_fig4_diurnal_aggregate_error.csv
+main_fig4_representative_trajectory.csv
+main_fig4_representative_selection.json
 submission_figure_audit.json
 ```
 
@@ -173,7 +183,7 @@ submission_figure_audit.json
 
 # Metric conventions
 
-正文总体和消融遵循 publisher-compatible 口径：
+正文总体和消融遵循统一口径：
 
 - total MAE = DMA A--J MAE 之和；
 - total MAPE/RMSE/NSE = 在 A--J 小时总需求轨迹上计算；

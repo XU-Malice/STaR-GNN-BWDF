@@ -1,10 +1,11 @@
 {
   "figure_architecture": {
-    "main_fig1": "Ablation mechanism and lead-time stability; four factorial variants only, no STGCN.",
-    "main_fig2": "Temporal and spatial robustness; paired forecast-origin improvements plus DMA-level improvement.",
-    "main_fig3": "Scale-to-instance week-ahead dynamics; population diurnal error profile plus deterministic representative trajectory.",
-    "supp_figS1": "Overall relative improvement over eight baselines.",
-    "supp_figS2": "Per-origin ECDF as supplementary distributional evidence."
+    "main_fig1": "Overall four-metric performance against eight baselines.",
+    "main_fig2": "Four-metric factorial ablation and lead-time stability; paired improvements relative to DCRNN.",
+    "main_fig3": "Four-metric temporal and spatial robustness; win rates and mean paired improvements.",
+    "main_fig4": "Scale-to-instance week-ahead dynamics; population diurnal error profile plus deterministic representative trajectory.",
+    "supp_figS1": "Detailed four-metric DMA-level improvements.",
+    "supp_figS2": "Per-origin total-MAE ECDF."
   },
   "block_bootstrap": {
     "block_length_origins": 7,
@@ -12,19 +13,904 @@
     "seed": 20260821,
     "rationale": "Ordered forecast origins preserve weekly dependence; the 168 h origins also overlap strongly because they start 24 h apart."
   },
-  "main_fig1_day7_relative_to_day1_pct": {
-    "DCRNN": 38.245219681874296,
-    "DCRNN + SAS-Norm": 2.642989241545783,
-    "DCRNN + FA-DPR": 11.934031316562242,
-    "STaR-GNN": 1.698386096468021
-  },
-  "main_fig2_origin_summary": [
+  "main_fig2_daywise_summary": [
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "MAE",
+      "day": 1,
+      "mean_improvement": 14.172371357976404,
+      "ci95_lower": 10.443174023795908,
+      "ci95_upper": 18.070620947290944,
+      "wins": 43,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "MAE",
+      "day": 2,
+      "mean_improvement": 23.047539679208572,
+      "ci95_lower": 20.67104308628499,
+      "ci95_upper": 25.58076028862595,
+      "wins": 46,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "MAE",
+      "day": 3,
+      "mean_improvement": 26.40645334019137,
+      "ci95_lower": 23.883936723513397,
+      "ci95_upper": 29.005978128592346,
+      "wins": 46,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "MAE",
+      "day": 4,
+      "mean_improvement": 27.107673199042374,
+      "ci95_lower": 24.450626250957153,
+      "ci95_upper": 29.641416832950636,
+      "wins": 46,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "MAE",
+      "day": 5,
+      "mean_improvement": 27.069953087037966,
+      "ci95_lower": 23.56732246686552,
+      "ci95_upper": 30.338991059150125,
+      "wins": 46,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "MAE",
+      "day": 6,
+      "mean_improvement": 28.65093482433736,
+      "ci95_lower": 24.676908070722206,
+      "ci95_upper": 32.60412552959417,
+      "wins": 46,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "MAE",
+      "day": 7,
+      "mean_improvement": 33.92010697083925,
+      "ci95_lower": 30.043555521610394,
+      "ci95_upper": 37.97675784139745,
+      "wins": 46,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "MAPE",
+      "day": 1,
+      "mean_improvement": 15.433809215120677,
+      "ci95_lower": -3.3503019256216375,
+      "ci95_upper": 33.04037818693246,
+      "wins": 38,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "MAPE",
+      "day": 2,
+      "mean_improvement": 26.24263285785752,
+      "ci95_lower": 13.724400037649493,
+      "ci95_upper": 38.95461626276873,
+      "wins": 38,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "MAPE",
+      "day": 3,
+      "mean_improvement": 30.11823094729164,
+      "ci95_lower": 17.886758474467687,
+      "ci95_upper": 42.68711373122985,
+      "wins": 41,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "MAPE",
+      "day": 4,
+      "mean_improvement": 30.501926032989164,
+      "ci95_lower": 19.977412070598376,
+      "ci95_upper": 41.14531408093884,
+      "wins": 41,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "MAPE",
+      "day": 5,
+      "mean_improvement": 27.60329471355749,
+      "ci95_lower": 14.959996236629982,
+      "ci95_upper": 39.802283368008595,
+      "wins": 39,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "MAPE",
+      "day": 6,
+      "mean_improvement": 27.262209105279823,
+      "ci95_lower": 15.54511370958603,
+      "ci95_upper": 39.282148596283854,
+      "wins": 38,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "MAPE",
+      "day": 7,
+      "mean_improvement": 35.978323425862456,
+      "ci95_lower": 26.297575725907564,
+      "ci95_upper": 46.17095128281152,
+      "wins": 42,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "RMSE",
+      "day": 1,
+      "mean_improvement": 16.673672272263136,
+      "ci95_lower": 1.0186214348641796,
+      "ci95_upper": 31.8463226935744,
+      "wins": 39,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "RMSE",
+      "day": 2,
+      "mean_improvement": 27.219287408957157,
+      "ci95_lower": 16.6006202501738,
+      "ci95_upper": 38.529885190568244,
+      "wins": 39,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "RMSE",
+      "day": 3,
+      "mean_improvement": 28.969668458228394,
+      "ci95_lower": 18.242129188055173,
+      "ci95_upper": 40.34175321245992,
+      "wins": 42,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "RMSE",
+      "day": 4,
+      "mean_improvement": 28.07683162875886,
+      "ci95_lower": 18.161145198654957,
+      "ci95_upper": 38.12470954722137,
+      "wins": 42,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "RMSE",
+      "day": 5,
+      "mean_improvement": 24.253986601808496,
+      "ci95_lower": 11.274711020753898,
+      "ci95_upper": 36.55671464333761,
+      "wins": 39,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "RMSE",
+      "day": 6,
+      "mean_improvement": 24.566485569756562,
+      "ci95_lower": 12.039347943983186,
+      "ci95_upper": 36.87446575821216,
+      "wins": 38,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "RMSE",
+      "day": 7,
+      "mean_improvement": 32.05102956896169,
+      "ci95_lower": 21.786738396289138,
+      "ci95_upper": 42.770161730745016,
+      "wins": 41,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "NSE",
+      "day": 1,
+      "mean_improvement": 0.0174043037275469,
+      "ci95_lower": 0.004539251110231287,
+      "ci95_upper": 0.031014781226473387,
+      "wins": 39,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "NSE",
+      "day": 2,
+      "mean_improvement": 0.02899122262593656,
+      "ci95_lower": 0.018501365406599964,
+      "ci95_upper": 0.041123197573405844,
+      "wins": 39,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "NSE",
+      "day": 3,
+      "mean_improvement": 0.03378012077070881,
+      "ci95_lower": 0.021557628961978503,
+      "ci95_upper": 0.047986465076774294,
+      "wins": 42,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "NSE",
+      "day": 4,
+      "mean_improvement": 0.028435331420866537,
+      "ci95_lower": 0.01657613433606381,
+      "ci95_upper": 0.041250023250273014,
+      "wins": 42,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "NSE",
+      "day": 5,
+      "mean_improvement": 0.027181496266215303,
+      "ci95_lower": 0.01428822126852826,
+      "ci95_upper": 0.040084290317089086,
+      "wins": 39,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "NSE",
+      "day": 6,
+      "mean_improvement": 0.03438302866841718,
+      "ci95_lower": 0.019422213341009447,
+      "ci95_upper": 0.05309379426345902,
+      "wins": 38,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + SAS-Norm",
+      "metric": "NSE",
+      "day": 7,
+      "mean_improvement": 0.06721512749706128,
+      "ci95_lower": 0.033623742278022076,
+      "ci95_upper": 0.11829113877842089,
+      "wins": 41,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "MAE",
+      "day": 1,
+      "mean_improvement": 2.655958494413945,
+      "ci95_lower": -0.7692032706874783,
+      "ci95_upper": 5.645958964976964,
+      "wins": 30,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "MAE",
+      "day": 2,
+      "mean_improvement": 16.88714013086025,
+      "ci95_lower": 14.42586217990606,
+      "ci95_upper": 19.638173153362953,
+      "wins": 46,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "MAE",
+      "day": 3,
+      "mean_improvement": 17.81994297981227,
+      "ci95_lower": 14.71274527022377,
+      "ci95_upper": 21.17082320334341,
+      "wins": 46,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "MAE",
+      "day": 4,
+      "mean_improvement": 16.322041913701547,
+      "ci95_lower": 12.474720277360598,
+      "ci95_upper": 19.91114075403444,
+      "wins": 43,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "MAE",
+      "day": 5,
+      "mean_improvement": 15.123787531826169,
+      "ci95_lower": 10.497856284928138,
+      "ci95_upper": 19.457554976157255,
+      "wins": 42,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "MAE",
+      "day": 6,
+      "mean_improvement": 13.785206012808858,
+      "ci95_lower": 8.343928860436073,
+      "ci95_upper": 19.201916612363355,
+      "wins": 36,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "MAE",
+      "day": 7,
+      "mean_improvement": 18.48081766088063,
+      "ci95_lower": 12.666177151826647,
+      "ci95_upper": 24.30559841696257,
+      "wins": 42,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "MAPE",
+      "day": 1,
+      "mean_improvement": 18.18425430471447,
+      "ci95_lower": 11.35571007486148,
+      "ci95_upper": 24.529947125264094,
+      "wins": 37,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "MAPE",
+      "day": 2,
+      "mean_improvement": 2.189837983996689,
+      "ci95_lower": -14.82557675866212,
+      "ci95_upper": 18.188932944734653,
+      "wins": 26,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "MAPE",
+      "day": 3,
+      "mean_improvement": -7.693640226678999,
+      "ci95_lower": -29.546456808411904,
+      "ci95_upper": 13.406480129295735,
+      "wins": 21,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "MAPE",
+      "day": 4,
+      "mean_improvement": -15.340460045259851,
+      "ci95_lower": -40.882050779868365,
+      "ci95_upper": 10.590507541789377,
+      "wins": 22,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "MAPE",
+      "day": 5,
+      "mean_improvement": -22.18781888976338,
+      "ci95_lower": -50.46906824985873,
+      "ci95_upper": 4.90896543017816,
+      "wins": 17,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "MAPE",
+      "day": 6,
+      "mean_improvement": -24.93100130342959,
+      "ci95_lower": -58.85067693873081,
+      "ci95_upper": 5.128035201099344,
+      "wins": 18,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "MAPE",
+      "day": 7,
+      "mean_improvement": -10.998515616704928,
+      "ci95_lower": -47.33244710648022,
+      "ci95_upper": 20.088663212159588,
+      "wins": 23,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "RMSE",
+      "day": 1,
+      "mean_improvement": 18.95560635646411,
+      "ci95_lower": 12.160547303540486,
+      "ci95_upper": 25.432718179115344,
+      "wins": 34,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "RMSE",
+      "day": 2,
+      "mean_improvement": 10.49572099077826,
+      "ci95_lower": -1.100552285034338,
+      "ci95_upper": 21.721394178373824,
+      "wins": 30,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "RMSE",
+      "day": 3,
+      "mean_improvement": 1.7721642582945694,
+      "ci95_lower": -14.359274213859411,
+      "ci95_upper": 17.504399275090904,
+      "wins": 24,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "RMSE",
+      "day": 4,
+      "mean_improvement": -6.231204362174578,
+      "ci95_lower": -25.72869699811524,
+      "ci95_upper": 13.172520492316053,
+      "wins": 26,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "RMSE",
+      "day": 5,
+      "mean_improvement": -12.003918898925836,
+      "ci95_lower": -34.18463597173993,
+      "ci95_upper": 9.167976864452767,
+      "wins": 19,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "RMSE",
+      "day": 6,
+      "mean_improvement": -13.192916322265662,
+      "ci95_lower": -39.632756504328796,
+      "ci95_upper": 10.00005254416564,
+      "wins": 21,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "RMSE",
+      "day": 7,
+      "mean_improvement": -1.74340329384444,
+      "ci95_lower": -29.57147860172523,
+      "ci95_upper": 22.104174290121815,
+      "wins": 26,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "NSE",
+      "day": 1,
+      "mean_improvement": 0.016446839805198746,
+      "ci95_lower": 0.010604600637928133,
+      "ci95_upper": 0.021869874752564057,
+      "wins": 34,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "NSE",
+      "day": 2,
+      "mean_improvement": 0.011538754475700854,
+      "ci95_lower": 0.0017195685099288423,
+      "ci95_upper": 0.020739831595483996,
+      "wins": 30,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "NSE",
+      "day": 3,
+      "mean_improvement": 0.0018303078593754738,
+      "ci95_lower": -0.015176079371693992,
+      "ci95_upper": 0.018982085733018694,
+      "wins": 24,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "NSE",
+      "day": 4,
+      "mean_improvement": -0.008194409624933318,
+      "ci95_lower": -0.028739509320156387,
+      "ci95_upper": 0.011823845641575619,
+      "wins": 26,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "NSE",
+      "day": 5,
+      "mean_improvement": -0.010400013289577386,
+      "ci95_lower": -0.03377795000344243,
+      "ci95_upper": 0.010574851175215644,
+      "wins": 19,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "NSE",
+      "day": 6,
+      "mean_improvement": -0.003537020202089504,
+      "ci95_lower": -0.03548845447695103,
+      "ci95_upper": 0.022723010705135487,
+      "wins": 21,
+      "n_origins": 46
+    },
+    {
+      "model": "DCRNN + FA-DPR",
+      "metric": "NSE",
+      "day": 7,
+      "mean_improvement": 0.030853388179560026,
+      "ci95_lower": -0.020377298417792906,
+      "ci95_upper": 0.08250152673535618,
+      "wins": 26,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "MAE",
+      "day": 1,
+      "mean_improvement": 13.409391435781918,
+      "ci95_lower": 10.639331922468061,
+      "ci95_upper": 16.111229810890897,
+      "wins": 43,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "MAE",
+      "day": 2,
+      "mean_improvement": 22.800318792449822,
+      "ci95_lower": 20.964547647000074,
+      "ci95_upper": 24.62102353847034,
+      "wins": 46,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "MAE",
+      "day": 3,
+      "mean_improvement": 26.047124988784848,
+      "ci95_lower": 23.906892004672752,
+      "ci95_upper": 28.08304992830738,
+      "wins": 46,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "MAE",
+      "day": 4,
+      "mean_improvement": 27.168386700606042,
+      "ci95_lower": 24.923918732864323,
+      "ci95_upper": 29.264777304628726,
+      "wins": 46,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "MAE",
+      "day": 5,
+      "mean_improvement": 27.102964808555804,
+      "ci95_lower": 23.99605530569032,
+      "ci95_upper": 30.081555837518195,
+      "wins": 46,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "MAE",
+      "day": 6,
+      "mean_improvement": 28.73346810050935,
+      "ci95_lower": 25.213832038783735,
+      "ci95_upper": 32.35568461436841,
+      "wins": 46,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "MAE",
+      "day": 7,
+      "mean_improvement": 34.04784014004184,
+      "ci95_lower": 30.302716755679775,
+      "ci95_upper": 38.02009622192761,
+      "wins": 46,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "MAPE",
+      "day": 1,
+      "mean_improvement": 18.64105000063894,
+      "ci95_lower": 8.180105475251551,
+      "ci95_upper": 27.87267628397706,
+      "wins": 35,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "MAPE",
+      "day": 2,
+      "mean_improvement": 26.316756295101918,
+      "ci95_lower": 16.082813886789225,
+      "ci95_upper": 35.24327557314634,
+      "wins": 37,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "MAPE",
+      "day": 3,
+      "mean_improvement": 32.127219881394154,
+      "ci95_lower": 21.719348801465507,
+      "ci95_upper": 40.95092714015829,
+      "wins": 43,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "MAPE",
+      "day": 4,
+      "mean_improvement": 35.100131154437726,
+      "ci95_lower": 28.963814029549894,
+      "ci95_upper": 40.75966412108242,
+      "wins": 43,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "MAPE",
+      "day": 5,
+      "mean_improvement": 31.46228101972334,
+      "ci95_lower": 23.263060141471797,
+      "ci95_upper": 39.300617924057725,
+      "wins": 38,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "MAPE",
+      "day": 6,
+      "mean_improvement": 32.74002520307589,
+      "ci95_lower": 24.490849017046763,
+      "ci95_upper": 41.62758633975585,
+      "wins": 42,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "MAPE",
+      "day": 7,
+      "mean_improvement": 40.598707295036455,
+      "ci95_lower": 31.96525329540595,
+      "ci95_upper": 49.65805483953061,
+      "wins": 42,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "RMSE",
+      "day": 1,
+      "mean_improvement": 19.114590064732667,
+      "ci95_lower": 9.060921021638597,
+      "ci95_upper": 28.03097097907152,
+      "wins": 37,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "RMSE",
+      "day": 2,
+      "mean_improvement": 27.222338689732002,
+      "ci95_lower": 17.225769907876757,
+      "ci95_upper": 35.75042961177644,
+      "wins": 37,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "RMSE",
+      "day": 3,
+      "mean_improvement": 31.45764146331278,
+      "ci95_lower": 21.72047107122742,
+      "ci95_upper": 39.518899206272536,
+      "wins": 42,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "RMSE",
+      "day": 4,
+      "mean_improvement": 31.53376890818047,
+      "ci95_lower": 23.938219983626087,
+      "ci95_upper": 38.077611000729085,
+      "wins": 44,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "RMSE",
+      "day": 5,
+      "mean_improvement": 27.53732933177434,
+      "ci95_lower": 17.816788429479924,
+      "ci95_upper": 36.73389835360721,
+      "wins": 39,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "RMSE",
+      "day": 6,
+      "mean_improvement": 29.416571669838138,
+      "ci95_lower": 20.177896491692536,
+      "ci95_upper": 38.97674861753259,
+      "wins": 37,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "RMSE",
+      "day": 7,
+      "mean_improvement": 36.19903214646856,
+      "ci95_lower": 26.6085473368167,
+      "ci95_upper": 46.08486297771288,
+      "wins": 41,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "NSE",
+      "day": 1,
+      "mean_improvement": 0.018366578051493842,
+      "ci95_lower": 0.009578961250049308,
+      "ci95_upper": 0.027326460830743343,
+      "wins": 37,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "NSE",
+      "day": 2,
+      "mean_improvement": 0.029426844296755485,
+      "ci95_lower": 0.020031351576766825,
+      "ci95_upper": 0.03906761074293498,
+      "wins": 37,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "NSE",
+      "day": 3,
+      "mean_improvement": 0.03518395418379072,
+      "ci95_lower": 0.02468013042434176,
+      "ci95_upper": 0.04653492146789089,
+      "wins": 42,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "NSE",
+      "day": 4,
+      "mean_improvement": 0.031910305030838526,
+      "ci95_lower": 0.022191871710860376,
+      "ci95_upper": 0.041757085211016856,
+      "wins": 44,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "NSE",
+      "day": 5,
+      "mean_improvement": 0.0306589302847444,
+      "ci95_lower": 0.019999715068888136,
+      "ci95_upper": 0.04081640955801391,
+      "wins": 39,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "NSE",
+      "day": 6,
+      "mean_improvement": 0.038338211245223845,
+      "ci95_lower": 0.024127490843552493,
+      "ci95_upper": 0.05616355194405238,
+      "wins": 37,
+      "n_origins": 46
+    },
+    {
+      "model": "STaR-GNN",
+      "metric": "NSE",
+      "day": 7,
+      "mean_improvement": 0.07224013620759973,
+      "ci95_lower": 0.03649771561335065,
+      "ci95_upper": 0.12310801232435081,
+      "wins": 41,
+      "n_origins": 46
+    }
+  ],
+  "main_fig3_origin_summary": [
     {
       "task": "24h",
       "baseline": "DCRNN",
-      "mean_improvement": 2.4931044809628227,
-      "ci95_lower": 2.0755867860077517,
-      "ci95_upper": 2.8545220230692547,
+      "metric": "MAE",
+      "mean_improvement": 19.31939210692272,
+      "ci95_lower": 16.659944400693426,
+      "ci95_upper": 21.581735077226174,
+      "wins": 45,
+      "losses": 1,
+      "ties": 0,
+      "n_origins": 46
+    },
+    {
+      "task": "24h",
+      "baseline": "DCRNN",
+      "metric": "MAPE",
+      "mean_improvement": 10.788493939474895,
+      "ci95_lower": -5.343630218596528,
+      "ci95_upper": 24.498264650139475,
+      "wins": 35,
+      "losses": 11,
+      "ties": 0,
+      "n_origins": 46
+    },
+    {
+      "task": "24h",
+      "baseline": "DCRNN",
+      "metric": "RMSE",
+      "mean_improvement": 10.103657916558689,
+      "ci95_lower": -6.3291672348787555,
+      "ci95_upper": 24.030511722277485,
+      "wins": 32,
+      "losses": 14,
+      "ties": 0,
+      "n_origins": 46
+    },
+    {
+      "task": "24h",
+      "baseline": "DCRNN",
+      "metric": "NSE",
+      "mean_improvement": 0.009885636717803297,
+      "ci95_lower": 0.0016706438817044671,
+      "ci95_upper": 0.017578466552355548,
+      "wins": 32,
+      "losses": 14,
+      "ties": 0,
+      "n_origins": 46
+    },
+    {
+      "task": "24h",
+      "baseline": "STGCN",
+      "metric": "MAE",
+      "mean_improvement": 22.633095959370873,
+      "ci95_lower": 20.58866205596647,
+      "ci95_upper": 24.967117769871617,
       "wins": 45,
       "losses": 1,
       "ties": 0,
@@ -33,20 +919,46 @@
     {
       "task": "24h",
       "baseline": "STGCN",
-      "mean_improvement": 2.933491837935171,
-      "ci95_lower": 2.6404829741010194,
-      "ci95_upper": 3.2824399411786294,
-      "wins": 45,
-      "losses": 1,
+      "metric": "MAPE",
+      "mean_improvement": 17.254453571209243,
+      "ci95_lower": 8.299395514884079,
+      "ci95_upper": 25.21734073236144,
+      "wins": 33,
+      "losses": 13,
+      "ties": 0,
+      "n_origins": 46
+    },
+    {
+      "task": "24h",
+      "baseline": "STGCN",
+      "metric": "RMSE",
+      "mean_improvement": 17.144843824159377,
+      "ci95_lower": 9.068421999564606,
+      "ci95_upper": 24.363987992767264,
+      "wins": 34,
+      "losses": 12,
+      "ties": 0,
+      "n_origins": 46
+    },
+    {
+      "task": "24h",
+      "baseline": "STGCN",
+      "metric": "NSE",
+      "mean_improvement": 0.019926788482812048,
+      "ci95_lower": 0.014136299541111227,
+      "ci95_upper": 0.02534793082419863,
+      "wins": 34,
+      "losses": 12,
       "ties": 0,
       "n_origins": 46
     },
     {
       "task": "168h",
       "baseline": "DCRNN",
-      "mean_improvement": 4.567153465951452,
-      "ci95_lower": 3.97223270675611,
-      "ci95_upper": 5.208140342330895,
+      "metric": "MAE",
+      "mean_improvement": 26.684234151693794,
+      "ci95_lower": 24.082970368113475,
+      "ci95_upper": 29.24683800957144,
       "wins": 46,
       "losses": 0,
       "ties": 0,
@@ -54,29 +966,102 @@
     },
     {
       "task": "168h",
+      "baseline": "DCRNN",
+      "metric": "MAPE",
+      "mean_improvement": 35.04518641962309,
+      "ci95_lower": 28.109019965645285,
+      "ci95_upper": 40.99150013456985,
+      "wins": 45,
+      "losses": 1,
+      "ties": 0,
+      "n_origins": 46
+    },
+    {
+      "task": "168h",
+      "baseline": "DCRNN",
+      "metric": "RMSE",
+      "mean_improvement": 32.9550487605841,
+      "ci95_lower": 25.293429118072126,
+      "ci95_upper": 39.79489467552919,
+      "wins": 45,
+      "losses": 1,
+      "ties": 0,
+      "n_origins": 46
+    },
+    {
+      "task": "168h",
+      "baseline": "DCRNN",
+      "metric": "NSE",
+      "mean_improvement": 0.037067503640274564,
+      "ci95_lower": 0.025566966008614463,
+      "ci95_upper": 0.0493081985417199,
+      "wins": 45,
+      "losses": 1,
+      "ties": 0,
+      "n_origins": 46
+    },
+    {
+      "task": "168h",
       "baseline": "STGCN",
-      "mean_improvement": 2.335589606754528,
-      "ci95_lower": 1.504355101783299,
-      "ci95_upper": 3.1540987419546838,
+      "metric": "MAE",
+      "mean_improvement": 15.06319343081096,
+      "ci95_lower": 9.794281188763305,
+      "ci95_upper": 19.83181628752201,
       "wins": 40,
       "losses": 6,
       "ties": 0,
       "n_origins": 46
+    },
+    {
+      "task": "168h",
+      "baseline": "STGCN",
+      "metric": "MAPE",
+      "mean_improvement": 33.34627288715503,
+      "ci95_lower": 12.301619203705627,
+      "ci95_upper": 52.15928056531533,
+      "wins": 36,
+      "losses": 10,
+      "ties": 0,
+      "n_origins": 46
+    },
+    {
+      "task": "168h",
+      "baseline": "STGCN",
+      "metric": "RMSE",
+      "mean_improvement": 30.019075058787774,
+      "ci95_lower": 11.599967038805147,
+      "ci95_upper": 46.672100584430005,
+      "wins": 35,
+      "losses": 11,
+      "ties": 0,
+      "n_origins": 46
+    },
+    {
+      "task": "168h",
+      "baseline": "STGCN",
+      "metric": "NSE",
+      "mean_improvement": 0.04315020594651057,
+      "ci95_lower": 0.01753393704779929,
+      "ci95_upper": 0.068630529065716,
+      "wins": 35,
+      "losses": 11,
+      "ties": 0,
+      "n_origins": 46
     }
   ],
-  "main_fig2_dma": {
-    "all_positive": true,
-    "n_cells": 40,
-    "min_reduction_pct": 1.2610835902931052,
-    "max_reduction_pct": 61.198078451376
+  "main_fig3_dma": {
+    "all_but_two_positive": true,
+    "n_cells": 160,
+    "n_positive": 158,
+    "n_nonpositive": 2
   },
-  "main_fig3_representative": {
-    "selection_rule": "STaR-GNN origin whose 168 h publisher-compatible MAE is closest to the median among the 46 common test origins",
+  "main_fig4_representative": {
+    "selection_rule": "STaR-GNN origin whose 168 h total MAE is closest to the median among the 46 common test origins",
     "selected_origin_position_zero_based": 42,
     "selected_common_index": 70,
-    "median_star_publisher_mae": 12.192746334132693,
-    "selected_star_publisher_mae": 12.182449728960082,
-    "selected_origin_model_publisher_mae": {
+    "median_star_total_mae": 12.192746334132693,
+    "selected_star_total_mae": 12.182449728960082,
+    "selected_origin_model_total_mae": {
       "DCRNN": 15.516927143647557,
       "STGCN": 14.653121023660615,
       "STaR-GNN": 12.182449728960082

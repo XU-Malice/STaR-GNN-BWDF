@@ -4,7 +4,7 @@
 
 本仓库是 STaR-GNN 的独立可复现实现，用于 10 个分区计量区域（DMA）的 24 h day-ahead 与 168 h week-ahead 联合需水预测。仓库包含 split-aware 数据预处理、仅训练期 Pearson 功能图、DCRNN/STGCN baseline、SAS-Norm 与 FA-DPR factorial ablation、冻结 checkpoint、common-46 Test 复评，以及 Journal of Hydrology 稿件所用的投稿表图和审计工件。
 
-> **Manuscript-facing 结果统一采用 publisher-compatible total 口径。** 内部 aggregate-demand MAE 与正文 total MAE 均保留，但不得混用。详见 [`paper/tables/literature/METRIC_CONVENTIONS.md`](paper/tables/literature/METRIC_CONVENTIONS.md)。
+> **Manuscript-facing 结果统一采用 total 口径。** 内部 aggregate-demand MAE 与正文 total MAE 均保留，但不得混用。详见 [`paper/tables/literature/METRIC_CONVENTIONS.md`](paper/tables/literature/METRIC_CONVENTIONS.md)。
 
 ## 1. 正式 factorial ablation
 
@@ -49,37 +49,38 @@ STaR-GNN：
 | 168 h | DCRNN + FA-DPR | 14.086 | 3.278 | 9.332 | 0.945 |
 | 168 h | STaR-GNN | 12.234 | **2.014** | **6.161** | **0.976** |
 
-168 h publisher-compatible MAE 中，SAS-Norm-only 与 STaR-GNN 仅差 `0.025755`（约 `0.21%`）。相邻 week-ahead forecast origins 高度重叠，因此采用 ordered 7-origin moving-block bootstrap 限定解释；该差异的均值区间跨过 0，不被表述为稳定优劣关系。
+168 h total MAE 中，SAS-Norm-only 与 STaR-GNN 仅差 `0.025755`（约 `0.21%`）。相邻 week-ahead forecast origins 高度重叠，因此采用 ordered 7-origin moving-block bootstrap 限定解释；该差异的均值区间跨过 0，不被表述为稳定优劣关系。
 
 ## 4. Journal of Hydrology 投稿版权威证据链
 
-正文不再平铺旧的五张结果图，而采用 **2 张主表 + 3 张主结果图**：
+正文采用 **2 张主表 + 4 张主结果图**：
 
 ```text
-Main Table 1
-Overall predictive performance
+Main Table 1 + Main Fig. 1  Overall four-metric performance
         ↓
-Main Table 2 + Main Fig. 1
-Factorial ablation + lead-time stability
+Main Table 2 + Main Fig. 2  Factorial ablation + lead-time stability
         ↓
-Main Fig. 2
-Temporal + spatial robustness
+Main Fig. 3                 Temporal + spatial robustness
         ↓
-Main Fig. 3
-Population-to-instance week-ahead dynamics
+Main Fig. 4                 Population-to-instance week-ahead dynamics
 ```
 
-### Main Figure 1 — Ablation mechanism and lead-time stability
+### Main Figure 1 — Overall four-metric performance
 
-- 四个 factorial variants 的 Day 1--Day 7 absolute publisher-compatible MAE + 7-origin moving-block 95% CI；
-- Day-1-relative degradation；Day 7 约为 DCRNN `+38.25%`、FA-DPR `+11.93%`、SAS-Norm `+2.64%`、STaR-GNN `+1.70%`。
+- 相对六个 published reference models 与 DCRNN、STGCN 的 MAE/MAPE/RMSE 降幅；
+- 对应的 NSE 绝对增益，24 h 与 168 h 并列。
 
-### Main Figure 2 — Temporal and spatial robustness
+### Main Figure 2 — Four-metric ablation and lead-time stability
 
-- 46 common origins 上 paired MAE improvement；win counts 为 `45/46, 45/46, 46/46, 40/46`；
-- 10 DMA × 2 horizons × 2 graph baselines 共 40 个 DMA-level comparisons，全部为正改善，范围约 `1.26%--61.20%`。
+- MAE、MAPE、RMSE、NSE 的逐日 paired improvement 与 moving-block 95% CI；
+- 同日水平错位、marker 和 linestyle 共同解决 SAS-Norm 与 STaR-GNN 的视觉重合。
 
-### Main Figure 3 — Week-ahead demand dynamics
+### Main Figure 3 — Four-metric temporal and spatial robustness
+
+- 46 common origins 和 10 DMAs 上的四指标 mean improvement 与 win count；
+- 160 个 DMA–horizon–baseline–metric 比较中 158 个改善；两个例外为 168 h DMA G 相对 STGCN 的 RMSE/NSE。
+
+### Main Figure 4 — Week-ahead demand dynamics
 
 - 46 origins × 7 forecast days 的日内 aggregate-demand error profile；
 - 预先固定 median-error rule 选出的 representative 168 h trajectory；
@@ -87,8 +88,8 @@ Population-to-instance week-ahead dynamics
 
 Supplementary：
 
-- **Table S1**：DMA A--J 详细指标；
-- **Fig. S1**：相对全部 baseline 的 improvement；
+- **Table S1**：三个 graph models 的 DMA A--J 详细四指标；
+- **Fig. S1**：逐 DMA 四指标 improvement；
 - **Fig. S2**：per-origin ECDF。
 
 最终设计见 [`docs/EXPERIMENT_DESIGN_FINAL_CN.md`](docs/EXPERIMENT_DESIGN_FINAL_CN.md)。
@@ -102,12 +103,13 @@ paper/tables/submission/
   tableS1_dma_metrics.md
 
 paper/figures/submission/
-  main_fig1_ablation_leadtime.{pdf,svg,png}
-  main_fig2_temporal_spatial_robustness.{pdf,svg,png}
-  main_fig3_week_ahead_dynamics.{pdf,svg,png}
+  main_fig1_overall_performance.{pdf,svg,png}
+  main_fig2_ablation_leadtime.{pdf,svg,png}
+  main_fig3_temporal_spatial_robustness.{pdf,svg,png}
+  main_fig4_week_ahead_dynamics.{pdf,svg,png}
 
 paper/figures/supplementary/
-  supp_figS1_relative_improvement.{pdf,svg,png}
+  supp_figS1_dma_improvement.{pdf,svg,png}
   supp_figS2_origin_ecdf.{pdf,svg,png}
 ```
 

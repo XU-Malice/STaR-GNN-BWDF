@@ -19,10 +19,9 @@ DISPLAY_NAMES = {
 
 
 def _display_name(name: str) -> str:
-    reported = name.endswith(REPORTED_SUFFIX)
     base = name.removesuffix(REPORTED_SUFFIX)
     base = DISPLAY_NAMES.get(base, base)
-    return f"{base}†" if reported else base
+    return base
 
 
 def _best(frame: pd.DataFrame, metric: str) -> float:
@@ -77,8 +76,9 @@ def _overall_markdown(frame: pd.DataFrame) -> str:
 
     lines += [
         "",
-        "**Note.** † Results reported by Que et al. (2024). DCRNN, STGCN and "
-        "STaR-GNN were evaluated under the common 46-origin protocol. "
+        "**Note.** Values for GRU, LSTM, MSNet and the MSCMNet variants were "
+        "reported by Que et al. (2024). DCRNN, STGCN and STaR-GNN were "
+        "evaluated under the common 46-origin protocol. "
         "All manuscript values use uniform three-decimal display precision; "
         "the source CSV retains full precision.",
     ]
@@ -114,31 +114,65 @@ def _ablation_markdown(frame: pd.DataFrame) -> str:
         "",
         "**Note.** STGCN is an independent graph baseline and is excluded from "
         "the factorial ablation. At 168 h, SAS-Norm-only has the marginally "
-        "lower publisher-compatible MAE (12.208 vs. 12.234), whereas the full "
+        "lower total MAE (12.208 vs. 12.234), whereas the full "
         "STaR-GNN is best in MAPE, RMSE and NSE. The corresponding paired "
-        "moving-block analysis is reported with Main Fig. 1.",
+        "moving-block analysis is reported with Main Fig. 2.",
     ]
     return "\n".join(lines) + "\n"
 
 
 def _dma_markdown(frame: pd.DataFrame) -> str:
     lines = [
-        "| Horizon | DMA | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |",
-        "|---|---|---:|---:|---:|---:|",
+        "| Horizon | DMA | Model | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |",
+        "|---|---|---|---:|---:|---:|---:|",
     ]
-    for _, row in frame.iterrows():
-        lines.append(
-            f"| {str(row['task']).replace('h', ' h')} | {row['DMA']} | "
-            f"{float(row['MAE']):.3f} | {float(row['MAPE']):.3f} | "
-            f"{float(row['RMSE']):.3f} | {float(row['NSE']):.3f} |"
-        )
+    for task in ("24h", "168h"):
+        for dma in tuple("ABCDEFGHIJ"):
+            block = frame.loc[(frame["task"] == task) & (frame["DMA"] == dma)]
+            best = {metric: _best(block, metric) for metric in METRICS}
+            for _, row in block.iterrows():
+                vals = [
+                    _fmt(row[m], bold=abs(float(row[m]) - best[m]) < 1e-12)
+                    for m in METRICS
+                ]
+                lines.append(
+                    f"| {task.replace('h', ' h')} | {dma} | {row['model']} | "
+                    f"{vals[0]} | {vals[1]} | {vals[2]} | {vals[3]} |"
+                )
     lines += [
         "",
-        "**Note.** Detailed DMA-level metrics are provided as Supplementary "
-        "Table S1; spatial consistency of the improvements is summarized in "
-        "Main Fig. 2b.",
+        "**Note.** MAPE is displayed as a percentage. Bold indicates the best "
+        "value within each horizon–DMA block. Spatial consistency is summarized "
+        "in Main Fig. 3b and detailed in Supplementary Fig. S1.",
     ]
     return "\n".join(lines) + "\n"
+
+
+def _load_dma_comparison(release: Path) -> pd.DataFrame:
+    model_paths = {
+        "DCRNN": "models/star_gnn/Base/{task}/seed_0/evaluation/metrics_common_46.csv",
+        "STGCN": "models/baselines/stgcn/{task}/seed_0/evaluation/metrics_common_46.csv",
+        "STaR-GNN": "models/star_gnn/Full/{task}/seed_0/evaluation/metrics_common_46.csv",
+    }
+    rows: list[dict[str, object]] = []
+    for task in ("24h", "168h"):
+        for model, template in model_paths.items():
+            path = release / template.format(task=task)
+            metrics = pd.read_csv(path)
+            metrics = metrics.loc[metrics["entity"].astype(str).isin(tuple("ABCDEFGHIJ"))]
+            for _, row in metrics.iterrows():
+                rows.append(
+                    {
+                        "task": task,
+                        "DMA": str(row["entity"]),
+                        "model": model,
+                        "MAE": float(row["MAE"]),
+                        "MAPE": 100.0 * float(row["MAPE"]),
+                        "RMSE": float(row["RMSE"]),
+                        "NSE": float(row["NSE"]),
+                    }
+                )
+    return pd.DataFrame(rows)
 
 
 def main() -> None:
@@ -153,6 +187,11 @@ def main() -> None:
         type=Path,
         default=Path("paper/tables/submission"),
     )
+    parser.add_argument(
+        "--release",
+        type=Path,
+        default=Path("results/paper/frozen_v1"),
+    )
     args = parser.parse_args()
 
     source = args.source_dir.resolve()
@@ -161,7 +200,7 @@ def main() -> None:
 
     overall = pd.read_csv(source / "table_literature_comparison_common46.csv")
     ablation = pd.read_csv(source / "table_ablation_common46.csv")
-    dma = pd.read_csv(source / "table_star_gnn_dma_common46.csv")
+    dma = _load_dma_comparison(args.release.resolve())
 
     (output / "table1_overall_performance.md").write_text(
         _overall_markdown(overall), encoding="utf-8"
@@ -171,6 +210,11 @@ def main() -> None:
     )
     (output / "tableS1_dma_metrics.md").write_text(
         _dma_markdown(dma), encoding="utf-8"
+    )
+    dma.to_csv(
+        source / "table_graph_models_dma_common46.csv",
+        index=False,
+        float_format="%.10f",
     )
 
     print("Submission tables: PASS")
