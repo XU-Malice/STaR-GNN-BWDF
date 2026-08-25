@@ -3,7 +3,7 @@
 
 The audit distinguishes frozen scientific artifacts from submission-facing
 presentation artifacts. Legacy diagnostic figures may remain tracked, but the
-canonical manuscript contract is 2 main tables + 4 main result figures,
+canonical manuscript contract is 2 main tables + 5 main result figures,
 and Supplementary Table S1.
 """
 
@@ -266,8 +266,9 @@ def _audit_paper(root: Path) -> list[str]:
     required_main = (
         "main_fig1_overall_performance",
         "main_fig2_dma_performance",
-        "main_fig3_ablation_leadtime",
-        "main_fig4_week_ahead_dynamics",
+        "main_fig3_dma_local_margin",
+        "main_fig4_ablation_leadtime",
+        "main_fig5_week_ahead_dynamics",
     )
     for stem in required_main:
         for ext in ("pdf", "svg", "png"):
@@ -279,10 +280,11 @@ def _audit_paper(root: Path) -> list[str]:
     required_audits = (
         "paper/tables/manuscript/submission/main_fig2_dma_ranks.csv",
         "paper/tables/manuscript/submission/main_fig2_dma_pairwise_improvement.csv",
-        "paper/tables/manuscript/submission/main_fig3_daywise_paired_improvement.csv",
-        "paper/tables/manuscript/submission/main_fig4_diurnal_aggregate_error.csv",
-        "paper/tables/manuscript/submission/main_fig4_representative_trajectory.csv",
-        "paper/tables/manuscript/submission/main_fig4_representative_selection.json",
+        "paper/tables/manuscript/submission/main_fig3_dma_strongest_competitor.csv",
+        "paper/tables/manuscript/submission/main_fig4_daywise_paired_improvement.csv",
+        "paper/tables/manuscript/submission/main_fig5_diurnal_aggregate_error.csv",
+        "paper/tables/manuscript/submission/main_fig5_representative_trajectory.csv",
+        "paper/tables/manuscript/submission/main_fig5_representative_selection.json",
         "paper/tables/manuscript/submission/submission_figure_audit.json",
     )
     for relative in required_audits:
@@ -315,6 +317,28 @@ def _audit_paper(root: Path) -> list[str]:
         }
         if dma != expected:
             errors.append(f"Main Fig. 2 DMA audit drift：{dma}")
+
+        local = audit.get("main_fig3_strongest_competitor", {})
+        expected_local = {
+            "24h": {
+                "wins": 36,
+                "comparisons": 40,
+                "losses_by_dma": {
+                    "A": 4, "B": 0, "C": 0, "D": 0, "E": 0,
+                    "F": 0, "G": 0, "H": 0, "I": 0, "J": 0,
+                },
+            },
+            "168h": {
+                "wins": 27,
+                "comparisons": 40,
+                "losses_by_dma": {
+                    "A": 4, "B": 0, "C": 0, "D": 0, "E": 4,
+                    "F": 0, "G": 4, "H": 0, "I": 1, "J": 0,
+                },
+            },
+        }
+        if local != expected_local:
+            errors.append(f"Main Fig. 3 DMA audit drift：{local}")
 
     return errors
 
@@ -418,7 +442,7 @@ def main() -> None:
     if args.require_frozen:
         print("唯一 checkpoint：10/10；DCRNN/Base无重复")
     if args.require_paper_artifacts:
-        print("Submission Table 1--2 / Main Fig. 1--4 / Table S1：PASS")
+        print("Submission Table 1--2 / Main Fig. 1--5 / Table S1：PASS")
 
 
 if __name__ == "__main__":

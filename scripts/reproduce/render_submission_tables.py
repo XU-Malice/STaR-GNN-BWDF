@@ -129,7 +129,7 @@ def _ablation_markdown(frame: pd.DataFrame) -> str:
         "the factorial ablation. At 168 h, SAS-Norm-only has the marginally "
         "lower total MAE (12.208 vs. 12.234), whereas the full "
         "STaR-GNN is best in MAPE, RMSE and NSE. The corresponding paired "
-        "moving-block analysis is reported with Main Fig. 3.",
+        "moving-block analysis is reported with Main Fig. 4.",
     ]
     return "\n".join(lines) + "\n"
 
@@ -168,8 +168,8 @@ def _dma_markdown(frame: pd.DataFrame) -> str:
         "value within each horizon–DMA block. The six recurrent and multi-scale "
         "model results are transcribed from the supplementary material of Que "
         "et al. (2024); its fractional MAPE values were multiplied by 100 for "
-        "consistent display. The same results are summarized as within-DMA "
-        "ranks in Main Fig. 2.",
+        "consistent display. The same results support the signed DMA-level "
+        "comparisons in Main Figs. 2 and 3.",
     ]
     return "\n".join(lines) + "\n"
 

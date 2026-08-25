@@ -35,15 +35,15 @@
 
 STGCN 是独立 graph baseline，不属于消融。
 
-168 h total MAE 中 SAS-Norm-only 为 12.208，STaR-GNN 为 12.234；完整模型在 MAPE、RMSE 和 NSE 上最好。该 0.21% MAE 点估计差异不用于声称任一模型稳定占优，长时域稳定性由 Main Fig. 3 和 moving-block bootstrap 进一步限定。
+168 h total MAE 中 SAS-Norm-only 为 12.208，STaR-GNN 为 12.234；完整模型在 MAPE、RMSE 和 NSE 上最好。该 0.21% MAE 点估计差异不用于声称任一模型稳定占优，长时域稳定性由 Main Fig. 4 和 moving-block bootstrap 进一步限定。
 
 ### Supplementary Table S1 — DMA-level metrics
 
-并列报告全部九种模型在 DMA A--J 的四指标绝对值。正文用 Main Fig. 2 概括逐 DMA 排名分布和 STaR-GNN 的首位指标覆盖度。
+并列报告全部九种模型在 DMA A--J 的四指标绝对值。正文用 Main Fig. 2 概括相对各基线的跨 DMA 改善分布，用 Main Fig. 3 定位相对最强局部竞争者的幅度与时域变化。
 
 ---
 
-## 2. 正文四张核心结果图
+## 2. 正文五张核心结果图
 
 ## Main Figure 1 — Overall four-metric performance
 
@@ -57,19 +57,25 @@ Panel a 用热图展示相对六个 published sequence/multiscale models 与 DCR
 
 ## Main Figure 2 — DMA-level performance breadth
 
-**Results-level question：**系统级优势是否覆盖多数 DMA 和四项指标？
+**Results-level question：**相对不同模型族的改善是否广泛分布于 DMA，而非由少数分区驱动？
 
-Panel a–b 分别展示九种模型在 24 h 和 168 h 任务中的逐 DMA、逐指标排名分布。排名在每个 horizon–DMA–metric 组合内独立计算，避免把不同 DMA 的需水尺度或不同指标单位直接混合。箱体汇总中位数与四分位距，散点保留全部 40 个 DMA–指标组合。
+四个 panel 分别展示 MAE、MAPE、RMSE 和 NSE。纵轴为八种基线，横轴为 STaR-GNN 相对每个基线的有符号逐 DMA 改善；小点保留十个 DMA，大点与线段给出中位数和四分位距，圆和方形区分 24 h 与 168 h。误差指标采用相对降幅，NSE 采用绝对增益，正值始终代表 STaR-GNN 更优。
 
-Panel c 保留 DMA 身份，给出 STaR-GNN 在每个 DMA 的四项指标中排名第一的数量。全部绝对数值置于 Supplementary Table S1，因此主图负责展示空间覆盖度，表格负责精确查询。
-
-图形选择借鉴了参考论文“总体表格 → 分区/站点层面分布 → 代表性过程”的递进方式：Que et al. 对 DMA 细节与总需求分别展示，IONET 工作用箱线图表达跨评价单元的性能分布，SiSGNN 则保留站点级差异。由于本研究同时包含九种模型、十个 DMA、两个时域和四项指标，直接复制多折线、雷达图或 Taylor 图会产生遮挡并丢失 DMA 身份，因此采用“排名分布 + 首位覆盖矩阵”，将完整绝对数值留给 Table S1。
-
-Main inference：STaR-GNN 在两个预测时域的中位排名均为 1，24 h 和 168 h 分别在 36/40 与 27/40 个 DMA–指标组合中排名第一，说明总体优势具有广泛而非绝对的空间覆盖。
+Main inference：STaR-GNN 的改善在时序模型和图模型两类基线中均具有广泛的跨 DMA 覆盖，但分布的负向尾部说明其并非在所有局部任务上占优。
 
 ---
 
-## Main Figure 3 — Four-metric ablation and lead-time stability
+## Main Figure 3 — DMA-specific local competitive margin
+
+**Results-level question：**相对每个 DMA 的最强替代方法，STaR-GNN 的优势在预测时域延长后如何保持、收窄或反转？
+
+四个 panel 对应四项指标。每个 DMA–指标–预测时域组合独立选择最强非 STaR-GNN 方法，并计算有符号竞争幅度。同一 DMA 的 24 h 与 168 h 点相连；红色点保留局部非最优结果。
+
+Main inference：24 h 的四个例外集中于 DMA A；168 h 时，A、E 和 G 的四项指标及 I 的 NSE 由其他方法取得更优结果。该图说明总体优势由多数 DMA 支撑，但局部竞争边界随预测时域呈明显异质性。
+
+---
+
+## Main Figure 4 — Four-metric ablation and lead-time stability
 
 **Results-level question：**SAS-Norm 与 FA-DPR 如何影响一周预测中的准确性和稳定性？
 
@@ -79,7 +85,7 @@ Main inference：STaR-GNN 在两个预测时域的中位排名均为 1，24 h �
 
 ---
 
-## Main Figure 4 — Week-ahead demand dynamics
+## Main Figure 5 — Week-ahead demand dynamics
 
 **Results-level question：**统计上的改进在真实一周需求轨迹中具体表现为什么？
 
@@ -144,13 +150,13 @@ scripts/reproduce/manuscript_plot_style.py
 
 ### 3.1 Overall performance across forecasting horizons
 
-证据：Table 1 + Main Fig. 1 + Main Fig. 2 + Supplementary Table S1。
+证据：Table 1 + Main Fig. 1 + Main Figs. 2--3 + Supplementary Table S1。
 
 写法：claim → quantitative evidence → sequence/multiscale comparison → graph baseline comparison → bounded inference。
 
 ### 3.2 Component contributions and lead-time dependence
 
-证据：Table 2 + Main Fig. 3。
+证据：Table 2 + Main Fig. 4。
 
 开头直接给 scientific finding，不以“Table 2 shows...”起句。
 
@@ -160,7 +166,7 @@ scripts/reproduce/manuscript_plot_style.py
 
 ### 3.3 Week-ahead demand dynamics
 
-证据：Main Fig. 4。
+证据：Main Fig. 5。
 
 代表案例定义为 population analysis 的 instance-level validation，而不是额外 leaderboard。
 

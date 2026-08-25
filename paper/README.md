@@ -55,7 +55,7 @@ STaR-GNN
 
 STGCN 是独立 graph baseline，不属于消融。
 
-168 h total MAE：SAS-Norm-only `12.208`，STaR-GNN `12.234`；差约 `0.21%`。该点估计差异由 Main Fig. 3 的 ordered moving-block evidence 限定解释；完整模型在 168 h 的 MAPE、RMSE、NSE 以及 aggregate-demand MAE 上更优。
+168 h total MAE：SAS-Norm-only `12.208`，STaR-GNN `12.234`；差约 `0.21%`。该点估计差异由 Main Fig. 4 的 ordered moving-block evidence 限定解释；完整模型在 168 h 的 MAPE、RMSE、NSE 以及 aggregate-demand MAE 上更优。
 
 ---
 
@@ -75,13 +75,13 @@ tables/literature/table_graph_models_dma_common46.csv
 tables/literature/table_all_models_dma.csv
 ```
 
-表中并列给出全部九种模型在 10 个 DMA、两个预测时域和四个指标上的绝对结果，用于支撑 Main Fig. 2。时序模型原始 MAPE 小数已统一转换为百分数。
+表中并列给出全部九种模型在 10 个 DMA、两个预测时域和四个指标上的绝对结果，用于支撑 Main Fig. 2 和 Main Fig. 3。时序模型原始 MAPE 小数已统一转换为百分数。
 
 ---
 
 # Main result figures
 
-最终正文保留四张核心结果图，按“总体优势—DMA 空间覆盖—组件作用—实际轨迹”展开。
+最终正文保留五张核心结果图，按“总体优势—跨 DMA 分布—局部竞争边界—组件作用—实际轨迹”展开。
 
 ## Main Figure 1 — Overall four-metric performance
 
@@ -104,18 +104,30 @@ figures/submission/main_fig2_dma_performance.svg
 figures/submission/main_fig2_dma_performance.png
 ```
 
-- Panel a–b：九种模型在 24 h 与 168 h 下的逐 DMA、逐指标排名分布；
-- Panel c：STaR-GNN 在每个 DMA 上四项指标中排名第一的数量；
-- 绝对数值保留于 Supplementary Table S1，主图用排名消除 DMA 尺度与指标单位差异。
+- 四个 panel：STaR-GNN 相对八种基线的 MAE、MAPE、RMSE、NSE 逐 DMA 有符号改善分布；
+- 小点保留全部十个 DMA，大点与线段为中位数和四分位距，圆/方形区分 24 h 与 168 h。
 
-回答：**总体优势是否覆盖多数 DMA 和全部评价维度，而非由少数高需水分区驱动？**
+回答：**相对不同模型族的改善是否广泛分布于 DMA，而非由少数分区驱动？**
 
-## Main Figure 3 — Four-metric ablation and lead-time stability
+## Main Figure 3 — DMA-specific local competitive margin
 
 ```text
-figures/submission/main_fig3_ablation_leadtime.pdf
-figures/submission/main_fig3_ablation_leadtime.svg
-figures/submission/main_fig3_ablation_leadtime.png
+figures/submission/main_fig3_dma_local_margin.pdf
+figures/submission/main_fig3_dma_local_margin.svg
+figures/submission/main_fig3_dma_local_margin.png
+```
+
+- 四个 panel：STaR-GNN 相对每个 DMA–指标–预测时域内最强竞争者的有符号幅度；
+- 连接 24 h 与 168 h，保留局部负值和 DMA 身份。
+
+回答：**系统级优势在不同 DMA 中如何保持、收窄或反转？**
+
+## Main Figure 4 — Four-metric ablation and lead-time stability
+
+```text
+figures/submission/main_fig4_ablation_leadtime.pdf
+figures/submission/main_fig4_ablation_leadtime.svg
+figures/submission/main_fig4_ablation_leadtime.png
 ```
 
 - 四个 panel 分别给出 MAE、MAPE、RMSE、NSE；
@@ -123,12 +135,12 @@ figures/submission/main_fig3_ablation_leadtime.png
 
 回答：**SAS-Norm 与 FA-DPR 分别如何影响周尺度准确性与 lead-time stability？**
 
-## Main Figure 4 — Week-ahead demand dynamics
+## Main Figure 5 — Week-ahead demand dynamics
 
 ```text
-figures/submission/main_fig4_week_ahead_dynamics.pdf
-figures/submission/main_fig4_week_ahead_dynamics.svg
-figures/submission/main_fig4_week_ahead_dynamics.png
+figures/submission/main_fig5_week_ahead_dynamics.pdf
+figures/submission/main_fig5_week_ahead_dynamics.svg
+figures/submission/main_fig5_week_ahead_dynamics.png
 ```
 
 - Panel a：全部测试窗口 × 7 days 的 diurnal aggregate-demand absolute-error profile；
@@ -152,10 +164,11 @@ tables/manuscript/submission/
 ```text
 main_fig2_dma_ranks.csv
 main_fig2_dma_pairwise_improvement.csv
-main_fig3_daywise_paired_improvement.csv
-main_fig4_diurnal_aggregate_error.csv
-main_fig4_representative_trajectory.csv
-main_fig4_representative_selection.json
+main_fig3_dma_strongest_competitor.csv
+main_fig4_daywise_paired_improvement.csv
+main_fig5_diurnal_aggregate_error.csv
+main_fig5_representative_trajectory.csv
+main_fig5_representative_selection.json
 submission_figure_audit.json
 ```
 

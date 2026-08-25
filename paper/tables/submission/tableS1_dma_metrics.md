@@ -183,4 +183,4 @@
 | 168 h | J | STGCN | 1.968 | 8.723 | 2.480 | 0.569 |
 | 168 h | J | STaR-GNN | **1.601** | **6.874** | **2.018** | **0.714** |
 
-**Note.** MAPE is displayed as a percentage. Bold indicates the best value within each horizon–DMA block. The six recurrent and multi-scale model results are transcribed from the supplementary material of Que et al. (2024); its fractional MAPE values were multiplied by 100 for consistent display. The same results are summarized as within-DMA ranks in Main Fig. 2.
+**Note.** MAPE is displayed as a percentage. Bold indicates the best value within each horizon–DMA block. The six recurrent and multi-scale model results are transcribed from the supplementary material of Que et al. (2024); its fractional MAPE values were multiplied by 100 for consistent display. The same results support the signed DMA-level comparisons in Main Figs. 2 and 3.
