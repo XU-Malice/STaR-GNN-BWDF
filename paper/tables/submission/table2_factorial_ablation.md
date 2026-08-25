@@ -9,4 +9,4 @@
 | 168 h | DCRNN + FA-DPR | 14.086 | 3.278 | 9.332 | 0.945 |
 | 168 h | STaR-GNN | 12.234 | **2.014** | **6.161** | **0.976** |
 
-**Note.** STGCN is an independent graph baseline and is excluded from the factorial ablation. At 168 h, SAS-Norm-only has the marginally lower publisher-compatible MAE (12.208 vs. 12.234), whereas the full STaR-GNN is best in MAPE, RMSE and NSE. The corresponding paired moving-block analysis is reported with Main Fig. 1.
+**Note.** STGCN is an independent graph baseline and is excluded from the factorial ablation. At 168 h, SAS-Norm-only has the marginally lower total MAE (12.208 vs. 12.234), whereas the full STaR-GNN is best in MAPE, RMSE and NSE. The corresponding paired moving-block analysis is reported with Main Fig. 2.

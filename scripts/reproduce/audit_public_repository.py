@@ -3,7 +3,7 @@
 
 The audit distinguishes frozen scientific artifacts from submission-facing
 presentation artifacts. Legacy diagnostic figures may remain tracked, but the
-canonical manuscript contract is 2 main tables + 3 main result figures,
+canonical manuscript contract is 2 main tables + 4 main result figures,
 Supplementary Fig. S1--S2, and Supplementary Table S1.
 """
 
@@ -93,6 +93,18 @@ def _sha256(path: Path) -> str:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _checksum_matches(path: Path, expected: str) -> bool:
+    """Accept Git-normalized line endings for frozen text inventories."""
+    if _sha256(path) == expected:
+        return True
+    if path.suffix.lower() not in {".csv", ".json", ".md", ".txt", ".yaml", ".yml"}:
+        return False
+    payload = path.read_bytes()
+    lf = payload.replace(b"\r\n", b"\n")
+    variants = (lf, lf.replace(b"\n", b"\r\n"))
+    return any(hashlib.sha256(item).hexdigest() == expected for item in variants)
 
 
 def _manifest_files(root: Path) -> tuple[set[str], list[str]]:
@@ -186,7 +198,7 @@ def _audit_frozen(root: Path) -> list[str]:
         expected, relative = line.split("  ", 1)
         listed.add(relative)
         path = release / relative
-        if not path.is_file() or _sha256(path) != expected:
+        if not path.is_file() or not _checksum_matches(path, expected):
             errors.append(f"冻结工件缺失或 SHA 错误：{relative}")
     actual = {
         path.relative_to(release).as_posix()
@@ -210,6 +222,7 @@ def _audit_paper(root: Path) -> list[str]:
         "paper/tables/literature/table_literature_comparison_common46.csv": 18,
         "paper/tables/literature/table_ablation_common46.csv": 8,
         "paper/tables/literature/table_star_gnn_dma_common46.csv": 20,
+        "paper/tables/literature/table_graph_models_dma_common46.csv": 60,
     }
     for relative, expected in source_tables.items():
         path = root / relative
@@ -251,12 +264,13 @@ def _audit_paper(root: Path) -> list[str]:
             errors.append(f"缺少投稿显示表：{relative}")
 
     required_main = (
-        "main_fig1_ablation_leadtime",
-        "main_fig2_temporal_spatial_robustness",
-        "main_fig3_week_ahead_dynamics",
+        "main_fig1_overall_performance",
+        "main_fig2_ablation_leadtime",
+        "main_fig3_temporal_spatial_robustness",
+        "main_fig4_week_ahead_dynamics",
     )
     required_supp = (
-        "supp_figS1_relative_improvement",
+        "supp_figS1_dma_improvement",
         "supp_figS2_origin_ecdf",
     )
     for stem in required_main:
@@ -275,14 +289,13 @@ def _audit_paper(root: Path) -> list[str]:
                 errors.append(f"补充图为空：{path.relative_to(root)}")
 
     required_audits = (
-        "paper/tables/manuscript/submission/main_fig1_daywise_block_ci.csv",
-        "paper/tables/manuscript/submission/main_fig1_day7_degradation.csv",
-        "paper/tables/manuscript/submission/main_fig2_origin_paired_improvement.csv",
-        "paper/tables/manuscript/submission/main_fig2_origin_paired_summary.csv",
-        "paper/tables/manuscript/submission/main_fig2_dma_improvement.csv",
-        "paper/tables/manuscript/submission/main_fig3_diurnal_aggregate_error.csv",
-        "paper/tables/manuscript/submission/main_fig3_representative_trajectory.csv",
-        "paper/tables/manuscript/submission/main_fig3_representative_selection.json",
+        "paper/tables/manuscript/submission/main_fig2_daywise_paired_improvement.csv",
+        "paper/tables/manuscript/submission/main_fig3_origin_paired_improvement.csv",
+        "paper/tables/manuscript/submission/main_fig3_origin_paired_summary.csv",
+        "paper/tables/manuscript/submission/main_fig3_dma_improvement.csv",
+        "paper/tables/manuscript/submission/main_fig4_diurnal_aggregate_error.csv",
+        "paper/tables/manuscript/submission/main_fig4_representative_trajectory.csv",
+        "paper/tables/manuscript/submission/main_fig4_representative_selection.json",
         "paper/tables/manuscript/submission/submission_figure_audit.json",
     )
     for relative in required_audits:
@@ -294,12 +307,16 @@ def _audit_paper(root: Path) -> list[str]:
     )
     if audit_path.is_file():
         audit = json.loads(audit_path.read_text(encoding="utf-8"))
-        dma = audit.get("main_fig2_dma", {})
-        if dma.get("n_cells") != 40 or dma.get("all_positive") is not True:
+        dma = audit.get("main_fig3_dma", {})
+        if (
+            dma.get("n_cells") != 160
+            or dma.get("n_positive") != 158
+            or dma.get("all_but_two_positive") is not True
+        ):
             errors.append(
-                "Main Fig. 2b DMA audit 必须为 40 cells 且全部 positive"
+                "Main Fig. 3b DMA audit 必须为 160 cells、158 positive"
             )
-        summary = audit.get("main_fig2_origin_summary", [])
+        summary = audit.get("main_fig3_origin_summary", [])
         expected_wins = {
             ("24h", "DCRNN"): 45,
             ("24h", "STGCN"): 45,
@@ -308,11 +325,11 @@ def _audit_paper(root: Path) -> list[str]:
         }
         observed_wins = {
             (str(row.get("task")), str(row.get("baseline"))): int(row.get("wins"))
-            for row in summary
+            for row in summary if row.get("metric") == "MAE"
         }
         if observed_wins != expected_wins:
             errors.append(
-                f"Main Fig. 2a paired win counts drift：{observed_wins}"
+                f"Main Fig. 3a paired MAE win counts drift：{observed_wins}"
             )
 
     return errors
@@ -417,7 +434,7 @@ def main() -> None:
     if args.require_frozen:
         print("唯一 checkpoint：10/10；DCRNN/Base无重复")
     if args.require_paper_artifacts:
-        print("Submission Table 1--2 / Main Fig. 1--3 / Fig. S1--S2：PASS")
+        print("Submission Table 1--2 / Main Fig. 1--4 / Fig. S1--S2：PASS")
 
 
 if __name__ == "__main__":

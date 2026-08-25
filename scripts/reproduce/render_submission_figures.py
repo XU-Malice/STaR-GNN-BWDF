@@ -1,25 +1,14 @@
 #!/usr/bin/env python
 """Render the canonical Journal of Hydrology submission result figures.
 
-The renderer implements a claim-driven evidence architecture:
+The four main figures follow the manuscript's claim sequence: overall
+performance, component evidence, temporal/spatial robustness, and a concrete
+week-ahead forecast.  MAE, MAPE, RMSE and NSE are carried through the first
+three stages instead of treating MAE as a proxy for all forecasting quality.
 
-Main Figure 1
-    Mechanism / ablation: absolute day-wise publisher-compatible MAE with
-    moving-block bootstrap uncertainty + Day-1-to-Day-7 degradation.
-
-Main Figure 2
-    Temporal and spatial robustness: paired per-origin MAE improvements +
-    DMA-level improvement heatmap.
-
-Main Figure 3
-    Week-ahead dynamics: population-level diurnal aggregate-error profile +
-    a deterministic representative 168 h trajectory + its absolute error.
-
-Supplementary Figure S1
-    Relative improvement over all literature/re-evaluated baselines.
-
-Supplementary Figure S2
-    ECDF of per-origin publisher-compatible MAE for DCRNN, STGCN, STaR-GNN.
+The ablation figure reports paired improvements relative to DCRNN with small
+horizontal offsets and confidence intervals.  This makes the very similar
+SAS-Norm and full-model results legible without distorting their values.
 
 All figures are rebuilt from frozen common-46 predictions and audited tables.
 No training, checkpoint selection, or hyperparameter tuning occurs here.
@@ -56,6 +45,7 @@ from manuscript_plot_style import (
 
 TASKS = ("24h", "168h")
 DMAS = tuple("ABCDEFGHIJ")
+METRICS = ("MAE", "MAPE", "RMSE", "NSE")
 
 PUBLIC_TO_INTERNAL = {
     "DCRNN": "DCRNN",
@@ -151,13 +141,53 @@ def _publisher_mae_per_origin(
     return np.mean(np.abs(prediction - truth), axis=1).sum(axis=1)
 
 
-def _publisher_mae_per_origin_day(
-    truth: np.ndarray, prediction: np.ndarray, day: int
+def _metric_per_origin(
+    truth: np.ndarray,
+    prediction: np.ndarray,
+    metric: str,
+    *,
+    day: int | None = None,
 ) -> np.ndarray:
-    if not 1 <= day <= 7:
-        raise ValueError(day)
-    sl = slice((day - 1) * 24, day * 24)
-    return np.mean(np.abs(prediction[:, sl, :] - truth[:, sl, :]), axis=1).sum(axis=1)
+    """Return one metric per forecast origin using manuscript conventions."""
+    if day is not None:
+        if not 1 <= day <= 7:
+            raise ValueError(day)
+        sl = slice((day - 1) * 24, day * 24)
+        truth = truth[:, sl, :]
+        prediction = prediction[:, sl, :]
+    if metric == "MAE":
+        return np.mean(np.abs(prediction - truth), axis=1).sum(axis=1)
+
+    aggregate_truth = truth.sum(axis=2)
+    aggregate_prediction = prediction.sum(axis=2)
+    error = aggregate_prediction - aggregate_truth
+    if metric == "MAPE":
+        denominator = np.maximum(np.abs(aggregate_truth), 1.0e-12)
+        return 100.0 * np.mean(np.abs(error) / denominator, axis=1)
+    if metric == "RMSE":
+        return np.sqrt(np.mean(error**2, axis=1))
+    if metric == "NSE":
+        numerator = np.sum(error**2, axis=1)
+        centered = aggregate_truth - aggregate_truth.mean(axis=1, keepdims=True)
+        denominator = np.sum(centered**2, axis=1)
+        return 1.0 - numerator / np.maximum(denominator, 1.0e-12)
+    raise ValueError(metric)
+
+
+def _paired_improvement(
+    baseline: np.ndarray,
+    candidate: np.ndarray,
+    metric: str,
+) -> np.ndarray:
+    """Direction-aligned improvement: positive always favors the candidate."""
+    if metric == "NSE":
+        return candidate - baseline
+    denominator = np.maximum(np.abs(baseline), 1.0e-12)
+    return 100.0 * (baseline - candidate) / denominator
+
+
+def _improvement_label(metric: str) -> str:
+    return "NSE gain" if metric == "NSE" else f"{metric} reduction (%)"
 
 
 def _moving_block_indices(
@@ -211,117 +241,92 @@ def _derive_daywise(
     indices: np.ndarray,
 ) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
-    truth_ref: np.ndarray | None = None
-    for model in ABLATION_MODELS:
-        truth, pred, _ = _load_common_predictions(release, model, "168h")
-        truth_ref = _ensure_same_truth(truth_ref, truth, model)
-        for day in range(1, 8):
-            values = _publisher_mae_per_origin_day(truth, pred, day)
-            mean, lo, hi = _block_ci(values, indices)
-            rows.append(
-                {
-                    "model": model,
-                    "day": day,
-                    "mean_MAE": mean,
-                    "ci95_lower": lo,
-                    "ci95_upper": hi,
-                }
-            )
+    truth, base_pred, common = _load_common_predictions(release, "DCRNN", "168h")
+    for model in ABLATION_MODELS[1:]:
+        model_truth, pred, model_common = _load_common_predictions(
+            release, model, "168h"
+        )
+        _ensure_same_truth(truth, model_truth, model)
+        if not np.array_equal(common, model_common):
+            raise ValueError(f"Origin index drift: {model}")
+        for metric in METRICS:
+            for day in range(1, 8):
+                baseline = _metric_per_origin(
+                    truth, base_pred, metric, day=day
+                )
+                candidate = _metric_per_origin(
+                    truth, pred, metric, day=day
+                )
+                values = _paired_improvement(baseline, candidate, metric)
+                mean, lo, hi = _block_ci(values, indices)
+                rows.append(
+                    {
+                        "model": model,
+                        "metric": metric,
+                        "day": day,
+                        "mean_improvement": mean,
+                        "ci95_lower": lo,
+                        "ci95_upper": hi,
+                        "wins": int((values > 0).sum()),
+                        "n_origins": int(values.size),
+                    }
+                )
     return pd.DataFrame(rows)
 
 
 def _main_figure1(
     daywise: pd.DataFrame,
     output: Path,
-) -> pd.DataFrame:
-    fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.25), sharex=True)
-    ax_abs, ax_deg = axes
-
-    degradation_rows: list[dict[str, Any]] = []
-    for model in ABLATION_MODELS:
-        sel = daywise.loc[daywise["model"] == model].sort_values("day")
-        x = sel["day"].to_numpy(int)
-        y = sel["mean_MAE"].to_numpy(float)
-        lo = sel["ci95_lower"].to_numpy(float)
-        hi = sel["ci95_upper"].to_numpy(float)
-        lw = 2.35 if model == "STaR-GNN" else 1.55
-        z = 5 if model == "STaR-GNN" else 3
-
-        ax_abs.plot(
-            x, y,
-            color=MODEL_COLORS[model],
-            linestyle=MODEL_LINESTYLES[model],
-            marker=MODEL_MARKERS[model],
-            markersize=4.3,
-            linewidth=lw,
-            label=model,
-            zorder=z,
-        )
-        ax_abs.fill_between(
-            x, lo, hi,
-            color=MODEL_COLORS[model],
-            alpha=0.10 if model == "STaR-GNN" else 0.07,
-            linewidth=0,
-            zorder=1,
-        )
-
-        day1 = float(y[0])
-        rel = 100.0 * (y - day1) / day1
-        for day, mean_mae, value in zip(x, y, rel):
-            degradation_rows.append(
-                {
-                    "model": model,
-                    "day": int(day),
-                    "mean_MAE": float(mean_mae),
-                    "relative_to_day1_pct": float(value),
-                }
+) -> None:
+    fig, axes = plt.subplots(2, 2, figsize=(7.4, 5.2), sharex=True)
+    offsets = {
+        "DCRNN + SAS-Norm": -0.12,
+        "DCRNN + FA-DPR": 0.0,
+        "STaR-GNN": 0.12,
+    }
+    for ax, metric, panel in zip(axes.flat, METRICS, "abcd"):
+        for model in ABLATION_MODELS[1:]:
+            sel = daywise.loc[
+                (daywise["model"] == model) & (daywise["metric"] == metric)
+            ].sort_values("day")
+            x = sel["day"].to_numpy(float) + offsets[model]
+            y = sel["mean_improvement"].to_numpy(float)
+            lo = sel["ci95_lower"].to_numpy(float)
+            hi = sel["ci95_upper"].to_numpy(float)
+            ax.errorbar(
+                x,
+                y,
+                yerr=np.vstack([y - lo, hi - y]),
+                color=MODEL_COLORS[model],
+                linestyle=MODEL_LINESTYLES[model],
+                marker=MODEL_MARKERS[model],
+                markersize=4.0,
+                linewidth=2.0 if model == "STaR-GNN" else 1.25,
+                elinewidth=0.85,
+                capsize=2.0,
+                label=model,
+                zorder=5 if model == "STaR-GNN" else 3,
             )
-        ax_deg.plot(
-            x, rel,
-            color=MODEL_COLORS[model],
-            linestyle=MODEL_LINESTYLES[model],
-            marker=MODEL_MARKERS[model],
-            markersize=4.3,
-            linewidth=lw,
-            label=model,
-            zorder=z,
-        )
-        ax_deg.annotate(
-            f"{rel[-1]:+.1f}%",
-            xy=(7, rel[-1]),
-            xytext=(4, 0),
-            textcoords="offset points",
-            ha="left",
-            va="center",
-            fontsize=7.3,
-            color=MODEL_COLORS[model],
-            fontweight="bold" if model == "STaR-GNN" else "normal",
-        )
-
-    for ax in axes:
+        ax.axhline(0.0, color=ZERO_GRAY, linewidth=0.8, zorder=0)
         ax.set_xticks(range(1, 8))
-        ax.set_xlabel("Forecast day")
+        ax.set_ylabel(_improvement_label(metric))
         style_axis(ax, ygrid=True)
-    ax_abs.set_ylabel("Publisher-compatible MAE (L s$^{-1}$)")
-    ax_deg.set_ylabel("MAE change from Day 1 (%)")
-    ax_deg.axhline(0.0, color=ZERO_GRAY, linewidth=0.8, zorder=0)
+        add_panel_label(ax, panel)
+    for ax in axes[1]:
+        ax.set_xlabel("Forecast day")
 
-    add_panel_label(ax_abs, "a")
-    add_panel_label(ax_deg, "b")
-
-    handles, labels = ax_abs.get_legend_handles_labels()
+    handles, labels = axes[0, 0].get_legend_handles_labels()
     fig.legend(
         handles,
         labels,
         loc="upper center",
-        bbox_to_anchor=(0.5, 1.02),
-        ncol=4,
-        columnspacing=1.2,
-        handlelength=2.7,
+        bbox_to_anchor=(0.5, 1.01),
+        ncol=3,
+        columnspacing=1.25,
+        handlelength=2.5,
     )
-    fig.subplots_adjust(top=0.80, wspace=0.32, bottom=0.18)
-    save_publication_figure(fig, output / "main_fig1_ablation_leadtime")
-    return pd.DataFrame(degradation_rows)
+    fig.subplots_adjust(top=0.88, wspace=0.34, hspace=0.24, bottom=0.10)
+    save_publication_figure(fig, output / "main_fig2_ablation_leadtime")
 
 
 def _derive_origin_improvements(
@@ -333,7 +338,6 @@ def _derive_origin_improvements(
     summary: list[dict[str, Any]] = []
     for task in TASKS:
         star_truth, star_pred, common = _load_common_predictions(release, "STaR-GNN", task)
-        star = _publisher_mae_per_origin(star_truth, star_pred)
         for baseline in BASELINE_MODELS:
             base_truth, base_pred, base_common = _load_common_predictions(
                 release, baseline, task
@@ -341,32 +345,38 @@ def _derive_origin_improvements(
             _ensure_same_truth(star_truth, base_truth, f"{task}/{baseline}")
             if not np.array_equal(common, base_common):
                 raise ValueError(f"Origin index drift: {task}/{baseline}")
-            base = _publisher_mae_per_origin(base_truth, base_pred)
-            diff = base - star
-            mean, lo, hi = _block_ci(diff, indices)
-            for pos, (common_index, value) in enumerate(zip(common, diff)):
-                rows.append(
+            for metric in METRICS:
+                base = _metric_per_origin(base_truth, base_pred, metric)
+                star = _metric_per_origin(star_truth, star_pred, metric)
+                improvement = _paired_improvement(base, star, metric)
+                mean, lo, hi = _block_ci(improvement, indices)
+                for pos, (common_index, value) in enumerate(
+                    zip(common, improvement)
+                ):
+                    rows.append(
+                        {
+                            "task": task,
+                            "baseline": baseline,
+                            "metric": metric,
+                            "origin_position": pos,
+                            "common_index": int(common_index),
+                            "improvement": float(value),
+                        }
+                    )
+                summary.append(
                     {
                         "task": task,
                         "baseline": baseline,
-                        "origin_position": pos,
-                        "common_index": int(common_index),
-                        "mae_improvement": float(value),
+                        "metric": metric,
+                        "mean_improvement": mean,
+                        "ci95_lower": lo,
+                        "ci95_upper": hi,
+                        "wins": int((improvement > 0).sum()),
+                        "losses": int((improvement < 0).sum()),
+                        "ties": int(np.isclose(improvement, 0.0).sum()),
+                        "n_origins": int(improvement.size),
                     }
                 )
-            summary.append(
-                {
-                    "task": task,
-                    "baseline": baseline,
-                    "mean_improvement": mean,
-                    "ci95_lower": lo,
-                    "ci95_upper": hi,
-                    "wins": int((diff > 0).sum()),
-                    "losses": int((diff < 0).sum()),
-                    "ties": int(np.isclose(diff, 0.0).sum()),
-                    "n_origins": int(diff.size),
-                }
-            )
     return pd.DataFrame(rows), pd.DataFrame(summary)
 
 
@@ -377,18 +387,28 @@ def _derive_dma_improvement(release: Path) -> pd.DataFrame:
         for baseline in BASELINE_MODELS:
             base = _load_dma_metrics(release, baseline, task).set_index("entity")
             for dma in DMAS:
-                base_mae = float(base.loc[dma, "MAE"])
-                star_mae = float(star.loc[dma, "MAE"])
-                rows.append(
-                    {
-                        "DMA": dma,
-                        "task": task,
-                        "baseline": baseline,
-                        "MAE_reduction_pct": 100.0
-                        * (base_mae - star_mae)
-                        / base_mae,
-                    }
-                )
+                for metric in METRICS:
+                    base_value = float(base.loc[dma, metric])
+                    star_value = float(star.loc[dma, metric])
+                    if metric == "MAPE":
+                        base_value *= 100.0
+                        star_value *= 100.0
+                    improvement = float(
+                        _paired_improvement(
+                            np.array([base_value]),
+                            np.array([star_value]),
+                            metric,
+                        )[0]
+                    )
+                    rows.append(
+                        {
+                            "DMA": dma,
+                            "task": task,
+                            "baseline": baseline,
+                            "metric": metric,
+                            "improvement": improvement,
+                        }
+                    )
     return pd.DataFrame(rows)
 
 
@@ -398,154 +418,70 @@ def _main_figure2(
     dma: pd.DataFrame,
     output: Path,
 ) -> None:
-    fig, axes = plt.subplots(
-        1, 2,
-        figsize=(7.4, 3.75),
-        gridspec_kw={"width_ratios": [1.05, 1.15]},
-    )
-    ax_pair, ax_dma = axes
-
-    groups = [
-        ("24h", "DCRNN"),
-        ("24h", "STGCN"),
-        ("168h", "DCRNN"),
-        ("168h", "STGCN"),
-    ]
-    labels = [
-        "24 h\nDCRNN",
-        "24 h\nSTGCN",
-        "168 h\nDCRNN",
-        "168 h\nSTGCN",
-    ]
-    rng = np.random.default_rng(20260821)
-    for x, (task, baseline) in enumerate(groups):
-        vals = paired.loc[
-            (paired["task"] == task) & (paired["baseline"] == baseline),
-            "mae_improvement",
-        ].to_numpy(float)
-        jitter = rng.uniform(-0.13, 0.13, size=vals.size)
-        point_color = "#AFC4D8" if task == "24h" else "#7398BB"
-        ax_pair.scatter(
-            np.full(vals.size, x) + jitter,
-            vals,
-            s=11,
-            color=point_color,
-            alpha=0.62,
-            edgecolors="none",
-            zorder=2,
-        )
-        row = paired_summary.loc[
-            (paired_summary["task"] == task)
-            & (paired_summary["baseline"] == baseline)
-        ].iloc[0]
-        mean = float(row["mean_improvement"])
-        lo = float(row["ci95_lower"])
-        hi = float(row["ci95_upper"])
-        ax_pair.errorbar(
-            x,
-            mean,
-            yerr=np.array([[mean - lo], [hi - mean]]),
-            fmt="D",
-            markersize=5,
-            color=HERO_BLUE,
-            ecolor=HERO_BLUE,
-            elinewidth=1.6,
-            capsize=3.5,
-            capthick=1.2,
-            zorder=4,
-        )
-        y_top = max(float(vals.max()), hi)
-        ax_pair.annotate(
-            f'{int(row["wins"])}/{int(row["n_origins"])}',
-            xy=(x, y_top),
-            xytext=(0, 7),
-            textcoords="offset points",
-            ha="center",
-            va="bottom",
-            fontsize=7.5,
-            color=HERO_BLUE,
-            fontweight="bold",
-        )
-
-    ax_pair.axhline(0.0, color=ZERO_GRAY, linewidth=0.9)
-    ax_pair.set_xticks(range(len(groups)), labels)
-    ax_pair.set_ylabel(
-        "Publisher-compatible MAE improvement\n"
-        "(baseline − STaR-GNN; L s$^{-1}$)"
-    )
-    style_axis(ax_pair, ygrid=True)
-    add_panel_label(ax_pair, "a")
-
-    col_keys = [
-        ("24h", "DCRNN"),
-        ("24h", "STGCN"),
-        ("168h", "DCRNN"),
-        ("168h", "STGCN"),
-    ]
-    matrix = np.zeros((len(DMAS), len(col_keys)), dtype=float)
-    for i, dma_name in enumerate(DMAS):
-        for j, (task, baseline) in enumerate(col_keys):
-            val = dma.loc[
-                (dma["DMA"] == dma_name)
-                & (dma["task"] == task)
-                & (dma["baseline"] == baseline),
-                "MAE_reduction_pct",
-            ]
-            if len(val) != 1:
-                raise ValueError(f"DMA cell missing: {dma_name}/{task}/{baseline}")
-            matrix[i, j] = float(val.iloc[0])
-
+    del paired  # detailed paired values remain available in the exported CSV
+    groups = [("24h", "DCRNN"), ("24h", "STGCN"),
+              ("168h", "DCRNN"), ("168h", "STGCN")]
+    labels = ["DCRNN", "STGCN", "DCRNN", "STGCN"]
+    fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.45))
     cmap = light_to_hero_cmap()
-    vmin = 0.0
-    vmax = float(np.ceil(matrix.max() / 5.0) * 5.0)
-    image = ax_dma.imshow(
-        matrix,
-        cmap=cmap,
-        vmin=vmin,
-        vmax=vmax,
-        aspect="auto",
-        interpolation="nearest",
-    )
-    ax_dma.set_yticks(np.arange(len(DMAS)), DMAS)
-    ax_dma.set_ylabel("DMA")
-    ax_dma.set_xticks(
-        np.arange(4),
-        ["DCRNN", "STGCN", "DCRNN", "STGCN"],
-        rotation=0,
-    )
-    ax_dma.tick_params(length=0)
-    ax_dma.spines[:].set_visible(False)
-    ax_dma.axvline(1.5, color="white", linewidth=3.0)
-    ax_dma.text(
-        0.5, 1.025, "24 h",
-        transform=ax_dma.get_xaxis_transform(),
-        ha="center", va="bottom", fontsize=8.5, fontweight="bold",
-    )
-    ax_dma.text(
-        2.5, 1.025, "168 h",
-        transform=ax_dma.get_xaxis_transform(),
-        ha="center", va="bottom", fontsize=8.5, fontweight="bold",
-    )
-    norm = plt.Normalize(vmin=vmin, vmax=vmax)
-    for i in range(matrix.shape[0]):
-        for j in range(matrix.shape[1]):
-            value = matrix[i, j]
-            r, g, b, _ = cmap(norm(value))
-            luminance = 0.299 * r + 0.587 * g + 0.114 * b
-            color = "white" if luminance < 0.52 else "#202020"
-            ax_dma.text(
-                j, i, f"{value:.1f}",
-                ha="center", va="center",
-                fontsize=7.0,
-                color=color,
-            )
-    cbar = fig.colorbar(image, ax=ax_dma, fraction=0.048, pad=0.025)
-    cbar.ax.tick_params(labelsize=7.5)
-    cbar.set_label("MAE reduction (%)", fontsize=8.5)
-    add_panel_label(ax_dma, "b")
 
-    fig.subplots_adjust(wspace=0.38, bottom=0.18, top=0.93)
-    save_publication_figure(fig, output / "main_fig2_temporal_spatial_robustness")
+    origin_win = np.zeros((4, 4), dtype=float)
+    origin_text: list[list[str]] = [["" for _ in groups] for _ in METRICS]
+    dma_win = np.zeros((4, 4), dtype=float)
+    dma_text: list[list[str]] = [["" for _ in groups] for _ in METRICS]
+    for i, metric in enumerate(METRICS):
+        for j, (task, baseline) in enumerate(groups):
+            row = paired_summary.loc[
+                (paired_summary["task"] == task)
+                & (paired_summary["baseline"] == baseline)
+                & (paired_summary["metric"] == metric)
+            ].iloc[0]
+            wins, n = int(row["wins"]), int(row["n_origins"])
+            origin_win[i, j] = 100.0 * wins / n
+            mean = float(row["mean_improvement"])
+            unit = "" if metric == "NSE" else "%"
+            origin_text[i][j] = f"{mean:+.2f}{unit}\n{wins}/{n}"
+
+            vals = dma.loc[
+                (dma["task"] == task)
+                & (dma["baseline"] == baseline)
+                & (dma["metric"] == metric),
+                "improvement",
+            ].to_numpy(float)
+            wins_dma = int((vals > 0).sum())
+            dma_win[i, j] = 100.0 * wins_dma / len(vals)
+            dma_text[i][j] = f"{vals.mean():+.2f}{unit}\n{wins_dma}/{len(vals)}"
+
+    images = []
+    for ax, matrix, text_matrix, title, panel in (
+        (axes[0], origin_win, origin_text, "Forecast origins", "a"),
+        (axes[1], dma_win, dma_text, "DMAs", "b"),
+    ):
+        images.append(ax.imshow(matrix, cmap=cmap, vmin=0, vmax=100, aspect="auto"))
+        ax.set_yticks(np.arange(4), METRICS)
+        ax.set_xticks(np.arange(4), labels)
+        ax.tick_params(length=0)
+        ax.spines[:].set_visible(False)
+        ax.axvline(1.5, color="white", linewidth=3.0)
+        ax.text(0.5, 1.03, "24 h", transform=ax.get_xaxis_transform(),
+                ha="center", va="bottom", fontsize=8.5, fontweight="bold")
+        ax.text(2.5, 1.03, "168 h", transform=ax.get_xaxis_transform(),
+                ha="center", va="bottom", fontsize=8.5, fontweight="bold")
+        ax.set_title(title, pad=20, fontweight="bold")
+        for i in range(4):
+            for j in range(4):
+                color = "white" if matrix[i, j] >= 72 else "#202020"
+                ax.text(j, i, text_matrix[i][j], ha="center", va="center",
+                        fontsize=7.0, color=color, linespacing=1.15)
+        add_panel_label(ax, panel)
+    fig.subplots_adjust(wspace=0.26, bottom=0.17, top=0.82, left=0.09, right=0.86)
+    cax = fig.add_axes([0.90, 0.17, 0.018, 0.65])
+    cbar = fig.colorbar(images[-1], cax=cax)
+    cbar.set_label("Comparisons improved (%)", fontsize=8.5)
+    cbar.ax.tick_params(labelsize=7.5)
+    fig.text(0.5, 0.015, "Cell text: mean improvement; wins / comparisons",
+             ha="center", va="bottom", fontsize=7.6, color="#4B4B4B")
+    save_publication_figure(fig, output / "main_fig3_temporal_spatial_robustness")
 
 
 def _diurnal_profile(
@@ -589,14 +525,14 @@ def _select_representative(
 
     truth_ref: np.ndarray | None = None
     data: dict[str, np.ndarray] = {}
-    publisher_mae: dict[str, float] = {}
+    total_mae: dict[str, float] = {}
     for model in TRAJECTORY_MODELS:
         truth, pred, model_common = _load_common_predictions(release, model, "168h")
         truth_ref = _ensure_same_truth(truth_ref, truth, model)
         if int(model_common[pos]) != common_index:
             raise ValueError("Representative common-index drift")
         data[model] = pred[pos].sum(axis=1)
-        publisher_mae[model] = float(
+        total_mae[model] = float(
             _publisher_mae_per_origin(
                 truth[pos : pos + 1], pred[pos : pos + 1]
             )[0]
@@ -615,14 +551,14 @@ def _select_representative(
     )
     meta = {
         "selection_rule": (
-            "STaR-GNN origin whose 168 h publisher-compatible MAE is closest "
+            "STaR-GNN origin whose 168 h total MAE is closest "
             "to the median among the 46 common test origins"
         ),
         "selected_origin_position_zero_based": pos,
         "selected_common_index": common_index,
-        "median_star_publisher_mae": median_mae,
-        "selected_star_publisher_mae": float(star_mae[pos]),
-        "selected_origin_model_publisher_mae": publisher_mae,
+        "median_star_total_mae": median_mae,
+        "selected_star_total_mae": float(star_mae[pos]),
+        "selected_origin_model_total_mae": total_mae,
     }
     return frame, meta
 
@@ -730,15 +666,21 @@ def _main_figure3(
         handlelength=2.5,
     )
     fig.subplots_adjust(top=0.86, bottom=0.12, left=0.09, right=0.98)
-    save_publication_figure(fig, output / "main_fig3_week_ahead_dynamics")
+    save_publication_figure(fig, output / "main_fig4_week_ahead_dynamics")
 
 
-def _supp_figure_s1(
+def _main_figure_overall(
     overall: pd.DataFrame,
     output: Path,
 ) -> None:
     baselines = list(REPORTED_MODELS) + ["DCRNN", "STGCN"]
-    clean_names = [name.replace(" (reported)", "†") for name in baselines]
+    clean_names = [
+        name.replace(" (reported)", "")
+        .replace("MSCMNet_WM", "MSCMNet-WM")
+        .replace("MSCMNet_M", "MSCMNet-M")
+        .replace("MSCMNet_W", "MSCMNet-W")
+        for name in baselines
+    ]
     rows: list[dict[str, Any]] = []
     for baseline in baselines:
         row: dict[str, Any] = {"baseline": baseline}
@@ -832,7 +774,66 @@ def _supp_figure_s1(
     add_panel_label(ax_n, "b")
 
     fig.subplots_adjust(wspace=0.24, bottom=0.17, top=0.92)
-    save_publication_figure(fig, output / "supp_figS1_relative_improvement")
+    save_publication_figure(fig, output / "main_fig1_overall_performance")
+
+
+def _supp_figure_s1_dma(
+    dma: pd.DataFrame,
+    output: Path,
+) -> None:
+    """Detailed DMA-level improvements for all four metrics."""
+    groups = [("24h", "DCRNN"), ("24h", "STGCN"),
+              ("168h", "DCRNN"), ("168h", "STGCN")]
+    fig, axes = plt.subplots(2, 2, figsize=(7.4, 6.0), sharey=True)
+    for ax, metric, panel in zip(axes.flat, METRICS, "abcd"):
+        matrix = np.zeros((len(DMAS), len(groups)), dtype=float)
+        for i, dma_name in enumerate(DMAS):
+            for j, (task, baseline) in enumerate(groups):
+                value = dma.loc[
+                    (dma["DMA"] == dma_name)
+                    & (dma["task"] == task)
+                    & (dma["baseline"] == baseline)
+                    & (dma["metric"] == metric),
+                    "improvement",
+                ]
+                if len(value) != 1:
+                    raise ValueError(
+                        f"DMA cell missing: {dma_name}/{task}/{baseline}/{metric}"
+                    )
+                matrix[i, j] = float(value.iloc[0])
+        absmax = max(float(np.max(np.abs(matrix))), 1.0e-9)
+        image = ax.imshow(
+            matrix,
+            cmap="RdBu",
+            vmin=-absmax,
+            vmax=absmax,
+            aspect="auto",
+            interpolation="nearest",
+        )
+        ax.set_yticks(np.arange(len(DMAS)), DMAS)
+        ax.set_xticks(np.arange(4), ["DCRNN", "STGCN", "DCRNN", "STGCN"])
+        ax.tick_params(length=0)
+        ax.spines[:].set_visible(False)
+        ax.axvline(1.5, color="white", linewidth=3.0)
+        ax.text(0.5, 1.02, "24 h", transform=ax.get_xaxis_transform(),
+                ha="center", va="bottom", fontsize=8.2, fontweight="bold")
+        ax.text(2.5, 1.02, "168 h", transform=ax.get_xaxis_transform(),
+                ha="center", va="bottom", fontsize=8.2, fontweight="bold")
+        ax.set_title(_improvement_label(metric), pad=19)
+        for i in range(matrix.shape[0]):
+            for j in range(matrix.shape[1]):
+                number = f"{matrix[i, j]:+.2f}" if metric == "NSE" else f"{matrix[i, j]:+.1f}"
+                ax.text(j, i, number, ha="center", va="center",
+                        fontsize=6.7,
+                        color="white" if abs(matrix[i, j]) > 0.58 * absmax else "#202020")
+        fig.colorbar(image, ax=ax, fraction=0.042, pad=0.025).ax.tick_params(
+            labelsize=7.0
+        )
+        add_panel_label(ax, panel)
+    axes[0, 0].set_ylabel("DMA")
+    axes[1, 0].set_ylabel("DMA")
+    fig.subplots_adjust(wspace=0.30, hspace=0.32, bottom=0.09, top=0.94)
+    save_publication_figure(fig, output / "supp_figS1_dma_improvement")
 
 
 def _supp_figure_s2(
@@ -856,7 +857,7 @@ def _supp_figure_s2(
                 linewidth=2.25 if model == "STaR-GNN" else 1.45,
                 label=model,
             )
-        ax.set_xlabel("Per-origin publisher-compatible MAE (L s$^{-1}$)")
+        ax.set_xlabel("Per-origin total MAE (L s$^{-1}$)")
         style_axis(ax, ygrid=True)
         add_panel_label(ax, label)
         ax.text(
@@ -880,7 +881,7 @@ def _supp_figure_s2(
 def _write_audit(
     path: Path,
     *,
-    degradation: pd.DataFrame,
+    daywise: pd.DataFrame,
     paired_summary: pd.DataFrame,
     dma: pd.DataFrame,
     representative: dict[str, Any],
@@ -888,23 +889,23 @@ def _write_audit(
     bootstrap_iterations: int,
     bootstrap_seed: int,
 ) -> None:
-    day7 = degradation.loc[degradation["day"] == 7].set_index("model")
     audit = {
         "figure_architecture": {
-            "main_fig1": (
-                "Ablation mechanism and lead-time stability; four factorial "
-                "variants only, no STGCN."
-            ),
+            "main_fig1": "Overall four-metric performance against eight baselines.",
             "main_fig2": (
-                "Temporal and spatial robustness; paired forecast-origin "
-                "improvements plus DMA-level improvement."
+                "Four-metric factorial ablation and lead-time stability; "
+                "paired improvements relative to DCRNN."
             ),
             "main_fig3": (
+                "Four-metric temporal and spatial robustness; win rates and "
+                "mean paired improvements."
+            ),
+            "main_fig4": (
                 "Scale-to-instance week-ahead dynamics; population diurnal "
                 "error profile plus deterministic representative trajectory."
             ),
-            "supp_figS1": "Overall relative improvement over eight baselines.",
-            "supp_figS2": "Per-origin ECDF as supplementary distributional evidence.",
+            "supp_figS1": "Detailed four-metric DMA-level improvements.",
+            "supp_figS2": "Per-origin total-MAE ECDF.",
         },
         "block_bootstrap": {
             "block_length_origins": block_length,
@@ -915,18 +916,15 @@ def _write_audit(
                 "origins also overlap strongly because they start 24 h apart."
             ),
         },
-        "main_fig1_day7_relative_to_day1_pct": {
-            model: float(day7.loc[model, "relative_to_day1_pct"])
-            for model in ABLATION_MODELS
-        },
-        "main_fig2_origin_summary": paired_summary.to_dict(orient="records"),
-        "main_fig2_dma": {
-            "all_positive": bool((dma["MAE_reduction_pct"] > 0).all()),
+        "main_fig2_daywise_summary": daywise.to_dict(orient="records"),
+        "main_fig3_origin_summary": paired_summary.to_dict(orient="records"),
+        "main_fig3_dma": {
+            "all_but_two_positive": int((dma["improvement"] > 0).sum()) == 158,
             "n_cells": int(len(dma)),
-            "min_reduction_pct": float(dma["MAE_reduction_pct"].min()),
-            "max_reduction_pct": float(dma["MAE_reduction_pct"].max()),
+            "n_positive": int((dma["improvement"] > 0).sum()),
+            "n_nonpositive": int((dma["improvement"] <= 0).sum()),
         },
-        "main_fig3_representative": representative,
+        "main_fig4_representative": representative,
     }
     path.write_text(
         json.dumps(audit, indent=2, ensure_ascii=False) + "\n",
@@ -996,34 +994,29 @@ def main() -> None:
 
     daywise = _derive_daywise(release, indices=indices)
     daywise.to_csv(
-        audit_output / "main_fig1_daywise_block_ci.csv",
+        audit_output / "main_fig2_daywise_paired_improvement.csv",
         index=False,
         float_format="%.9f",
     )
-    degradation = _main_figure1(daywise, main_output)
-    degradation.to_csv(
-        audit_output / "main_fig1_day7_degradation.csv",
-        index=False,
-        float_format="%.9f",
-    )
+    _main_figure1(daywise, main_output)
 
     paired, paired_summary = _derive_origin_improvements(
         release,
         indices=indices,
     )
     paired.to_csv(
-        audit_output / "main_fig2_origin_paired_improvement.csv",
+        audit_output / "main_fig3_origin_paired_improvement.csv",
         index=False,
         float_format="%.9f",
     )
     paired_summary.to_csv(
-        audit_output / "main_fig2_origin_paired_summary.csv",
+        audit_output / "main_fig3_origin_paired_summary.csv",
         index=False,
         float_format="%.9f",
     )
     dma = _derive_dma_improvement(release)
     dma.to_csv(
-        audit_output / "main_fig2_dma_improvement.csv",
+        audit_output / "main_fig3_dma_improvement.csv",
         index=False,
         float_format="%.9f",
     )
@@ -1031,29 +1024,30 @@ def main() -> None:
 
     diurnal = _diurnal_profile(release, indices=indices)
     diurnal.to_csv(
-        audit_output / "main_fig3_diurnal_aggregate_error.csv",
+        audit_output / "main_fig4_diurnal_aggregate_error.csv",
         index=False,
         float_format="%.9f",
     )
     trajectory, representative = _select_representative(release)
     trajectory.to_csv(
-        audit_output / "main_fig3_representative_trajectory.csv",
+        audit_output / "main_fig4_representative_trajectory.csv",
         index=False,
         float_format="%.9f",
     )
-    (audit_output / "main_fig3_representative_selection.json").write_text(
+    (audit_output / "main_fig4_representative_selection.json").write_text(
         json.dumps(representative, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
     _main_figure3(diurnal, trajectory, main_output)
 
     overall = _load_overall(overall_path)
-    _supp_figure_s1(overall, supp_output)
+    _main_figure_overall(overall, main_output)
+    _supp_figure_s1_dma(dma, supp_output)
     _supp_figure_s2(release, supp_output)
 
     _write_audit(
         audit_output / "submission_figure_audit.json",
-        degradation=degradation,
+        daywise=daywise,
         paired_summary=paired_summary,
         dma=dma,
         representative=representative,
@@ -1064,12 +1058,13 @@ def main() -> None:
 
     print("Submission figure renderer: PASS")
     print("Main figures:")
-    print("  Main Fig. 1 — ablation and lead-time stability")
-    print("  Main Fig. 2 — temporal and spatial robustness")
-    print("  Main Fig. 3 — week-ahead demand dynamics")
+    print("  Main Fig. 1 — overall four-metric performance")
+    print("  Main Fig. 2 — four-metric ablation and lead-time stability")
+    print("  Main Fig. 3 — four-metric temporal and spatial robustness")
+    print("  Main Fig. 4 — week-ahead demand dynamics")
     print("Supplementary figures:")
-    print("  Fig. S1 — relative improvement over all baselines")
-    print("  Fig. S2 — per-origin ECDF")
+    print("  Fig. S1 — detailed four-metric DMA improvements")
+    print("  Fig. S2 — per-origin total-MAE ECDF")
     print(
         f"Block bootstrap: length={args.block_length}, "
         f"iterations={args.bootstrap_iterations}, seed={args.bootstrap_seed}"
