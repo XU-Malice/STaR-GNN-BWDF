@@ -187,7 +187,7 @@ def _paired_improvement(
 
 
 def _improvement_label(metric: str) -> str:
-    return "NSE gain" if metric == "NSE" else f"{metric} reduction (%)"
+    return "NSE improvement ($\\Delta$NSE)" if metric == "NSE" else f"{metric} reduction (%)"
 
 
 def _moving_block_indices(
@@ -278,7 +278,7 @@ def _main_figure1(
     daywise: pd.DataFrame,
     output: Path,
 ) -> None:
-    fig, axes = plt.subplots(2, 2, figsize=(7.4, 5.2), sharex=True)
+    fig, axes = plt.subplots(2, 2, figsize=(7.4, 5.35), sharex=False)
     offsets = {
         "DCRNN + SAS-Norm": -0.12,
         "DCRNN + FA-DPR": 0.0,
@@ -309,11 +309,15 @@ def _main_figure1(
             )
         ax.axhline(0.0, color=ZERO_GRAY, linewidth=0.8, zorder=0)
         ax.set_xticks(range(1, 8))
+        ax.set_xlabel("Forecast day")
         ax.set_ylabel(_improvement_label(metric))
+        ax.set_title(
+            metric,
+            pad=7,
+            fontweight="bold",
+        )
         style_axis(ax, ygrid=True)
         add_panel_label(ax, panel)
-    for ax in axes[1]:
-        ax.set_xlabel("Forecast day")
 
     handles, labels = axes[0, 0].get_legend_handles_labels()
     fig.legend(
@@ -325,7 +329,7 @@ def _main_figure1(
         columnspacing=1.25,
         handlelength=2.5,
     )
-    fig.subplots_adjust(top=0.88, wspace=0.34, hspace=0.24, bottom=0.10)
+    fig.subplots_adjust(top=0.86, wspace=0.36, hspace=0.34, bottom=0.10)
     save_publication_figure(fig, output / "main_fig2_ablation_leadtime")
 
 
@@ -454,12 +458,14 @@ def _main_figure2(
 
     images = []
     for ax, matrix, text_matrix, title, panel in (
-        (axes[0], origin_win, origin_text, "Forecast origins", "a"),
-        (axes[1], dma_win, dma_text, "DMAs", "b"),
+        (axes[0], origin_win, origin_text, "Forecast-origin consistency", "a"),
+        (axes[1], dma_win, dma_text, "DMA-level consistency", "b"),
     ):
         images.append(ax.imshow(matrix, cmap=cmap, vmin=0, vmax=100, aspect="auto"))
         ax.set_yticks(np.arange(4), METRICS)
         ax.set_xticks(np.arange(4), labels)
+        ax.set_xlabel("Baseline model")
+        ax.set_ylabel("Evaluation metric")
         ax.tick_params(length=0)
         ax.spines[:].set_visible(False)
         ax.axvline(1.5, color="white", linewidth=3.0)
@@ -477,9 +483,12 @@ def _main_figure2(
     fig.subplots_adjust(wspace=0.26, bottom=0.17, top=0.82, left=0.09, right=0.86)
     cax = fig.add_axes([0.90, 0.17, 0.018, 0.65])
     cbar = fig.colorbar(images[-1], cax=cax)
-    cbar.set_label("Comparisons improved (%)", fontsize=8.5)
+    cbar.set_label("Share of comparisons improved (%)", fontsize=8.5)
     cbar.ax.tick_params(labelsize=7.5)
-    fig.text(0.5, 0.015, "Cell text: mean improvement; wins / comparisons",
+    fig.text(
+        0.5,
+        0.015,
+        "Cell text: mean error reduction (%) or mean $\\Delta$NSE; wins / comparisons",
              ha="center", va="bottom", fontsize=7.6, color="#4B4B4B")
     save_publication_figure(fig, output / "main_fig3_temporal_spatial_robustness")
 
@@ -568,13 +577,13 @@ def _main_figure3(
     trajectory: pd.DataFrame,
     output: Path,
 ) -> None:
-    fig = plt.figure(figsize=(7.4, 4.65))
+    fig = plt.figure(figsize=(7.4, 5.0))
     gs = fig.add_gridspec(
         2, 2,
         width_ratios=[1.0, 2.15],
         height_ratios=[1.65, 1.0],
         wspace=0.38,
-        hspace=0.12,
+        hspace=0.38,
     )
     ax_d = fig.add_subplot(gs[:, 0])
     ax_t = fig.add_subplot(gs[0, 1])
@@ -603,6 +612,7 @@ def _main_figure3(
     ax_d.set_xticks([0, 6, 12, 18, 23])
     ax_d.set_xlabel("Hour within forecast day")
     ax_d.set_ylabel("Aggregate absolute error (L s$^{-1}$)")
+    ax_d.set_title("Diurnal error profile", pad=8, fontweight="bold")
     style_axis(ax_d, ygrid=True)
     add_panel_label(ax_d, "a")
 
@@ -644,15 +654,18 @@ def _main_figure3(
             )
 
     ax_t.set_ylabel("Aggregate demand (L s$^{-1}$)")
+    ax_t.set_title("Week-ahead demand", pad=8, fontweight="bold")
     style_axis(ax_t, ygrid=False)
-    ax_t.tick_params(axis="x", labelbottom=False)
+    day_ticks = np.arange(12, 169, 24)
+    ax_t.set_xticks(day_ticks, [str(i) for i in range(1, 8)])
     add_panel_label(ax_t, "b")
 
     ax_e.set_ylabel("Absolute error\n(L s$^{-1}$)")
     ax_e.set_xlabel("Forecast day")
-    day_ticks = np.arange(12, 169, 24)
     ax_e.set_xticks(day_ticks, [str(i) for i in range(1, 8)])
+    ax_e.set_title("Hourly errors", pad=7, fontweight="bold")
     style_axis(ax_e, ygrid=True)
+    ax_t.set_xlabel("")
     add_panel_label(ax_e, "c")
 
     handles, labels = ax_t.get_legend_handles_labels()
@@ -724,6 +737,13 @@ def _main_figure_overall(
     )
     ax_h.set_yticks(np.arange(len(clean_names)), clean_names)
     ax_h.set_xticks(np.arange(6), labels)
+    ax_h.set_xlabel("Error metric")
+    ax_h.set_ylabel("Baseline model")
+    ax_h.set_title(
+        "Relative reduction in forecasting errors",
+        pad=17,
+        fontweight="bold",
+    )
     ax_h.tick_params(length=0)
     ax_h.spines[:].set_visible(False)
     ax_h.axvline(2.5, color="white", linewidth=3.0)
@@ -766,14 +786,23 @@ def _main_figure_overall(
             [y[i]-0.12, y[i]+0.12],
             color="#B5B5B5", linewidth=0.65, zorder=0,
         )
-    ax_n.set_yticks(y, [""] * len(y))
+    ax_n.set_yticks(y, clean_names)
+    ax_n.yaxis.tick_right()
+    ax_n.tick_params(axis="y", labelsize=6.7, pad=3)
     ax_n.invert_yaxis()
-    ax_n.set_xlabel("NSE gain")
+    ax_n.set_xlabel("Absolute NSE improvement ($\\Delta$NSE)")
+    ax_n.set_ylabel("Baseline model")
+    ax_n.yaxis.set_label_position("right")
+    ax_n.set_title(
+        "Improvement in NSE",
+        pad=17,
+        fontweight="bold",
+    )
     style_axis(ax_n, ygrid=False)
     ax_n.legend(loc="lower right")
     add_panel_label(ax_n, "b")
 
-    fig.subplots_adjust(wspace=0.24, bottom=0.17, top=0.92)
+    fig.subplots_adjust(wspace=0.34, bottom=0.19, top=0.88, right=0.90)
     save_publication_figure(fig, output / "main_fig1_overall_performance")
 
 
@@ -819,7 +848,7 @@ def _supp_figure_s1_dma(
                 ha="center", va="bottom", fontsize=8.2, fontweight="bold")
         ax.text(2.5, 1.02, "168 h", transform=ax.get_xaxis_transform(),
                 ha="center", va="bottom", fontsize=8.2, fontweight="bold")
-        ax.set_title(_improvement_label(metric), pad=19)
+        ax.set_title(_improvement_label(metric), pad=19, fontweight="bold")
         for i in range(matrix.shape[0]):
             for j in range(matrix.shape[1]):
                 number = f"{matrix[i, j]:+.2f}" if metric == "NSE" else f"{matrix[i, j]:+.1f}"
@@ -832,7 +861,8 @@ def _supp_figure_s1_dma(
         add_panel_label(ax, panel)
     axes[0, 0].set_ylabel("DMA")
     axes[1, 0].set_ylabel("DMA")
-    fig.subplots_adjust(wspace=0.30, hspace=0.32, bottom=0.09, top=0.94)
+    fig.supxlabel("Baseline model", y=0.015, fontsize=9)
+    fig.subplots_adjust(wspace=0.30, hspace=0.32, bottom=0.10, top=0.94)
     save_publication_figure(fig, output / "supp_figS1_dma_improvement")
 
 

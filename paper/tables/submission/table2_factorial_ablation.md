@@ -1,3 +1,5 @@
+**Table 2. Factorial ablation of SAS-Norm and FA-DPR for the 24 h and 168 h prediction horizons.**
+
 | Horizon | Model | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |
 |---|---|---:|---:|---:|---:|
 | 24 h | DCRNN | 11.917 | 2.213 | 6.848 | 0.970 |

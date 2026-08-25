@@ -37,6 +37,9 @@ def _fmt(value: float, *, bold: bool) -> str:
 
 def _overall_markdown(frame: pd.DataFrame) -> str:
     lines = [
+        "**Table 1. Overall forecasting performance of the comparison models "
+        "for the 24 h and 168 h prediction horizons.**",
+        "",
         "| Horizon | Model | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |",
         "|---|---|---:|---:|---:|---:|",
     ]
@@ -44,9 +47,6 @@ def _overall_markdown(frame: pd.DataFrame) -> str:
         task_frame = frame.loc[frame["task"] == task].copy()
         best = {metric: _best(task_frame, metric) for metric in METRICS}
 
-        lines.append(
-            f"| **{task.replace('h', ' h')}** | **Published reference models** |  |  |  |  |"
-        )
         for _, row in task_frame.loc[
             task_frame["model"].astype(str).str.endswith(REPORTED_SUFFIX)
         ].iterrows():
@@ -60,7 +60,6 @@ def _overall_markdown(frame: pd.DataFrame) -> str:
                 f"{vals[0]} | {vals[1]} | {vals[2]} | {vals[3]} |"
             )
 
-        lines.append("|  | **Re-evaluated graph models** |  |  |  |  |")
         for _, row in task_frame.loc[
             ~task_frame["model"].astype(str).str.endswith(REPORTED_SUFFIX)
         ].iterrows():
@@ -93,6 +92,9 @@ def _ablation_markdown(frame: pd.DataFrame) -> str:
         "STaR-GNN",
     )
     lines = [
+        "**Table 2. Factorial ablation of SAS-Norm and FA-DPR for the 24 h "
+        "and 168 h prediction horizons.**",
+        "",
         "| Horizon | Model | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |",
         "|---|---|---:|---:|---:|---:|",
     ]
@@ -123,6 +125,9 @@ def _ablation_markdown(frame: pd.DataFrame) -> str:
 
 def _dma_markdown(frame: pd.DataFrame) -> str:
     lines = [
+        "**Table S1. DMA-level forecasting performance of DCRNN, STGCN and "
+        "STaR-GNN for the 24 h and 168 h prediction horizons.**",
+        "",
         "| Horizon | DMA | Model | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |",
         "|---|---|---|---:|---:|---:|---:|",
     ]

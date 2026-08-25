@@ -1,3 +1,5 @@
+**Table S1. DMA-level forecasting performance of DCRNN, STGCN and STaR-GNN for the 24 h and 168 h prediction horizons.**
+
 | Horizon | DMA | Model | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |
 |---|---|---|---:|---:|---:|---:|
 | 24 h | A | DCRNN | 1.020 | 15.936 | 1.532 | 0.445 |
