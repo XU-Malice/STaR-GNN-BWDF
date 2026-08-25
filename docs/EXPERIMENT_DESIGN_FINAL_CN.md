@@ -20,7 +20,7 @@
 - GRU、LSTM、MSNet、MSCMNet-WM、MSCMNet-M、MSCMNet-W；
 - DCRNN、STGCN、STaR-GNN。
 
-前六个时序/多尺度模型使用 Que et al. (2024) 已发表结果，并通过表内分组和表注说明来源，不再使用符号标记；DCRNN、STGCN、STaR-GNN 为 common-46 协议下重新评价。正文显示统一 3 位小数，审计 CSV 保留完整精度。
+前六个时序/多尺度模型使用 Que et al. (2024) 的结果，并通过表注说明来源，不再使用符号标记；DCRNN、STGCN、STaR-GNN 使用本文评价流程。正文显示统一 3 位小数，审计 CSV 保留可用精度。
 
 ### Table 2 — Factorial ablation
 
@@ -35,11 +35,11 @@
 
 STGCN 是独立 graph baseline，不属于消融。
 
-168 h total MAE 中 SAS-Norm-only 为 12.208，STaR-GNN 为 12.234；完整模型在 MAPE、RMSE 和 NSE 上最好。该 0.21% MAE 点估计差异不用于声称任一模型稳定占优，长时域稳定性由 Main Fig. 2 和 moving-block bootstrap 进一步限定。
+168 h total MAE 中 SAS-Norm-only 为 12.208，STaR-GNN 为 12.234；完整模型在 MAPE、RMSE 和 NSE 上最好。该 0.21% MAE 点估计差异不用于声称任一模型稳定占优，长时域稳定性由 Main Fig. 3 和 moving-block bootstrap 进一步限定。
 
 ### Supplementary Table S1 — DMA-level metrics
 
-并列报告 DCRNN、STGCN、STaR-GNN 在 DMA A--J 的四指标绝对值。正文用 Main Fig. 3b 概括空间一致性，Supplementary Fig. S1 展示逐 DMA 的改善幅度。
+并列报告全部九种模型在 DMA A--J 的四指标绝对值。正文用 Main Fig. 2 概括逐 DMA 排名分布和 STaR-GNN 的首位指标覆盖度。
 
 ---
 
@@ -55,25 +55,27 @@ Panel a 用热图展示相对六个 published sequence/multiscale models 与 DCR
 
 ---
 
-## Main Figure 2 — Four-metric ablation and lead-time stability
+## Main Figure 2 — DMA-level performance breadth
 
-**Results-level question：**SAS-Norm 与 FA-DPR 如何影响一周预测中的准确性和稳定性？
+**Results-level question：**系统级优势是否覆盖多数 DMA 和四项指标？
 
-四个 panel 分别展示 MAE、MAPE、RMSE、NSE。SAS-Norm-only、FA-DPR-only 与 Full 均按相同 origin、相同 forecast day 相对 DCRNN 计算方向统一的 paired improvement；95% CI 采用 ordered seven-origin moving-block bootstrap。
+Panel a–b 分别展示九种模型在 24 h 和 168 h 任务中的逐 DMA、逐指标排名分布。排名在每个 horizon–DMA–metric 组合内独立计算，避免把不同 DMA 的需水尺度或不同指标单位直接混合。箱体汇总中位数与四分位距，散点保留全部 40 个 DMA–指标组合。
 
-同一 forecast day 内的三个模型点做轻微水平错位，并同时使用不同 marker/linestyle，解决 SAS-Norm 与 STaR-GNN 曲线几乎重合的问题。正值始终代表优于 DCRNN；误差指标使用相对降幅，NSE 使用绝对增益。
+Panel c 保留 DMA 身份，给出 STaR-GNN 在每个 DMA 的四项指标中排名第一的数量。全部绝对数值置于 Supplementary Table S1，因此主图负责展示空间覆盖度，表格负责精确查询。
 
-Main inference：SAS-Norm 是周尺度性能改善的主要来源；FA-DPR-only 的逐日结果显示其作用并非在所有指标上独立成立，完整模型在 168 h 的 MAPE、RMSE、NSE 上最好。SAS-only 与 Full 的 168 h MAE 只差约 0.21%，不得写成稳定显著差异。
+图形选择借鉴了参考论文“总体表格 → 分区/站点层面分布 → 代表性过程”的递进方式：Que et al. 对 DMA 细节与总需求分别展示，IONET 工作用箱线图表达跨评价单元的性能分布，SiSGNN 则保留站点级差异。由于本研究同时包含九种模型、十个 DMA、两个时域和四项指标，直接复制多折线、雷达图或 Taylor 图会产生遮挡并丢失 DMA 身份，因此采用“排名分布 + 首位覆盖矩阵”，将完整绝对数值留给 Table S1。
+
+Main inference：STaR-GNN 在两个预测时域的中位排名均为 1，24 h 和 168 h 分别在 36/40 与 27/40 个 DMA–指标组合中排名第一，说明总体优势具有广泛而非绝对的空间覆盖。
 
 ---
 
-## Main Figure 3 — Four-metric temporal and spatial robustness
+## Main Figure 3 — Four-metric ablation and lead-time stability
 
-**Results-level question：**总体优势是否只来自少数有利日期、少数 DMA 或单一指标？
+**Results-level question：**SAS-Norm 与 FA-DPR 如何影响一周预测中的准确性和稳定性？
 
-Panel a 汇总 46 个 common forecast origins，Panel b 汇总 10 个 DMA；列为 24 h / 168 h × DCRNN / STGCN，行为 MAE/MAPE/RMSE/NSE。颜色编码“改善比较所占比例”，单元格文本同时给出 mean improvement 与 wins/comparisons。
+四个 panel 分别展示 MAE、MAPE、RMSE、NSE。SAS-Norm-only、FA-DPR-only 与 Full 均按相同测试窗口和预测日相对 DCRNN 计算方向统一的 paired improvement；95% CI 采用 ordered seven-window moving-block bootstrap。
 
-该编码让四个量纲不同的指标使用同一可比颜色语义，同时保留实际改善幅度。逐 DMA 共有 160 个 horizon–baseline–metric comparisons，其中 158 个改善；两个例外均为 168 h、DMA G、相对 STGCN 的 RMSE 与 NSE，必须在正文和 caption 中如实报告。
+同一 forecast day 内的三个模型点做轻微水平错位，并同时使用不同 marker/linestyle，解决 SAS-Norm 与 STaR-GNN 曲线几乎重合的问题。Main inference：SAS-Norm 是周尺度改善的主要来源；FA-DPR-only 的作用具有指标依赖性；完整模型在 168 h 的 MAPE、RMSE、NSE 上最好。
 
 ---
 
@@ -85,7 +87,7 @@ Panel a 汇总 46 个 common forecast origins，Panel b 汇总 10 个 DMA；列�
 
 ### Panel a — Population-level diurnal aggregate-error profile
 
-使用全部 46 common origins × 7 forecast days，将 168 h 折叠为 24 h 日内周期。对 DCRNN、STGCN、STaR-GNN 比较 aggregate-demand absolute error，并使用 moving-block bootstrap 95% CI。
+使用全部共同测试窗口 × 7 forecast days，将 168 h 折叠为 24 h 日内周期。对 DCRNN、STGCN、STaR-GNN 比较 aggregate-demand absolute error，并使用 moving-block bootstrap 95% CI。
 
 推理角色：**population-level diagnostic**。
 
@@ -93,13 +95,13 @@ Panel a 汇总 46 个 common forecast origins，Panel b 汇总 10 个 DMA；列�
 
 ### Panel b — Representative 168 h aggregate-demand trajectory
 
-代表性 origin 使用预先固定的 median-error proximity rule，不依据图像外观挑选。Observed 使用黑色；STaR-GNN 为深蓝 hero line；DCRNN/STGCN 降低视觉权重。
+代表性测试窗口使用预先固定的 median-error proximity rule，不依据图像外观挑选。Observed 使用黑色；STaR-GNN 为深蓝 hero line；DCRNN/STGCN 降低视觉权重。
 
 推理角色：**representative instance**。
 
 ### Panel c — Corresponding absolute error
 
-展示同一 representative origin 的 aggregate-demand absolute error，并标出连续七个 forecast days。
+展示同一 representative window 的 aggregate-demand absolute error，并标出连续七个 forecast days。
 
 推理角色：**instance-level error localization**。
 
@@ -107,19 +109,7 @@ Panel a 汇总 46 个 common forecast origins，Panel b 汇总 10 个 DMA；列�
 
 ---
 
-## 3. Supplementary figures
-
-### Figure S1 — Detailed four-metric DMA improvements
-
-以 2×2 panel 展示每个 DMA 的 MAE/MAPE/RMSE 相对降幅和 NSE 绝对增益。采用以 0 为中心的发散配色，因为 160 个单元格中确实有两个负值；蓝色为改善，红色为退化。
-
-### Figure S2 — Per-origin ECDF
-
-保留 DCRNN / STGCN / STaR-GNN 的 24 h 和 168 h total-MAE ECDF，作为 Main Fig. 3a 的 distributional reassurance。
-
----
-
-## 4. 统一 publication visual system
+## 3. 统一 publication visual system
 
 不再坚持旧绿色。最终 hero system：
 
@@ -150,17 +140,17 @@ scripts/reproduce/manuscript_plot_style.py
 
 ---
 
-## 5. Results 最终章节结构
+## 4. Results 最终章节结构
 
-### 4.1 STaR-GNN consistently improves day-ahead and week-ahead multi-DMA forecasting
+### 3.1 Overall performance across forecasting horizons
 
-证据：Table 1 + Main Fig. 1。
+证据：Table 1 + Main Fig. 1 + Main Fig. 2 + Supplementary Table S1。
 
 写法：claim → quantitative evidence → sequence/multiscale comparison → graph baseline comparison → bounded inference。
 
-### 4.2 State normalization drives week-ahead accuracy while future-aware retrieval improves lead-time stability
+### 3.2 Component contributions and lead-time dependence
 
-证据：Table 2 + Main Fig. 2。
+证据：Table 2 + Main Fig. 3。
 
 开头直接给 scientific finding，不以“Table 2 shows...”起句。
 
@@ -168,15 +158,7 @@ scripts/reproduce/manuscript_plot_style.py
 
 > The two proposed modules contributed to week-ahead forecasting in distinct but complementary ways: SAS-Norm accounted for most of the reduction in absolute MAE, whereas FA-DPR primarily reduced the accumulation of error with increasing lead time.
 
-### 4.3 Forecasting gains remain consistent across test origins and DMAs
-
-证据：Main Fig. 3。
-
-建议核心句：
-
-> The average accuracy improvement was not driven by a small subset of favorable forecasting periods or DMAs.
-
-### 4.4 STaR-GNN preserves week-ahead demand dynamics across the diurnal cycle
+### 3.3 Week-ahead demand dynamics
 
 证据：Main Fig. 4。
 
@@ -184,7 +166,7 @@ scripts/reproduce/manuscript_plot_style.py
 
 ---
 
-## 6. Results 写作规则
+## 5. Results 写作规则
 
 每个 subsection 均按：
 
@@ -204,7 +186,7 @@ Results 可以包含与当前证据直接绑定的局部解释；跨文献综合
 
 ---
 
-## 7. 当前冻结结果之外的可选补充实验
+## 6. 当前冻结结果之外的可选补充实验
 
 这些实验尚未纳入当前主结果，在没有真实运行结果前不得写入论文结论。
 

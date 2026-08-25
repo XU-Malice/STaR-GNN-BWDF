@@ -5,7 +5,7 @@
 1. **submission-facing artifacts**：真正用于论文正文/Supplementary 的最终表图；
 2. **legacy / diagnostic artifacts**：旧 `manuscript_fig1...5`、`test_*` 等历史复现和内部诊断图。
 
-> **投稿版权威入口：** `tables/submission/`、`figures/submission/`、`figures/supplementary/` 和 `tables/manuscript/submission/`。
+> **投稿版权威入口：** `tables/submission/`、`figures/submission/` 和 `tables/manuscript/submission/`。
 
 实验设计见 [`../docs/EXPERIMENT_DESIGN_FINAL_CN.md`](../docs/EXPERIMENT_DESIGN_FINAL_CN.md)，作图流程见 [`../docs/PLOTTING_CN.md`](../docs/PLOTTING_CN.md)。
 
@@ -55,7 +55,7 @@ STaR-GNN
 
 STGCN 是独立 graph baseline，不属于消融。
 
-168 h total MAE：SAS-Norm-only `12.208`，STaR-GNN `12.234`；差约 `0.21%`。该点估计差异由 Main Fig. 2 的 ordered moving-block evidence 限定解释；完整模型在 168 h 的 MAPE、RMSE、NSE 以及 aggregate-demand MAE 上更优。
+168 h total MAE：SAS-Norm-only `12.208`，STaR-GNN `12.234`；差约 `0.21%`。该点估计差异由 Main Fig. 3 的 ordered moving-block evidence 限定解释；完整模型在 168 h 的 MAPE、RMSE、NSE 以及 aggregate-demand MAE 上更优。
 
 ---
 
@@ -70,16 +70,18 @@ tables/submission/tableS1_dma_metrics.md
 全精度来源：
 
 ```text
-tables/literature/table_star_gnn_dma_common46.csv
+tables/literature/table_temporal_models_dma.csv
+tables/literature/table_graph_models_dma_common46.csv
+tables/literature/table_all_models_dma.csv
 ```
 
-表中并列给出 DCRNN、STGCN、STaR-GNN 在 10 个 DMA、两个预测时域和四个指标上的绝对结果，用于支撑 Main Fig. 3b 与 Supplementary Fig. S1。
+表中并列给出全部九种模型在 10 个 DMA、两个预测时域和四个指标上的绝对结果，用于支撑 Main Fig. 2。时序模型原始 MAPE 小数已统一转换为百分数。
 
 ---
 
 # Main result figures
 
-最终正文保留四张核心结果图，按“总体优势—组件作用—稳健性—实际轨迹”展开。
+最终正文保留四张核心结果图，按“总体优势—DMA 空间覆盖—组件作用—实际轨迹”展开。
 
 ## Main Figure 1 — Overall four-metric performance
 
@@ -89,36 +91,37 @@ figures/submission/main_fig1_overall_performance.svg
 figures/submission/main_fig1_overall_performance.png
 ```
 
-- Panel a：STaR-GNN 相对六个 published models 与两个 graph baselines 的 MAE/MAPE/RMSE 降幅；
+- Panel a：STaR-GNN 相对六个时序模型与两个图模型的 MAE/MAPE/RMSE 降幅；
 - Panel b：对应的 NSE 绝对提升（$\Delta$NSE）。
 
 回答：**STaR-GNN 是否在 24 h 与 168 h、四个互补指标上都保持总体优势？**
 
-## Main Figure 2 — Four-metric ablation and lead-time stability
+## Main Figure 2 — DMA-level performance breadth
 
 ```text
-figures/submission/main_fig2_ablation_leadtime.pdf
-figures/submission/main_fig2_ablation_leadtime.svg
-figures/submission/main_fig2_ablation_leadtime.png
+figures/submission/main_fig2_dma_performance.pdf
+figures/submission/main_fig2_dma_performance.svg
+figures/submission/main_fig2_dma_performance.png
+```
+
+- Panel a–b：九种模型在 24 h 与 168 h 下的逐 DMA、逐指标排名分布；
+- Panel c：STaR-GNN 在每个 DMA 上四项指标中排名第一的数量；
+- 绝对数值保留于 Supplementary Table S1，主图用排名消除 DMA 尺度与指标单位差异。
+
+回答：**总体优势是否覆盖多数 DMA 和全部评价维度，而非由少数高需水分区驱动？**
+
+## Main Figure 3 — Four-metric ablation and lead-time stability
+
+```text
+figures/submission/main_fig3_ablation_leadtime.pdf
+figures/submission/main_fig3_ablation_leadtime.svg
+figures/submission/main_fig3_ablation_leadtime.png
 ```
 
 - 四个 panel 分别给出 MAE、MAPE、RMSE、NSE；
 - SAS-Norm、FA-DPR、Full 均相对 DCRNN 做 paired improvement；同一天内用水平错位的点和置信区间避免 SAS-Norm 与 Full 重叠。
 
 回答：**SAS-Norm 与 FA-DPR 分别如何影响周尺度准确性与 lead-time stability？**
-
-## Main Figure 3 — Four-metric temporal and spatial robustness
-
-```text
-figures/submission/main_fig3_temporal_spatial_robustness.pdf
-figures/submission/main_fig3_temporal_spatial_robustness.svg
-figures/submission/main_fig3_temporal_spatial_robustness.png
-```
-
-- Panel a：46 个 common origins 上四指标的 mean improvement 与 win count；
-- Panel b：10 个 DMA 上四指标的 mean improvement 与 win count。
-
-回答：**平均优势是否只来自少数有利日期或少数 DMA？**
 
 ## Main Figure 4 — Week-ahead demand dynamics
 
@@ -128,33 +131,13 @@ figures/submission/main_fig4_week_ahead_dynamics.svg
 figures/submission/main_fig4_week_ahead_dynamics.png
 ```
 
-- Panel a：46 origins × 7 days 的 diurnal aggregate-demand absolute-error profile；
+- Panel a：全部测试窗口 × 7 days 的 diurnal aggregate-demand absolute-error profile；
 - Panel b：预先规定 median-total-MAE rule 选出的 representative 168 h trajectory；
 - Panel c：同一 representative origin 的 aggregate-demand hourly absolute error。
 
 回答：**统计优势在真实一周需求轨迹中具体表现为什么？**
 
 水量单位为 `L s⁻¹`。
-
----
-
-# Supplementary figures
-
-## Supplementary Figure S1 — Detailed DMA improvements
-
-```text
-figures/supplementary/supp_figS1_dma_improvement.*
-```
-
-逐 DMA 展示 MAE、MAPE、RMSE 的相对降幅和 NSE 的绝对增益；发散配色如实保留 168 h / DMA G / STGCN 下 RMSE 与 NSE 的两个例外。
-
-## Supplementary Figure S2 — Per-origin ECDF
-
-```text
-figures/supplementary/supp_figS2_origin_ecdf.*
-```
-
-保留 DCRNN / STGCN / STaR-GNN 的 per-origin total-MAE ECDF，作为 Main Fig. 3a 的 distributional reassurance。
 
 ---
 
@@ -167,10 +150,9 @@ tables/manuscript/submission/
 包含：
 
 ```text
-main_fig2_daywise_paired_improvement.csv
-main_fig3_origin_paired_improvement.csv
-main_fig3_origin_paired_summary.csv
-main_fig3_dma_improvement.csv
+main_fig2_dma_ranks.csv
+main_fig2_dma_pairwise_improvement.csv
+main_fig3_daywise_paired_improvement.csv
 main_fig4_diurnal_aggregate_error.csv
 main_fig4_representative_trajectory.csv
 main_fig4_representative_selection.json

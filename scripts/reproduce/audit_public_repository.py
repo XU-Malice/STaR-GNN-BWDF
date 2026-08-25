@@ -4,7 +4,7 @@
 The audit distinguishes frozen scientific artifacts from submission-facing
 presentation artifacts. Legacy diagnostic figures may remain tracked, but the
 canonical manuscript contract is 2 main tables + 4 main result figures,
-Supplementary Fig. S1--S2, and Supplementary Table S1.
+and Supplementary Table S1.
 """
 
 from __future__ import annotations
@@ -265,13 +265,9 @@ def _audit_paper(root: Path) -> list[str]:
 
     required_main = (
         "main_fig1_overall_performance",
-        "main_fig2_ablation_leadtime",
-        "main_fig3_temporal_spatial_robustness",
+        "main_fig2_dma_performance",
+        "main_fig3_ablation_leadtime",
         "main_fig4_week_ahead_dynamics",
-    )
-    required_supp = (
-        "supp_figS1_dma_improvement",
-        "supp_figS2_origin_ecdf",
     )
     for stem in required_main:
         for ext in ("pdf", "svg", "png"):
@@ -280,19 +276,10 @@ def _audit_paper(root: Path) -> list[str]:
                 errors.append(f"缺少主图：{path.relative_to(root)}")
             elif path.stat().st_size == 0:
                 errors.append(f"主图为空：{path.relative_to(root)}")
-    for stem in required_supp:
-        for ext in ("pdf", "svg", "png"):
-            path = root / f"paper/figures/supplementary/{stem}.{ext}"
-            if not path.is_file():
-                errors.append(f"缺少补充图：{path.relative_to(root)}")
-            elif path.stat().st_size == 0:
-                errors.append(f"补充图为空：{path.relative_to(root)}")
-
     required_audits = (
-        "paper/tables/manuscript/submission/main_fig2_daywise_paired_improvement.csv",
-        "paper/tables/manuscript/submission/main_fig3_origin_paired_improvement.csv",
-        "paper/tables/manuscript/submission/main_fig3_origin_paired_summary.csv",
-        "paper/tables/manuscript/submission/main_fig3_dma_improvement.csv",
+        "paper/tables/manuscript/submission/main_fig2_dma_ranks.csv",
+        "paper/tables/manuscript/submission/main_fig2_dma_pairwise_improvement.csv",
+        "paper/tables/manuscript/submission/main_fig3_daywise_paired_improvement.csv",
         "paper/tables/manuscript/submission/main_fig4_diurnal_aggregate_error.csv",
         "paper/tables/manuscript/submission/main_fig4_representative_trajectory.csv",
         "paper/tables/manuscript/submission/main_fig4_representative_selection.json",
@@ -307,30 +294,27 @@ def _audit_paper(root: Path) -> list[str]:
     )
     if audit_path.is_file():
         audit = json.loads(audit_path.read_text(encoding="utf-8"))
-        dma = audit.get("main_fig3_dma", {})
-        if (
-            dma.get("n_cells") != 160
-            or dma.get("n_positive") != 158
-            or dma.get("all_but_two_positive") is not True
-        ):
-            errors.append(
-                "Main Fig. 3b DMA audit 必须为 160 cells、158 positive"
-            )
-        summary = audit.get("main_fig3_origin_summary", [])
-        expected_wins = {
-            ("24h", "DCRNN"): 45,
-            ("24h", "STGCN"): 45,
-            ("168h", "DCRNN"): 46,
-            ("168h", "STGCN"): 40,
+        dma = audit.get("main_fig2_dma", {})
+        expected = {
+            "24h": {
+                "first_place_cells": 36,
+                "n_dma_metric_cells": 40,
+                "pairwise_wins": 306,
+                "n_pairwise_comparisons": 320,
+                "graph_baseline_wins": 80,
+                "n_graph_baseline_comparisons": 80,
+            },
+            "168h": {
+                "first_place_cells": 27,
+                "n_dma_metric_cells": 40,
+                "pairwise_wins": 275,
+                "n_pairwise_comparisons": 320,
+                "graph_baseline_wins": 78,
+                "n_graph_baseline_comparisons": 80,
+            },
         }
-        observed_wins = {
-            (str(row.get("task")), str(row.get("baseline"))): int(row.get("wins"))
-            for row in summary if row.get("metric") == "MAE"
-        }
-        if observed_wins != expected_wins:
-            errors.append(
-                f"Main Fig. 3a paired MAE win counts drift：{observed_wins}"
-            )
+        if dma != expected:
+            errors.append(f"Main Fig. 2 DMA audit drift：{dma}")
 
     return errors
 
@@ -434,7 +418,7 @@ def main() -> None:
     if args.require_frozen:
         print("唯一 checkpoint：10/10；DCRNN/Base无重复")
     if args.require_paper_artifacts:
-        print("Submission Table 1--2 / Main Fig. 1--4 / Fig. S1--S2：PASS")
+        print("Submission Table 1--2 / Main Fig. 1--4 / Table S1：PASS")
 
 
 if __name__ == "__main__":

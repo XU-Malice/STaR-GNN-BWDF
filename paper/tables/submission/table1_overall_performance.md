@@ -21,4 +21,4 @@
 | 168 h | STGCN | 14.569 | 3.576 | 10.306 | 0.933 |
 | 168 h | STaR-GNN | **12.234** | **2.014** | **6.161** | **0.976** |
 
-**Note.** Values for GRU, LSTM, MSNet and the MSCMNet variants were reported by Que et al. (2024). DCRNN, STGCN and STaR-GNN were evaluated under the common 46-origin protocol. All manuscript values use uniform three-decimal display precision; the source CSV retains full precision.
+**Note.** Values for GRU, LSTM, MSNet and the MSCMNet variants were reported by Que et al. (2024). DCRNN, STGCN and STaR-GNN were evaluated using the present study's pipeline. All manuscript values use uniform three-decimal display precision; the source CSV retains full precision.

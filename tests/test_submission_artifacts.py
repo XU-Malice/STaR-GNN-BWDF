@@ -59,8 +59,32 @@ def test_submission_ablation_table_is_four_model_factorial():
 def test_submission_contract_is_documented():
     paper_readme = (ROOT / "paper/README.md").read_text(encoding="utf-8")
     assert "Main Figure 1 — Overall four-metric performance" in paper_readme
-    assert "Main Figure 2 — Four-metric ablation and lead-time stability" in paper_readme
-    assert "Main Figure 3 — Four-metric temporal and spatial robustness" in paper_readme
+    assert "Main Figure 2 — DMA-level performance breadth" in paper_readme
+    assert "Main Figure 3 — Four-metric ablation and lead-time stability" in paper_readme
     assert "Main Figure 4 — Week-ahead demand dynamics" in paper_readme
-    assert "Supplementary Figure S1" in paper_readme
-    assert "Supplementary Figure S2" in paper_readme
+
+
+def test_dma_level_comparison_covers_all_models_metrics_and_horizons():
+    frame = pd.read_csv(
+        ROOT / "paper/tables/literature/table_all_models_dma.csv"
+    )
+    assert frame.shape == (180, 7)
+    assert set(frame["task"]) == {"24h", "168h"}
+    assert set(frame["DMA"]) == set("ABCDEFGHIJ")
+    assert set(frame["model"]) == set(figures.DMA_MODELS)
+
+    ranks = figures._derive_dma_ranks(frame)
+    star = ranks.loc[ranks["model"] == "STaR-GNN"]
+    first = star.groupby("task")["rank"].apply(lambda values: int((values == 1).sum()))
+    assert first.to_dict() == {"168h": 27, "24h": 36}
+    assert star.groupby("task")["rank"].median().to_dict() == {
+        "168h": 1.0,
+        "24h": 1.0,
+    }
+
+    pairwise = figures._derive_dma_pairwise(frame)
+    wins = pairwise.groupby("task")["star_better"].sum().astype(int)
+    assert wins.to_dict() == {"168h": 275, "24h": 306}
+    graph = pairwise.loc[pairwise["baseline_family"] == "graph"]
+    graph_wins = graph.groupby("task")["star_better"].sum().astype(int)
+    assert graph_wins.to_dict() == {"168h": 78, "24h": 80}

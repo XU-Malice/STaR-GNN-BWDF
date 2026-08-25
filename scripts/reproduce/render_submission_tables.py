@@ -10,6 +10,17 @@ import pandas as pd
 
 
 METRICS = ("MAE", "MAPE", "RMSE", "NSE")
+DMA_MODELS = (
+    "GRU",
+    "LSTM",
+    "MSNet",
+    "MSCMNet-WM",
+    "MSCMNet-M",
+    "MSCMNet-W",
+    "DCRNN",
+    "STGCN",
+    "STaR-GNN",
+)
 REPORTED_SUFFIX = " (reported)"
 DISPLAY_NAMES = {
     "MSCMNet_WM": "MSCMNet-WM",
@@ -77,7 +88,7 @@ def _overall_markdown(frame: pd.DataFrame) -> str:
         "",
         "**Note.** Values for GRU, LSTM, MSNet and the MSCMNet variants were "
         "reported by Que et al. (2024). DCRNN, STGCN and STaR-GNN were "
-        "evaluated under the common 46-origin protocol. "
+        "evaluated using the present study's pipeline. "
         "All manuscript values use uniform three-decimal display precision; "
         "the source CSV retains full precision.",
     ]
@@ -118,15 +129,15 @@ def _ablation_markdown(frame: pd.DataFrame) -> str:
         "the factorial ablation. At 168 h, SAS-Norm-only has the marginally "
         "lower total MAE (12.208 vs. 12.234), whereas the full "
         "STaR-GNN is best in MAPE, RMSE and NSE. The corresponding paired "
-        "moving-block analysis is reported with Main Fig. 2.",
+        "moving-block analysis is reported with Main Fig. 3.",
     ]
     return "\n".join(lines) + "\n"
 
 
 def _dma_markdown(frame: pd.DataFrame) -> str:
     lines = [
-        "**Table S1. DMA-level forecasting performance of DCRNN, STGCN and "
-        "STaR-GNN for the 24 h and 168 h prediction horizons.**",
+        "**Table S1. DMA-level forecasting performance of all comparison "
+        "models for the 24 h and 168 h prediction horizons.**",
         "",
         "| Horizon | DMA | Model | MAE ↓ | MAPE (%) ↓ | RMSE ↓ | NSE ↑ |",
         "|---|---|---|---:|---:|---:|---:|",
@@ -134,6 +145,13 @@ def _dma_markdown(frame: pd.DataFrame) -> str:
     for task in ("24h", "168h"):
         for dma in tuple("ABCDEFGHIJ"):
             block = frame.loc[(frame["task"] == task) & (frame["DMA"] == dma)]
+            block = block.assign(
+                model=pd.Categorical(
+                    block["model"], categories=DMA_MODELS, ordered=True
+                )
+            ).sort_values("model")
+            if tuple(block["model"].astype(str)) != DMA_MODELS:
+                raise ValueError(f"Unexpected DMA model set for {task}/{dma}")
             best = {metric: _best(block, metric) for metric in METRICS}
             for _, row in block.iterrows():
                 vals = [
@@ -147,8 +165,11 @@ def _dma_markdown(frame: pd.DataFrame) -> str:
     lines += [
         "",
         "**Note.** MAPE is displayed as a percentage. Bold indicates the best "
-        "value within each horizon–DMA block. Spatial consistency is summarized "
-        "in Main Fig. 3b and detailed in Supplementary Fig. S1.",
+        "value within each horizon–DMA block. The six recurrent and multi-scale "
+        "model results are transcribed from the supplementary material of Que "
+        "et al. (2024); its fractional MAPE values were multiplied by 100 for "
+        "consistent display. The same results are summarized as within-DMA "
+        "ranks in Main Fig. 2.",
     ]
     return "\n".join(lines) + "\n"
 
@@ -205,7 +226,20 @@ def main() -> None:
 
     overall = pd.read_csv(source / "table_literature_comparison_common46.csv")
     ablation = pd.read_csv(source / "table_ablation_common46.csv")
-    dma = _load_dma_comparison(args.release.resolve())
+    graph_dma = _load_dma_comparison(args.release.resolve())
+    temporal_dma = pd.read_csv(source / "table_temporal_models_dma.csv")
+    expected_temporal = len(tuple("ABCDEFGHIJ")) * 2 * 6
+    required_dma_columns = {"task", "DMA", "model", *METRICS}
+    if set(temporal_dma.columns) != required_dma_columns:
+        raise ValueError("Unexpected temporal DMA table schema")
+    if len(temporal_dma) != expected_temporal:
+        raise ValueError(
+            f"Expected {expected_temporal} temporal DMA rows, "
+            f"found {len(temporal_dma)}"
+        )
+    if temporal_dma.duplicated(["task", "DMA", "model"]).any():
+        raise ValueError("Duplicate temporal DMA result rows")
+    dma = pd.concat([temporal_dma, graph_dma], ignore_index=True)
 
     (output / "table1_overall_performance.md").write_text(
         _overall_markdown(overall), encoding="utf-8"
@@ -217,7 +251,7 @@ def main() -> None:
         _dma_markdown(dma), encoding="utf-8"
     )
     dma.to_csv(
-        source / "table_graph_models_dma_common46.csv",
+        source / "table_all_models_dma.csv",
         index=False,
         float_format="%.10f",
     )

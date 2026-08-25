@@ -6,9 +6,9 @@
 
 1. [`../README.md`](../README.md) — 仓库入口与快速验证；
 2. [`METHOD_CN.md`](METHOD_CN.md) — SAS-Norm、FA-DPR、Pearson 功能图与源码对应；
-3. [`EXPERIMENT_DESIGN_FINAL_CN.md`](EXPERIMENT_DESIGN_FINAL_CN.md) — **最终实验问题、主表/主图、Supplementary 和 Results 证据链**；
-4. [`RESULTS_AND_ARTIFACTS_CN.md`](RESULTS_AND_ARTIFACTS_CN.md) — 结果和审计工件；
-5. [`PLOTTING_CN.md`](PLOTTING_CN.md) — 从冻结预测一次性生成 submission tables 与 Main Fig. 1--4 / Fig. S1--S2；
+3. [`EXPERIMENT_DESIGN_FINAL_CN.md`](EXPERIMENT_DESIGN_FINAL_CN.md) — **最终实验问题、主表/主图和 Results 证据链**；
+4. [`RESULTS_AND_ARTIFACTS_CN.md`](RESULTS_AND_ARTIFACTS_CN.md) — 上一版结果审计记录，仅作历史追溯；
+5. [`PLOTTING_CN.md`](PLOTTING_CN.md) — 从冻结预测一次性生成 submission tables 与 Main Fig. 1--4；
 6. [`FULL_PIPELINE_CN.md`](FULL_PIPELINE_CN.md) — 从环境、数据、图、训练到 Test/clean-room 的完整流程；
 7. [`RELEASE_CN.md`](RELEASE_CN.md) — GitHub Release、冻结资产和独立验收。
 
@@ -22,17 +22,9 @@
 
 ```text
 Table 1 + Main Fig. 1 → overall four-metric performance
-Table 2 + Main Fig. 2 → factorial ablation + lead-time stability
-Main Fig. 3 → temporal + spatial robustness
+Main Fig. 2 + Table S1 → all-model DMA-level performance breadth
+Table 2 + Main Fig. 3 → factorial ablation + lead-time stability
 Main Fig. 4 → week-ahead demand dynamics
-```
-
-Supplementary：
-
-```text
-Table S1 → three graph models × DMA-level detailed metrics
-Fig. S1 → detailed four-metric DMA improvement
-Fig. S2 → per-origin ECDF
 ```
 
 ### 指标定义
@@ -55,11 +47,9 @@ paper/tables/submission/tableS1_dma_metrics.md
 
 ```text
 paper/figures/submission/main_fig1_overall_performance.*
-paper/figures/submission/main_fig2_ablation_leadtime.*
-paper/figures/submission/main_fig3_temporal_spatial_robustness.*
+paper/figures/submission/main_fig2_dma_performance.*
+paper/figures/submission/main_fig3_ablation_leadtime.*
 paper/figures/submission/main_fig4_week_ahead_dynamics.*
-paper/figures/supplementary/supp_figS1_dma_improvement.*
-paper/figures/supplementary/supp_figS2_origin_ecdf.*
 ```
 
 ### Figure captions
@@ -72,7 +62,7 @@ paper/figures/supplementary/supp_figS2_origin_ecdf.*
 |---|---|:---:|
 | `METHOD_CN.md` | 最终方法名与源码对应 | ✓ |
 | `EXPERIMENT_DESIGN_FINAL_CN.md` | **最终实验与证据链** | ✓ |
-| `RESULTS_AND_ARTIFACTS_CN.md` | 最终结果/工件入口 | ✓ |
+| `RESULTS_AND_ARTIFACTS_CN.md` | 上一版结果/工件审计记录 | 否 |
 | `PLOTTING_CN.md` | 最终投稿作图教程 | ✓ |
 | `FULL_PIPELINE_CN.md` | 完整复现与代码流转 | 部分 |
 | `RELEASE_CN.md` | 发布与 clean-room | 工程文档 |
@@ -113,7 +103,7 @@ factorial ablation 为 **30/32**。必须透明保留：
 - FA-DPR 168 h MAPE 略差于 DCRNN；
 - SAS-Norm-only 168 h MAE `12.207835` 略低于 STaR-GNN `12.233590`。
 
-这两个边界不被隐藏；Main Fig. 2 用 ordered moving-block evidence 说明 Full 与 SAS 的 168 h MAE 点估计接近，同时揭示 SAS-Norm 与 FA-DPR 对四指标和 lead-time stability 的不同作用。
+这两个边界不被隐藏；Main Fig. 3 用 ordered moving-block evidence 说明 Full 与 SAS 的 168 h MAE 点估计接近，同时揭示 SAS-Norm 与 FA-DPR 对四指标和 lead-time stability 的不同作用。
 
 ## 6. 当前 Results 证据链
 
@@ -121,11 +111,11 @@ factorial ablation 为 **30/32**。必须透明保留：
 Overall capability
   Table 1 + Main Fig. 1
       ↓
-Component mechanism
-  Table 2 + Main Fig. 2
+Spatial breadth across DMAs
+  Main Fig. 2 + Table S1
       ↓
-Temporal / spatial robustness
-  Main Fig. 3
+Component mechanism
+  Table 2 + Main Fig. 3
       ↓
 Population-to-instance week-ahead behavior
   Main Fig. 4
@@ -147,4 +137,4 @@ Population-to-instance week-ahead behavior
 - `paper/figures/manuscript_fig1...5`
 - `paper/captions/MANUSCRIPT_RESULT_FIGURE_CAPTIONS.md`
 
-最终投稿必须优先查看 `paper/tables/submission/`、`paper/figures/submission/`、`paper/figures/supplementary/` 与 `paper/captions/SUBMISSION_RESULT_FIGURE_CAPTIONS.md`。
+最终投稿必须优先查看 `paper/tables/submission/`、`paper/figures/submission/` 与 `paper/captions/SUBMISSION_RESULT_FIGURE_CAPTIONS.md`。

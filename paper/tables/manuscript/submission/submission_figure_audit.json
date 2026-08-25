@@ -1,11 +1,9 @@
 {
   "figure_architecture": {
     "main_fig1": "Overall four-metric performance against eight baselines.",
-    "main_fig2": "Four-metric factorial ablation and lead-time stability; paired improvements relative to DCRNN.",
-    "main_fig3": "Four-metric temporal and spatial robustness; win rates and mean paired improvements.",
-    "main_fig4": "Scale-to-instance week-ahead dynamics; population diurnal error profile plus deterministic representative trajectory.",
-    "supp_figS1": "Detailed four-metric DMA-level improvements.",
-    "supp_figS2": "Per-origin total-MAE ECDF."
+    "main_fig2": "Within-DMA ranks for nine models, two horizons and all four evaluation metrics.",
+    "main_fig3": "Four-metric factorial ablation and lead-time stability; paired improvements relative to DCRNN.",
+    "main_fig4": "Scale-to-instance week-ahead dynamics; population diurnal error profile plus deterministic representative trajectory."
   },
   "block_bootstrap": {
     "block_length_origins": 7,
@@ -13,7 +11,25 @@
     "seed": 20260821,
     "rationale": "Ordered forecast origins preserve weekly dependence; the 168 h origins also overlap strongly because they start 24 h apart."
   },
-  "main_fig2_daywise_summary": [
+  "main_fig2_dma": {
+    "24h": {
+      "first_place_cells": 36,
+      "n_dma_metric_cells": 40,
+      "pairwise_wins": 306,
+      "n_pairwise_comparisons": 320,
+      "graph_baseline_wins": 80,
+      "n_graph_baseline_comparisons": 80
+    },
+    "168h": {
+      "first_place_cells": 27,
+      "n_dma_metric_cells": 40,
+      "pairwise_wins": 275,
+      "n_pairwise_comparisons": 320,
+      "graph_baseline_wins": 78,
+      "n_graph_baseline_comparisons": 80
+    }
+  },
+  "main_fig3_daywise_summary": [
     {
       "model": "DCRNN + SAS-Norm",
       "metric": "MAE",
@@ -855,206 +871,6 @@
       "n_origins": 46
     }
   ],
-  "main_fig3_origin_summary": [
-    {
-      "task": "24h",
-      "baseline": "DCRNN",
-      "metric": "MAE",
-      "mean_improvement": 19.31939210692272,
-      "ci95_lower": 16.659944400693426,
-      "ci95_upper": 21.581735077226174,
-      "wins": 45,
-      "losses": 1,
-      "ties": 0,
-      "n_origins": 46
-    },
-    {
-      "task": "24h",
-      "baseline": "DCRNN",
-      "metric": "MAPE",
-      "mean_improvement": 10.788493939474895,
-      "ci95_lower": -5.343630218596528,
-      "ci95_upper": 24.498264650139475,
-      "wins": 35,
-      "losses": 11,
-      "ties": 0,
-      "n_origins": 46
-    },
-    {
-      "task": "24h",
-      "baseline": "DCRNN",
-      "metric": "RMSE",
-      "mean_improvement": 10.103657916558689,
-      "ci95_lower": -6.3291672348787555,
-      "ci95_upper": 24.030511722277485,
-      "wins": 32,
-      "losses": 14,
-      "ties": 0,
-      "n_origins": 46
-    },
-    {
-      "task": "24h",
-      "baseline": "DCRNN",
-      "metric": "NSE",
-      "mean_improvement": 0.009885636717803297,
-      "ci95_lower": 0.0016706438817044671,
-      "ci95_upper": 0.017578466552355548,
-      "wins": 32,
-      "losses": 14,
-      "ties": 0,
-      "n_origins": 46
-    },
-    {
-      "task": "24h",
-      "baseline": "STGCN",
-      "metric": "MAE",
-      "mean_improvement": 22.633095959370873,
-      "ci95_lower": 20.58866205596647,
-      "ci95_upper": 24.967117769871617,
-      "wins": 45,
-      "losses": 1,
-      "ties": 0,
-      "n_origins": 46
-    },
-    {
-      "task": "24h",
-      "baseline": "STGCN",
-      "metric": "MAPE",
-      "mean_improvement": 17.254453571209243,
-      "ci95_lower": 8.299395514884079,
-      "ci95_upper": 25.21734073236144,
-      "wins": 33,
-      "losses": 13,
-      "ties": 0,
-      "n_origins": 46
-    },
-    {
-      "task": "24h",
-      "baseline": "STGCN",
-      "metric": "RMSE",
-      "mean_improvement": 17.144843824159377,
-      "ci95_lower": 9.068421999564606,
-      "ci95_upper": 24.363987992767264,
-      "wins": 34,
-      "losses": 12,
-      "ties": 0,
-      "n_origins": 46
-    },
-    {
-      "task": "24h",
-      "baseline": "STGCN",
-      "metric": "NSE",
-      "mean_improvement": 0.019926788482812048,
-      "ci95_lower": 0.014136299541111227,
-      "ci95_upper": 0.02534793082419863,
-      "wins": 34,
-      "losses": 12,
-      "ties": 0,
-      "n_origins": 46
-    },
-    {
-      "task": "168h",
-      "baseline": "DCRNN",
-      "metric": "MAE",
-      "mean_improvement": 26.684234151693794,
-      "ci95_lower": 24.082970368113475,
-      "ci95_upper": 29.24683800957144,
-      "wins": 46,
-      "losses": 0,
-      "ties": 0,
-      "n_origins": 46
-    },
-    {
-      "task": "168h",
-      "baseline": "DCRNN",
-      "metric": "MAPE",
-      "mean_improvement": 35.04518641962309,
-      "ci95_lower": 28.109019965645285,
-      "ci95_upper": 40.99150013456985,
-      "wins": 45,
-      "losses": 1,
-      "ties": 0,
-      "n_origins": 46
-    },
-    {
-      "task": "168h",
-      "baseline": "DCRNN",
-      "metric": "RMSE",
-      "mean_improvement": 32.9550487605841,
-      "ci95_lower": 25.293429118072126,
-      "ci95_upper": 39.79489467552919,
-      "wins": 45,
-      "losses": 1,
-      "ties": 0,
-      "n_origins": 46
-    },
-    {
-      "task": "168h",
-      "baseline": "DCRNN",
-      "metric": "NSE",
-      "mean_improvement": 0.037067503640274564,
-      "ci95_lower": 0.025566966008614463,
-      "ci95_upper": 0.0493081985417199,
-      "wins": 45,
-      "losses": 1,
-      "ties": 0,
-      "n_origins": 46
-    },
-    {
-      "task": "168h",
-      "baseline": "STGCN",
-      "metric": "MAE",
-      "mean_improvement": 15.06319343081096,
-      "ci95_lower": 9.794281188763305,
-      "ci95_upper": 19.83181628752201,
-      "wins": 40,
-      "losses": 6,
-      "ties": 0,
-      "n_origins": 46
-    },
-    {
-      "task": "168h",
-      "baseline": "STGCN",
-      "metric": "MAPE",
-      "mean_improvement": 33.34627288715503,
-      "ci95_lower": 12.301619203705627,
-      "ci95_upper": 52.15928056531533,
-      "wins": 36,
-      "losses": 10,
-      "ties": 0,
-      "n_origins": 46
-    },
-    {
-      "task": "168h",
-      "baseline": "STGCN",
-      "metric": "RMSE",
-      "mean_improvement": 30.019075058787774,
-      "ci95_lower": 11.599967038805147,
-      "ci95_upper": 46.672100584430005,
-      "wins": 35,
-      "losses": 11,
-      "ties": 0,
-      "n_origins": 46
-    },
-    {
-      "task": "168h",
-      "baseline": "STGCN",
-      "metric": "NSE",
-      "mean_improvement": 0.04315020594651057,
-      "ci95_lower": 0.01753393704779929,
-      "ci95_upper": 0.068630529065716,
-      "wins": 35,
-      "losses": 11,
-      "ties": 0,
-      "n_origins": 46
-    }
-  ],
-  "main_fig3_dma": {
-    "all_but_two_positive": true,
-    "n_cells": 160,
-    "n_positive": 158,
-    "n_nonpositive": 2
-  },
   "main_fig4_representative": {
     "selection_rule": "STaR-GNN origin whose 168 h total MAE is closest to the median among the 46 common test origins",
     "selected_origin_position_zero_based": 42,
