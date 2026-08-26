@@ -718,19 +718,20 @@ def _main_figure2_dma_pairwise_distribution(
     )
     fig.text(
         0.5,
-        0.012,
+        0.014,
+        "Positive values favor STaR-GNN; negative values favor the baseline.\n"
         "Small points: individual DMAs; large markers: median; "
-        "bars: interquartile range",
+        "bars: interquartile range.",
         ha="center",
         va="bottom",
-        fontsize=7.5,
+        fontsize=7.2,
         color="#4B4B4B",
     )
     fig.subplots_adjust(
         left=0.15,
         right=0.98,
         top=0.91,
-        bottom=0.10,
+        bottom=0.13,
         wspace=0.33,
         hspace=0.34,
     )
@@ -820,18 +821,20 @@ def _main_figure3_dma_local_margin(
     )
     fig.text(
         0.5,
-        0.012,
-        "Competitor selected independently within each DMA, metric and horizon",
+        0.014,
+        "The competitor is re-selected within each DMA–metric–horizon combination; "
+        "positive values favor STaR-GNN.\n"
+        "Lines connect the same DMA across horizons; red markers denote local losses.",
         ha="center",
         va="bottom",
-        fontsize=7.5,
+        fontsize=7.2,
         color="#4B4B4B",
     )
     fig.subplots_adjust(
         left=0.11,
         right=0.98,
         top=0.91,
-        bottom=0.10,
+        bottom=0.13,
         wspace=0.34,
         hspace=0.34,
     )
