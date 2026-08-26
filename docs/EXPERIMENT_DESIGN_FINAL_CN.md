@@ -180,7 +180,7 @@ scripts/reproduce/manuscript_plot_style.py
 
 只对同协议 DCRNN、STGCN、STaR-GNN 做配对统计，并明确 overlapping 168 h windows 的移动块处理。困难条件只由观测需求定义。
 
-### 3.4 Week-ahead demand dynamics, practical implications, and limitations
+### 3.4 Week-ahead demand dynamics and practical implications
 
 证据：Main Fig. 6。
 
