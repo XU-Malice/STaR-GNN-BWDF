@@ -77,6 +77,16 @@ tables/literature/table_all_models_dma.csv
 
 表中并列给出全部九种模型在 10 个 DMA、两个预测时域和四个指标上的绝对结果，用于支撑 Main Fig. 2 和 Main Fig. 3。时序模型原始 MAPE 小数已统一转换为百分数。
 
+## Supplementary Table S2 — DMA-level local margins
+
+显示版：
+
+```text
+tables/submission/tableS2_dma_local_margin.md
+```
+
+对每个“预测时域–DMA–指标”组合，表中独立给出最强非 STaR-GNN 竞争模型及 Fig. 3 使用的有符号幅度。所有负值均被保留。
+
 ---
 
 # Main result figures

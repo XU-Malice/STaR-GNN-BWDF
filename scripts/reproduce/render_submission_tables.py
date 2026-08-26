@@ -174,6 +174,56 @@ def _dma_markdown(frame: pd.DataFrame) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _dma_local_margin_markdown(frame: pd.DataFrame) -> str:
+    """Render the exact comparator identity and signed margin used in Fig. 3."""
+    lines = [
+        "**Table S2. DMA-level margins of STaR-GNN relative to the locally "
+        "strongest competing model.**",
+        "",
+        "| Horizon | DMA | MAE competitor | ΔMAE (%) | MAPE competitor | "
+        "ΔMAPE (%) | RMSE competitor | ΔRMSE (%) | NSE competitor | ΔNSE |",
+        "|---|---|---|---:|---|---:|---|---:|---|---:|",
+    ]
+    for task in ("24h", "168h"):
+        for dma in tuple("ABCDEFGHIJ"):
+            block = frame.loc[(frame["task"] == task) & (frame["DMA"] == dma)]
+            star = block.loc[block["model"] == "STaR-GNN"].iloc[0]
+            competitors = block.loc[block["model"] != "STaR-GNN"]
+            cells: list[str] = []
+            for metric in METRICS:
+                if metric == "NSE":
+                    best = competitors.loc[competitors[metric].idxmax()]
+                    margin = float(star[metric]) - float(best[metric])
+                    margin_text = f"{margin:+.3f}"
+                else:
+                    best = competitors.loc[competitors[metric].idxmin()]
+                    denominator = max(abs(float(best[metric])), 1.0e-12)
+                    margin = 100.0 * (
+                        float(best[metric]) - float(star[metric])
+                    ) / denominator
+                    margin_text = f"{margin:+.1f}"
+                cells.extend([str(best["model"]), margin_text])
+            lines.append(
+                f"| {task.replace('h', ' h')} | {dma} | "
+                + " | ".join(cells)
+                + " |"
+            )
+    lines += [
+        "",
+        "**Note.** For each horizon, DMA and metric, the comparator is selected "
+        "independently as the best-performing non-STaR-GNN model among the eight "
+        "alternatives. For MAE, MAPE and RMSE, "
+        "\\(\\Delta E=(E_{competitor}-E_{STaR-GNN})/E_{competitor}\\times100\\%\\); "
+        "for NSE, "
+        "\\(\\Delta\\mathrm{NSE}=\\mathrm{NSE}_{STaR-GNN}-\\mathrm{NSE}_{competitor}\\). "
+        "Positive values favor STaR-GNN; negative values identify local losses. "
+        "All values are retained, including cases in which STaR-GNN is not best. "
+        "Source provenance for the underlying absolute metrics is provided in "
+        "Supplementary Table S1.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def _load_dma_comparison(release: Path) -> pd.DataFrame:
     model_paths = {
         "DCRNN": "models/star_gnn/Base/{task}/seed_0/evaluation/metrics_common_46.csv",
@@ -250,6 +300,9 @@ def main() -> None:
     (output / "tableS1_dma_metrics.md").write_text(
         _dma_markdown(dma), encoding="utf-8"
     )
+    (output / "tableS2_dma_local_margin.md").write_text(
+        _dma_local_margin_markdown(dma), encoding="utf-8"
+    )
     dma.to_csv(
         source / "table_all_models_dma.csv",
         index=False,
@@ -260,6 +313,7 @@ def main() -> None:
     print("  Table 1 — overall forecasting performance")
     print("  Table 2 — factorial ablation")
     print("  Table S1 — detailed DMA-level metrics")
+    print("  Table S2 — DMA-level local competitor identities and margins")
 
 
 if __name__ == "__main__":
