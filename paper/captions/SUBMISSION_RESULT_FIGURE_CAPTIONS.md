@@ -2,7 +2,7 @@
 
 ## Main Figure 1
 
-**Overall forecasting performance across prediction horizons and model families.** **a**, Relative reductions in MAE, MAPE and RMSE achieved by STaR-GNN against GRU, LSTM, MSNet, three MSCMNet variants, DCRNN and STGCN for the 24 h and 168 h tasks. **b**, Corresponding absolute improvements in NSE, defined as \(\Delta\mathrm{NSE}=\mathrm{NSE}_{\mathrm{STaR-GNN}}-\mathrm{NSE}_{\mathrm{baseline}}\). Error-metric reductions are calculated as \((E_{baseline}-E_{STaR-GNN})/E_{baseline}\times100\%\); positive values consistently favor STaR-GNN. Values for GRU, LSTM, MSNet and the MSCMNet variants are taken from Que et al. (2024), whereas DCRNN, STGCN and STaR-GNN are evaluated using the present study's pipeline.
+**Overall forecasting performance across prediction horizons and model families.** **a**, Relative reductions in MAE, MAPE and RMSE achieved by STaR-GNN against GRU, LSTM, MSNet, three MSCMNet variants, DCRNN and STGCN for the 24 h and 168 h tasks. **b**, Corresponding absolute improvements in NSE, defined as \(\Delta\mathrm{NSE}=\mathrm{NSE}_{\mathrm{STaR-GNN}}-\mathrm{NSE}_{\mathrm{baseline}}\). Error-metric reductions are calculated as \((E_{baseline}-E_{STaR-GNN})/E_{baseline}\times100\%\); positive values consistently favor STaR-GNN. MAE is the sum of the ten DMA-level MAEs, whereas MAPE, RMSE and NSE are evaluated on aggregate demand. Values for GRU, LSTM, MSNet and the MSCMNet variants are taken from Que et al. (2024), whereas DCRNN, STGCN and STaR-GNN are evaluated using the present study's pipeline; cross-source comparisons are used for performance positioning rather than paired inference.
 
 ## Main Figure 2
 
@@ -18,7 +18,7 @@
 
 ## Main Figure 5
 
-**Robustness across forecast origins and high-variability demand windows.** **a–b**, Per-origin reductions in MAE, MAPE and RMSE achieved by STaR-GNN relative to DCRNN and STGCN for the 24 h and 168 h tasks. Faint points are the 46 common forecast origins; filled symbols and horizontal bars are the means and 95% confidence intervals from an ordered seven-origin moving-block bootstrap. **c**, Corresponding absolute NSE improvements. **d**, Win counts in the horizon-specific highest quartile of observed normalized mean absolute ramp. The difficulty index is calculated independently of model errors by normalizing each DMA's mean absolute hourly demand change by its mean demand and taking the median across the ten DMAs. Color denotes win rate, and cells show wins/12. Positive effects consistently favor STaR-GNN. Exact statistics are reported in Supplementary Table S3.
+**Robustness across forecast origins and high-variability demand windows.** **a–b**, Per-origin reductions in MAE, MAPE and RMSE achieved by STaR-GNN relative to DCRNN and STGCN for the 24 h and 168 h tasks. Faint points are the 46 common forecast origins; filled symbols and horizontal bars are the means and 95% confidence intervals from an ordered seven-origin moving-block bootstrap. **c**, Corresponding absolute NSE improvements. **d**, Win counts in the horizon-specific highest quartile of observed normalized mean absolute ramp. The difficulty index is calculated independently of model errors by normalizing each DMA's mean absolute hourly demand change by its mean demand and taking the median across the ten DMAs. MAE is summed over DMA-level MAEs; MAPE, RMSE and NSE are evaluated on aggregate demand. Color denotes win rate, and cells show wins/12. Positive effects consistently favor STaR-GNN. Exact statistics are reported in Supplementary Table S3.
 
 ## Main Figure 6
 

@@ -7,10 +7,11 @@
 1. [`../README.md`](../README.md) — 仓库入口与快速验证；
 2. [`METHOD_CN.md`](METHOD_CN.md) — SAS-Norm、FA-DPR、Pearson 功能图与源码对应；
 3. [`EXPERIMENT_DESIGN_FINAL_CN.md`](EXPERIMENT_DESIGN_FINAL_CN.md) — **最终实验问题、主表/主图和 Results 证据链**；
-4. [`RESULTS_AND_ARTIFACTS_CN.md`](RESULTS_AND_ARTIFACTS_CN.md) — 上一版结果审计记录，仅作历史追溯；
-5. [`PLOTTING_CN.md`](PLOTTING_CN.md) — 从冻结预测一次性生成 submission tables 与 Main Fig. 1--6；
-6. [`FULL_PIPELINE_CN.md`](FULL_PIPELINE_CN.md) — 从环境、数据、图、训练到 Test/clean-room 的完整流程；
-7. [`RELEASE_CN.md`](RELEASE_CN.md) — GitHub Release、冻结资产和独立验收。
+4. [`RESULTS_DISCUSSION_JOH_AUDIT_FINAL_CN.md`](RESULTS_DISCUSSION_JOH_AUDIT_FINAL_CN.md) — 五篇参考论文对标、逐图表审计与 3.1--3.4 终稿说明；
+5. [`RESULTS_AND_ARTIFACTS_CN.md`](RESULTS_AND_ARTIFACTS_CN.md) — 上一版结果审计记录，仅作历史追溯；
+6. [`PLOTTING_CN.md`](PLOTTING_CN.md) — 从冻结预测一次性生成 submission tables 与 Main Fig. 1--6；
+7. [`FULL_PIPELINE_CN.md`](FULL_PIPELINE_CN.md) — 从环境、数据、图、训练到 Test/clean-room 的完整流程；
+8. [`RELEASE_CN.md`](RELEASE_CN.md) — GitHub Release、冻结资产和独立验收。
 
 ## 2. 当前 manuscript-facing 权威入口
 
@@ -68,6 +69,7 @@ paper/figures/submission/main_fig6_week_ahead_dynamics.*
 |---|---|:---:|
 | `METHOD_CN.md` | 最终方法名与源码对应 | ✓ |
 | `EXPERIMENT_DESIGN_FINAL_CN.md` | **最终实验与证据链** | ✓ |
+| `RESULTS_DISCUSSION_JOH_AUDIT_FINAL_CN.md` | 五篇全文对标与 Results/Figure/Table 终稿审计 | ✓ |
 | `RESULTS_AND_ARTIFACTS_CN.md` | 上一版结果/工件审计记录 | 否 |
 | `PLOTTING_CN.md` | 最终投稿作图教程 | ✓ |
 | `FULL_PIPELINE_CN.md` | 完整复现与代码流转 | 部分 |

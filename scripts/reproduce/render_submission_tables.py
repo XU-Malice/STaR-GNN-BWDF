@@ -91,9 +91,12 @@ def _overall_markdown(frame: pd.DataFrame) -> str:
 
     lines += [
         "",
-        "**Note.** Values for GRU, LSTM, MSNet and the MSCMNet variants were "
-        "reported by Que et al. (2024). DCRNN, STGCN and STaR-GNN were "
-        "evaluated using the present study's pipeline. "
+        "**Note.** MAE is the sum of the ten DMA-level MAEs; MAPE, RMSE and "
+        "NSE are evaluated on aggregate demand. Values for GRU, LSTM, MSNet "
+        "and the MSCMNet variants were reported by Que et al. (2024). DCRNN, "
+        "STGCN and STaR-GNN were evaluated using the present study's pipeline. "
+        "Cross-source comparisons are used for performance positioning, "
+        "whereas paired inference is restricted to the latter three models. "
         "All manuscript values use uniform three-decimal display precision; "
         "the source CSV retains full precision.",
     ]
@@ -130,9 +133,11 @@ def _ablation_markdown(frame: pd.DataFrame) -> str:
             )
     lines += [
         "",
-        "**Note.** STGCN is an independent graph baseline and is excluded from "
-        "the factorial ablation. At 168 h, SAS-Norm-only has the marginally "
-        "lower total MAE (12.208 vs. 12.234), whereas the full "
+        "**Note.** MAE is the sum of the ten DMA-level MAEs; MAPE, RMSE and "
+        "NSE are evaluated on aggregate demand. STGCN is an independent graph "
+        "baseline and is excluded from the factorial ablation. At 168 h, "
+        "SAS-Norm-only has the marginally lower MAE (12.208 vs. 12.234), "
+        "whereas the full "
         "STaR-GNN is best in MAPE, RMSE and NSE. The corresponding paired "
         "moving-block analysis is reported with Main Fig. 4.",
     ]

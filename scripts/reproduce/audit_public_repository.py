@@ -31,6 +31,7 @@ EXPECTED_DOCS = {
     "docs/PLOTTING_CN.md",
     "docs/RELEASE_CN.md",
     "docs/RESULTS_AND_ARTIFACTS_CN.md",
+    "docs/RESULTS_DISCUSSION_JOH_AUDIT_FINAL_CN.md",
     "docs/RESULT_CONSISTENCY_AUDIT_CN.md",
 }
 
