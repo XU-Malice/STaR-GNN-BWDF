@@ -876,13 +876,12 @@ def _main_figure2_dma_pairwise_distribution(
         for y_pos, baseline in enumerate(DMA_MODELS[:-1]):
             for task in TASKS:
                 style = horizon_style[task]
-                points = pairwise.loc[
+                values = pairwise.loc[
                     (pairwise["metric"] == metric)
                     & (pairwise["baseline"] == baseline)
                     & (pairwise["task"] == task),
-                    ["DMA", "improvement"],
-                ]
-                values = points["improvement"].to_numpy(float)
+                    "improvement",
+                ].to_numpy(float)
                 if values.size != len(DMAS):
                     raise ValueError(
                         f"Expected {len(DMAS)} DMA values: "
@@ -920,43 +919,6 @@ def _main_figure2_dma_pairwise_distribution(
                     zorder=4,
                 )
 
-                # The only graph-baseline exceptions are too close to the
-                # zero line to identify in the full distribution.  Label only
-                # these two points, preserving the figure's distributional
-                # emphasis without turning every DMA into a lookup table.
-                if (
-                    task == "168h"
-                    and baseline == "STGCN"
-                    and metric in ("RMSE", "NSE")
-                ):
-                    g_index = int(np.flatnonzero(
-                        points["DMA"].to_numpy(str) == "G"
-                    )[0])
-                    g_x = float(values[g_index])
-                    g_y = float(y + jitter[g_index])
-                    ax.scatter(
-                        [g_x],
-                        [g_y],
-                        s=22,
-                        marker="s",
-                        facecolor="#C65A46",
-                        edgecolor="white",
-                        linewidth=0.55,
-                        zorder=6,
-                    )
-                    ax.annotate(
-                        "G",
-                        xy=(g_x, g_y),
-                        xytext=(-1, -9),
-                        textcoords="offset points",
-                        ha="center",
-                        va="top",
-                        fontsize=6.5,
-                        fontweight="bold",
-                        color="#A54535",
-                        zorder=7,
-                    )
-
         ax.axvline(0.0, color=ZERO_GRAY, linewidth=0.85, zorder=0)
         ax.axhline(5.5, color="#D6D6D6", linewidth=0.7, zorder=0)
         ax.set_yticks(np.arange(len(DMA_MODELS) - 1), DMA_MODELS[:-1])
@@ -981,47 +943,17 @@ def _main_figure2_dma_pairwise_distribution(
         )
         for t in TASKS
     ]
-    handles.append(
-        plt.Line2D(
-            [],
-            [],
-            color="#C65A46",
-            marker="s",
-            linestyle="",
-            markersize=5.0,
-            label="DMA G exception",
-        )
-    )
     fig.legend(
         handles=handles,
         loc="upper center",
         bbox_to_anchor=(0.5, 1.005),
-        ncol=3,
-        columnspacing=1.2,
-    )
-    favorable = {
-        task: 100.0 * pairwise.loc[
-            pairwise["task"] == task, "star_better"
-        ].mean()
-        for task in TASKS
-    }
-    fig.text(
-        0.5,
-        0.935,
-        (
-            "Favorable DMA-level comparisons: "
-            f"24 h {favorable['24h']:.1f}%   |   "
-            f"168 h {favorable['168h']:.1f}%"
-        ),
-        ha="center",
-        va="center",
-        fontsize=7.3,
-        color="#3F3F3F",
+        ncol=2,
+        columnspacing=1.4,
     )
     fig.subplots_adjust(
         left=0.15,
         right=0.98,
-        top=0.875,
+        top=0.91,
         bottom=0.10,
         wspace=0.33,
         hspace=0.34,
@@ -1037,14 +969,6 @@ def _main_figure3_dma_local_margin(
     fig, axes = plt.subplots(2, 2, figsize=(7.4, 5.55))
     colors = {"24h": "#8FB6D5", "168h": HERO_BLUE}
     markers = {"24h": "o", "168h": "s"}
-    all_metric_winners = (
-        strongest.groupby(["task", "DMA"], sort=False)["star_better"]
-        .all()
-        .groupby(level="task")
-        .sum()
-        .astype(int)
-    )
-
     for ax, metric, panel in zip(axes.flat, METRICS, "abcd"):
         block = strongest.loc[strongest["metric"] == metric]
         for y_pos, dma in enumerate(DMAS):
@@ -1075,26 +999,6 @@ def _main_figure3_dma_local_margin(
                     linewidth=0.55,
                     zorder=3,
                 )
-                if metric == "NSE" and dma == "I" and task == "168h":
-                    ax.annotate(
-                        "I: NSE rank 2",
-                        xy=(x, y_pos),
-                        xytext=(-8, -12),
-                        textcoords="offset points",
-                        ha="right",
-                        va="top",
-                        fontsize=6.4,
-                        color="#A54535",
-                        arrowprops={
-                            "arrowstyle": "-",
-                            "color": "#A54535",
-                            "linewidth": 0.55,
-                            "shrinkA": 1.0,
-                            "shrinkB": 1.0,
-                        },
-                        zorder=4,
-                    )
-
         ax.axvline(0.0, color=ZERO_GRAY, linewidth=0.9, zorder=0)
         ax.set_yticks(np.arange(len(DMAS)), DMAS)
         ax.invert_yaxis()
@@ -1126,7 +1030,7 @@ def _main_figure3_dma_local_margin(
             marker="o",
             linestyle="",
             markersize=5.2,
-            label="Not first locally",
+            label="Local loss",
         )
     )
     fig.legend(
@@ -1136,23 +1040,10 @@ def _main_figure3_dma_local_margin(
         ncol=3,
         columnspacing=1.2,
     )
-    fig.text(
-        0.5,
-        0.935,
-        (
-            "First on all four metrics: "
-            f"24 h {all_metric_winners['24h']} DMAs   |   "
-            f"168 h {all_metric_winners['168h']} DMAs"
-        ),
-        ha="center",
-        va="center",
-        fontsize=7.3,
-        color="#3F3F3F",
-    )
     fig.subplots_adjust(
         left=0.11,
         right=0.98,
-        top=0.875,
+        top=0.91,
         bottom=0.10,
         wspace=0.34,
         hspace=0.34,
