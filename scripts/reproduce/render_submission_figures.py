@@ -571,7 +571,7 @@ def _main_figure5_origin_robustness(
             wins = int(row["high_variability_wins"])
             n = int(row["n_high_variability"])
             matrix[i, j] = 100.0 * wins / n
-            labels[i][j] = f"{wins}/{n}"
+            labels[i][j] = f"{wins}"
     image = ax.imshow(
         matrix,
         cmap=light_to_hero_cmap(),
@@ -610,7 +610,7 @@ def _main_figure5_origin_robustness(
         fontsize=8.0,
         fontweight="bold",
     )
-    ax.set_title("High-variability origins", pad=18, fontweight="bold")
+    ax.set_title("High-variability origins, n = 12", pad=18, fontweight="bold")
     for i in range(matrix.shape[0]):
         for j in range(matrix.shape[1]):
             ax.text(
