@@ -53,7 +53,7 @@ The 168 h total-MAE point estimates of SAS-Norm-only and STaR-GNN differ by only
 
 ## Journal of Hydrology submission evidence chain
 
-The canonical submission structure is **two main tables + five main result figures**:
+The canonical submission structure is **two main tables + six main result figures**:
 
 ```text
 Main Table 1 + Main Fig. 1  Overall four-metric performance
@@ -62,7 +62,9 @@ Main Figs. 2–3 + Table S1   DMA-level breadth and local margins
         ↓
 Main Table 2 + Main Fig. 4  Factorial ablation + lead-time stability
         ↓
-Main Fig. 5                 Population-to-instance week-ahead dynamics
+Main Fig. 5                 Forecast-origin + difficult-window robustness
+        ↓
+Main Fig. 6                 Population-to-instance week-ahead dynamics
 ```
 
 ### Main Figure 1 — Overall four-metric performance
@@ -85,7 +87,12 @@ Main Fig. 5                 Population-to-instance week-ahead dynamics
 - day-wise paired improvements and moving-block 95% CIs for MAE, MAPE, RMSE and NSE;
 - within-day offsets, markers and line styles keep SAS-Norm and STaR-GNN legible when their estimates are close.
 
-### Main Figure 5 — Week-ahead demand dynamics
+### Main Figure 5 — Forecast-origin and difficult-window robustness
+
+- paired four-metric effects over 46 common origins for DCRNN, STGCN, and STaR-GNN;
+- ordered seven-origin moving-block 95% CIs and an observed-demand high-variability stratum.
+
+### Main Figure 6 — Week-ahead demand dynamics
 
 - population-level diurnal aggregate-demand error profile over 46 origins × 7 forecast days;
 - a representative 168 h trajectory selected with a pre-specified median-error rule;
@@ -93,9 +100,9 @@ Main Fig. 5                 Population-to-instance week-ahead dynamics
 
 Supplementary material:
 
-- **Table S1**: detailed four-metric DMA A--J results for all three graph models;
-- **Fig. S1**: detailed four-metric DMA improvements;
-- **Fig. S2**: per-origin ECDF.
+- **Table S1**: detailed four-metric DMA A--J results for all nine models;
+- **Table S2**: locally strongest competitor identities and signed margins;
+- **Table S3**: forecast-origin and high-variability-window robustness statistics.
 
 See [`docs/EXPERIMENT_DESIGN_FINAL_CN.md`](docs/EXPERIMENT_DESIGN_FINAL_CN.md) for the complete claim-driven design.
 
@@ -106,13 +113,16 @@ paper/tables/submission/
   table1_overall_performance.md
   table2_factorial_ablation.md
   tableS1_dma_metrics.md
+  tableS2_dma_local_margin.md
+  tableS3_forecast_origin_robustness.{md,csv}
 
 paper/figures/submission/
   main_fig1_overall_performance.{pdf,svg,png}
   main_fig2_dma_performance.{pdf,svg,png}
   main_fig3_dma_local_margin.{pdf,svg,png}
   main_fig4_ablation_leadtime.{pdf,svg,png}
-  main_fig5_week_ahead_dynamics.{pdf,svg,png}
+  main_fig5_origin_robustness.{pdf,svg,png}
+  main_fig6_week_ahead_dynamics.{pdf,svg,png}
 ```
 
 STaR-GNN is the visual hero method (`#0F4D92` deep blue); DCRNN/STGCN use gray baselines, while SAS-Norm and FA-DPR use restrained variant colors. The shared style is centralized in `scripts/reproduce/manuscript_plot_style.py`.

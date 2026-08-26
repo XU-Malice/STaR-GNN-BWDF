@@ -53,7 +53,7 @@ STaR-GNN：
 
 ## 4. Journal of Hydrology 投稿版权威证据链
 
-正文采用 **2 张主表 + 5 张主结果图**：
+正文采用 **2 张主表 + 6 张主结果图**：
 
 ```text
 Main Table 1 + Main Fig. 1  Overall four-metric performance
@@ -62,7 +62,9 @@ Main Figs. 2–3 + Tables S1–S2  DMA-level breadth and local margins
         ↓
 Main Table 2 + Main Fig. 4   Factorial ablation + lead-time stability
         ↓
-Main Fig. 5                  Population-to-instance week-ahead dynamics
+Main Fig. 5                  Forecast-origin + difficult-window robustness
+        ↓
+Main Fig. 6                  Population-to-instance week-ahead dynamics
 ```
 
 ### Main Figure 1 — Overall four-metric performance
@@ -85,13 +87,19 @@ Main Fig. 5                  Population-to-instance week-ahead dynamics
 - MAE、MAPE、RMSE、NSE 的逐日 paired improvement 与 moving-block 95% CI；
 - 同日水平错位、marker 和 linestyle 共同解决 SAS-Norm 与 STaR-GNN 的视觉重合。
 
-### Main Figure 5 — Week-ahead demand dynamics
+### Main Figure 5 — Forecast-origin and difficult-window robustness
+
+- 同协议 DCRNN、STGCN、STaR-GNN 的 46-origin 四指标 paired effects；
+- ordered 7-origin moving-block 95% CI；
+- 仅由观测 normalized mean absolute ramp 定义的高波动四分位窗口。
+
+### Main Figure 6 — Week-ahead demand dynamics
 
 - 全部测试窗口 × 7 forecast days 的日内 aggregate-demand error profile；
 - 预先固定 median-error rule 选出的 representative 168 h trajectory；
 - 对应 hourly absolute error。需求单位为 `L s⁻¹`。
 
-Supplementary Table S1 给出全部九种模型的 DMA A--J 详细四指标；Supplementary Table S2 给出 Fig. 3 中逐 DMA 局部最强竞争者及精确有符号幅度。
+Supplementary Table S1 给出全部九种模型的 DMA A--J 详细四指标；Supplementary Table S2 给出 Fig. 3 中逐 DMA 局部最强竞争者及精确有符号幅度；Supplementary Table S3 给出 Fig. 5 的逐起点稳健性统计。
 
 最终设计见 [`docs/EXPERIMENT_DESIGN_FINAL_CN.md`](docs/EXPERIMENT_DESIGN_FINAL_CN.md)。
 
@@ -103,13 +111,15 @@ paper/tables/submission/
   table2_factorial_ablation.md
   tableS1_dma_metrics.md
   tableS2_dma_local_margin.md
+  tableS3_forecast_origin_robustness.{md,csv}
 
 paper/figures/submission/
   main_fig1_overall_performance.{pdf,svg,png}
   main_fig2_dma_performance.{pdf,svg,png}
   main_fig3_dma_local_margin.{pdf,svg,png}
   main_fig4_ablation_leadtime.{pdf,svg,png}
-  main_fig5_week_ahead_dynamics.{pdf,svg,png}
+  main_fig5_origin_robustness.{pdf,svg,png}
+  main_fig6_week_ahead_dynamics.{pdf,svg,png}
 ```
 
 图中 STaR-GNN 使用深蓝 `#0F4D92` 作为唯一 hero color；DCRNN/STGCN 使用灰度 baseline，SAS-Norm/FA-DPR 使用低饱和 variant colors。统一样式由 `scripts/reproduce/manuscript_plot_style.py` 管理。

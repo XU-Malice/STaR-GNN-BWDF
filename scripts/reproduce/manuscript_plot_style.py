@@ -72,6 +72,7 @@ def apply_publication_style() -> None:
             "pdf.fonttype": 42,
             "ps.fonttype": 42,
             "svg.fonttype": "none",
+            "svg.hashsalt": "star-gnn-joh-submission",
             "savefig.transparent": False,
         }
     )
@@ -108,9 +109,13 @@ def add_panel_label(ax: plt.Axes, label: str) -> None:
 def save_publication_figure(fig: plt.Figure, base: Path) -> None:
     """Save vector PDF + editable SVG + 300 dpi PNG preview."""
     base.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(base.with_suffix(".pdf"), bbox_inches="tight")
+    fig.savefig(
+        base.with_suffix(".pdf"),
+        bbox_inches="tight",
+        metadata={"CreationDate": None, "ModDate": None},
+    )
     svg_path = base.with_suffix(".svg")
-    fig.savefig(svg_path, bbox_inches="tight")
+    fig.savefig(svg_path, bbox_inches="tight", metadata={"Date": None})
     # Matplotlib may emit trailing whitespace in SVG path lines.
     # Normalize generated SVGs so repository checks remain clean.
     svg_text = svg_path.read_text(encoding="utf-8")

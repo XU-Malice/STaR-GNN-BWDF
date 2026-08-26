@@ -43,7 +43,7 @@ STGCN 是独立 graph baseline，不属于消融。
 
 ---
 
-## 2. 正文五张核心结果图
+## 2. 正文六张核心结果图
 
 ## Main Figure 1 — Overall four-metric performance
 
@@ -85,7 +85,17 @@ Main inference：24 h 的四个例外集中于 DMA A；168 h 时，A、E 和 G �
 
 ---
 
-## Main Figure 5 — Week-ahead demand dynamics
+## Main Figure 5 — Forecast-origin and difficult-window robustness
+
+**Results-level question：**系统级平均优势是否跨测试起点成立，并能否在需求快速变化的窗口中保持？
+
+Panels a–b 展示 24 h 与 168 h 下相对 DCRNN/STGCN 的逐起点 MAE、MAPE、RMSE 降幅及 seven-origin moving-block bootstrap 95% CI；Panel c 展示 NSE 绝对提升；Panel d 展示由观测 normalized mean absolute ramp 定义的高波动四分位窗口中的胜出数。仅使用同协议模型，不从已发表 DMA 平均值反推样本分布。
+
+Main inference：168 h 的四指标改善在绝大多数预测起点中保持；24 h 相对 DCRNN 的 MAPE/RMSE 区间跨零。高波动窗口总体仍以正向结果为主，但相对 STGCN 的覆盖度收窄。
+
+---
+
+## Main Figure 6 — Week-ahead demand dynamics
 
 **Results-level question：**统计上的改进在真实一周需求轨迹中具体表现为什么？
 
@@ -148,7 +158,7 @@ scripts/reproduce/manuscript_plot_style.py
 
 ## 4. Results 最终章节结构
 
-### 3.1 Overall performance across forecasting horizons
+### 3.1 Predictive performance across forecasting horizons and DMAs
 
 证据：Table 1 + Main Fig. 1 + Main Figs. 2--3 + Supplementary Table S1。
 
@@ -164,11 +174,17 @@ scripts/reproduce/manuscript_plot_style.py
 
 > The two proposed modules contributed to week-ahead forecasting in distinct but complementary ways: SAS-Norm accounted for most of the reduction in absolute MAE, whereas FA-DPR primarily reduced the accumulation of error with increasing lead time.
 
-### 3.3 Week-ahead demand dynamics
+### 3.3 Robustness across forecast origins and demand conditions
 
-证据：Main Fig. 5。
+证据：Main Fig. 5 + Supplementary Table S3。
 
-代表案例定义为 population analysis 的 instance-level validation，而不是额外 leaderboard。
+只对同协议 DCRNN、STGCN、STaR-GNN 做配对统计，并明确 overlapping 168 h windows 的移动块处理。困难条件只由观测需求定义。
+
+### 3.4 Week-ahead demand dynamics, practical implications, and limitations
+
+证据：Main Fig. 6。
+
+代表案例定义为 population analysis 的 instance-level validation，而不是额外 leaderboard；实际意义与限制由该过程证据自然导出，不另设独立 summary/discussion 小节。
 
 ---
 

@@ -8,7 +8,7 @@
 2. [`METHOD_CN.md`](METHOD_CN.md) — SAS-Norm、FA-DPR、Pearson 功能图与源码对应；
 3. [`EXPERIMENT_DESIGN_FINAL_CN.md`](EXPERIMENT_DESIGN_FINAL_CN.md) — **最终实验问题、主表/主图和 Results 证据链**；
 4. [`RESULTS_AND_ARTIFACTS_CN.md`](RESULTS_AND_ARTIFACTS_CN.md) — 上一版结果审计记录，仅作历史追溯；
-5. [`PLOTTING_CN.md`](PLOTTING_CN.md) — 从冻结预测一次性生成 submission tables 与 Main Fig. 1--5；
+5. [`PLOTTING_CN.md`](PLOTTING_CN.md) — 从冻结预测一次性生成 submission tables 与 Main Fig. 1--6；
 6. [`FULL_PIPELINE_CN.md`](FULL_PIPELINE_CN.md) — 从环境、数据、图、训练到 Test/clean-room 的完整流程；
 7. [`RELEASE_CN.md`](RELEASE_CN.md) — GitHub Release、冻结资产和独立验收。
 
@@ -25,7 +25,8 @@ Table 1 + Main Fig. 1 → overall four-metric performance
 Main Fig. 2 + Table S1 → all-model DMA-level performance breadth
 Main Fig. 3 + Table S1 → strongest local competitor and horizon transition
 Table 2 + Main Fig. 4 → factorial ablation + lead-time stability
-Main Fig. 5 → week-ahead demand dynamics
+Main Fig. 5 → forecast-origin and difficult-window robustness
+Main Fig. 6 → week-ahead demand dynamics, implications, limitations
 ```
 
 ### 指标定义
@@ -40,6 +41,8 @@ Main Fig. 5 → week-ahead demand dynamics
 paper/tables/submission/table1_overall_performance.md
 paper/tables/submission/table2_factorial_ablation.md
 paper/tables/submission/tableS1_dma_metrics.md
+paper/tables/submission/tableS2_dma_local_margin.md
+paper/tables/submission/tableS3_forecast_origin_robustness.{md,csv}
 ```
 
 源 CSV 保留完整精度，显示表统一 3 位小数。
@@ -51,7 +54,8 @@ paper/figures/submission/main_fig1_overall_performance.*
 paper/figures/submission/main_fig2_dma_performance.*
 paper/figures/submission/main_fig3_dma_local_margin.*
 paper/figures/submission/main_fig4_ablation_leadtime.*
-paper/figures/submission/main_fig5_week_ahead_dynamics.*
+paper/figures/submission/main_fig5_origin_robustness.*
+paper/figures/submission/main_fig6_week_ahead_dynamics.*
 ```
 
 ### Figure captions
@@ -119,8 +123,11 @@ Spatial breadth across DMAs
 Component mechanism
   Table 2 + Main Fig. 4
       ↓
+Forecast-origin and difficult-condition robustness
+  Main Fig. 5 + Table S3
+      ↓
 Population-to-instance week-ahead behavior
-  Main Fig. 5
+  Main Fig. 6
 ```
 
 每个 subsection 采用：

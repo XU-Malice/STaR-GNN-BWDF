@@ -9,7 +9,7 @@
 #   3. 封存并验证当前 public-source SHA；
 #   4. 校验 10 个冻结 checkpoint、协议与内部 aggregate 诊断；
 #   5. 重新执行 10 组 common-46 推理；
-#   6. 重建源表、submission tables、Main Fig. 1--3 / Fig. S1--S2；
+#   6. 重建源表、submission tables、Main Fig. 1--6；
 #   7. 审计 GitHub 发布边界；
 #   8. 可选生成 GitHub Release checkpoint asset。
 #
@@ -132,13 +132,14 @@ python scripts/reproduce/build_detailed_test_artifacts.py
 
 python scripts/reproduce/render_submission_tables.py \
     --source-dir paper/tables/literature \
-    --output-dir paper/tables/submission
+    --output-dir paper/tables/submission \
+    --release results/paper/frozen_v1
 
 python scripts/reproduce/render_submission_figures.py \
     --release results/paper/frozen_v1 \
     --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
+    --dma-table paper/tables/literature/table_all_models_dma.csv \
     --main-output paper/figures/submission \
-    --supp-output paper/figures/supplementary \
     --audit-output paper/tables/manuscript/submission \
     --block-length 7 \
     --bootstrap-iterations 50000 \
@@ -174,11 +175,8 @@ checkpoint common-46 复推理：10/10
 复推理指标：40/40（绝对与相对容差5e-4）
 Main Table 1 overall：PASS
 Main Table 2 factorial ablation：4 models / no STGCN / 30/32 PASS
-Supplementary Table S1 DMA metrics：PASS
-Main Fig. 1 ablation + lead-time：PASS
-Main Fig. 2 temporal + spatial robustness：PASS
-Main Fig. 3 week-ahead dynamics：PASS
-Supplementary Fig. S1--S2：PASS
+Supplementary Tables S1--S3：PASS
+Main Fig. 1--6：PASS
 7-origin moving-block bootstrap：PASS
 公开文档与发布边界：PASS
 GitHub Release checkpoint资产：${ASSET_STATUS}

@@ -87,11 +87,20 @@ tables/submission/tableS2_dma_local_margin.md
 
 对每个“预测时域–DMA–指标”组合，表中独立给出最强非 STaR-GNN 竞争模型及 Fig. 3 使用的有符号幅度。所有负值均被保留。
 
+## Supplementary Table S3 — Forecast-origin robustness
+
+```text
+tables/submission/tableS3_forecast_origin_robustness.md
+tables/submission/tableS3_forecast_origin_robustness.csv
+```
+
+仅对同协议 DCRNN、STGCN、STaR-GNN 报告 46-origin 四指标改善、moving-block CI、胜出数及观测定义的高波动窗口统计。A 类 published models 不具有逐起点输出，未被推断或补齐。
+
 ---
 
 # Main result figures
 
-最终正文保留五张核心结果图，按“总体优势—跨 DMA 分布—局部竞争边界—组件作用—实际轨迹”展开。
+最终正文保留六张核心结果图，按“总体优势—跨 DMA 分布—局部竞争边界—组件作用—逐起点稳健性—实际轨迹”展开。
 
 ## Main Figure 1 — Overall four-metric performance
 
@@ -145,12 +154,25 @@ figures/submission/main_fig4_ablation_leadtime.png
 
 回答：**SAS-Norm 与 FA-DPR 分别如何影响周尺度准确性与 lead-time stability？**
 
-## Main Figure 5 — Week-ahead demand dynamics
+## Main Figure 5 — Forecast-origin and difficult-window robustness
 
 ```text
-figures/submission/main_fig5_week_ahead_dynamics.pdf
-figures/submission/main_fig5_week_ahead_dynamics.svg
-figures/submission/main_fig5_week_ahead_dynamics.png
+figures/submission/main_fig5_origin_robustness.pdf
+figures/submission/main_fig5_origin_robustness.svg
+figures/submission/main_fig5_origin_robustness.png
+```
+
+- Panels a–c：46 个共同起点上的四指标 paired effects 与 ordered moving-block 95% CI；
+- Panel d：仅由观测 normalized mean absolute ramp 定义的高波动窗口胜出数。
+
+回答：**平均优势是否跨预测起点成立，并在困难需水条件下保持？**
+
+## Main Figure 6 — Week-ahead demand dynamics
+
+```text
+figures/submission/main_fig6_week_ahead_dynamics.pdf
+figures/submission/main_fig6_week_ahead_dynamics.svg
+figures/submission/main_fig6_week_ahead_dynamics.png
 ```
 
 - Panel a：全部测试窗口 × 7 days 的 diurnal aggregate-demand absolute-error profile；
@@ -176,9 +198,11 @@ main_fig2_dma_ranks.csv
 main_fig2_dma_pairwise_improvement.csv
 main_fig3_dma_strongest_competitor.csv
 main_fig4_daywise_paired_improvement.csv
-main_fig5_diurnal_aggregate_error.csv
-main_fig5_representative_trajectory.csv
-main_fig5_representative_selection.json
+main_fig5_origin_paired_improvement.csv
+main_fig5_origin_summary.csv
+main_fig6_diurnal_aggregate_error.csv
+main_fig6_representative_trajectory.csv
+main_fig6_representative_selection.json
 submission_figure_audit.json
 ```
 
