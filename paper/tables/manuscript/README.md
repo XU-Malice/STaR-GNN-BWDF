@@ -1,6 +1,6 @@
-# Manuscript Figure 1--5 审计工件
+# Legacy manuscript figure audit artifacts
 
-本目录保存正文 Figure 1--5 的可追溯 CSV/JSON。最终 Figure 2/3 由两阶段流程生成；Stage 2 会覆盖 Stage 1 的 Figure 2/3 图像，但保留 Stage 1 的基础审计数据。
+本文件记录早期两阶段作图流程，仅用于历史追溯，不再定义投稿图号。当前 Journal of Hydrology 正文 Figure 1--5 的权威审计工件位于 [`submission/`](submission/)，图件与数据对应关系见 [`../../README.md`](../../README.md)。以下旧 Figure 1--5 名称均指 `paper/figures/manuscript_*` 历史图，不应与当前 `paper/figures/submission/` 混用。
 
 ## Stage 1
 

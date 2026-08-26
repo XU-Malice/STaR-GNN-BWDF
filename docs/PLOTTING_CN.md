@@ -62,9 +62,10 @@ MPLCONFIGDIR=/tmp/star_gnn_mpl python scripts/reproduce/render_submission_figure
 Submission figure renderer: PASS
 Main figures:
   Main Fig. 1 — overall four-metric performance
-  Main Fig. 2 — all-model DMA-level performance ranks
-  Main Fig. 3 — four-metric ablation and lead-time stability
-  Main Fig. 4 — week-ahead demand dynamics
+  Main Fig. 2 — cross-DMA pairwise improvement distributions
+  Main Fig. 3 — DMA-specific margin to the strongest competitor
+  Main Fig. 4 — four-metric ablation and lead-time stability
+  Main Fig. 5 — week-ahead demand dynamics
 ```
 
 每张图同时输出 PDF、editable SVG 和 300 dpi PNG。
@@ -77,15 +78,19 @@ Panel a 为 STaR-GNN 相对六个时序模型与 DCRNN/STGCN 的 MAE、MAPE、RM
 
 ### Main Figure 2
 
-Panel a–b 为九种模型在 24 h 与 168 h 下的逐 DMA、逐指标排名分布。每个 horizon–DMA–metric 组合独立排序；箱体给中位数与四分位距，散点保留全部 40 个组合。Panel c 给出 STaR-GNN 在每个 DMA 的四项指标中排名第一的数量。完整绝对数值见 Supplementary Table S1。
+四个 panel 分别为 MAE、MAPE、RMSE、NSE。纵轴为八种基线，横轴为 STaR-GNN 相对每个基线的有符号逐 DMA 改善。小点保留十个 DMA，大点与线段分别为中位数和四分位距；圆和方形区分 24 h 与 168 h。
 
 ### Main Figure 3
+
+四个 panel 分别给出 STaR-GNN 相对每个 DMA–指标–预测时域内最强竞争者的有符号幅度。纵轴保留 DMA A–J；同一 DMA 的 24 h 与 168 h 点用线连接，红色点表示局部非最优。完整绝对值见 Supplementary Table S1。
+
+### Main Figure 4
 
 四个 panel 分别为 MAE、MAPE、RMSE、NSE。SAS-Norm-only、FA-DPR-only 与 Full 均相对 DCRNN 做逐日 paired improvement；误差指标为相对降幅，NSE 为绝对增益。
 
 同一 forecast day 内三个模型使用轻微水平错位，并固定 color、marker、linestyle。这样 SAS-Norm 与 STaR-GNN 即使数值接近也能辨认；误差棒为 ordered seven-window moving-block 95% CI。
 
-### Main Figure 4
+### Main Figure 5
 
 采用 scale-to-instance 结构：全部测试窗口 × 7 days 的日内 aggregate-demand error profile、预先规定 median-total-MAE rule 的 representative 168 h trajectory，以及同一窗口的 hourly absolute error。
 
@@ -116,6 +121,7 @@ python scripts/reproduce/audit_public_repository.py \
 
 - 最终表图中没有额外符号和内部工程措辞；
 - PDF/SVG/PNG 均可打开，SVG 文字可编辑；
-- Main Fig. 2 的排名轴、模型轴、DMA 轴和颜色含义完整，绝对值可由 Table S1 核查；
-- Main Fig. 3 的三条 variant series 可分辨；
+- Main Fig. 2 的基线轴、改善轴、预测时域与分布统计含义完整；
+- Main Fig. 3 的 DMA 轴、零线、负向例外和最强竞争者定义完整；
+- Main Fig. 4 的三条 variant series 可分辨；
 - caption、审计 CSV/JSON 与图中数值一致。

@@ -1,9 +1,10 @@
 {
   "figure_architecture": {
     "main_fig1": "Overall four-metric performance against eight baselines.",
-    "main_fig2": "Within-DMA ranks for nine models, two horizons and all four evaluation metrics.",
-    "main_fig3": "Four-metric factorial ablation and lead-time stability; paired improvements relative to DCRNN.",
-    "main_fig4": "Scale-to-instance week-ahead dynamics; population diurnal error profile plus deterministic representative trajectory."
+    "main_fig2": "Cross-DMA distributions of signed pairwise improvements against each of eight baselines.",
+    "main_fig3": "DMA-specific signed margins to the strongest competing method and their transition from 24 h to 168 h.",
+    "main_fig4": "Four-metric factorial ablation and lead-time stability; paired improvements relative to DCRNN.",
+    "main_fig5": "Scale-to-instance week-ahead dynamics; population diurnal error profile plus deterministic representative trajectory."
   },
   "block_bootstrap": {
     "block_length_origins": 7,
@@ -29,7 +30,41 @@
       "n_graph_baseline_comparisons": 80
     }
   },
-  "main_fig3_daywise_summary": [
+  "main_fig3_strongest_competitor": {
+    "24h": {
+      "wins": 36,
+      "comparisons": 40,
+      "losses_by_dma": {
+        "A": 4,
+        "B": 0,
+        "C": 0,
+        "D": 0,
+        "E": 0,
+        "F": 0,
+        "G": 0,
+        "H": 0,
+        "I": 0,
+        "J": 0
+      }
+    },
+    "168h": {
+      "wins": 27,
+      "comparisons": 40,
+      "losses_by_dma": {
+        "A": 4,
+        "B": 0,
+        "C": 0,
+        "D": 0,
+        "E": 4,
+        "F": 0,
+        "G": 4,
+        "H": 0,
+        "I": 1,
+        "J": 0
+      }
+    }
+  },
+  "main_fig4_daywise_summary": [
     {
       "model": "DCRNN + SAS-Norm",
       "metric": "MAE",
@@ -871,7 +906,7 @@
       "n_origins": 46
     }
   ],
-  "main_fig4_representative": {
+  "main_fig5_representative": {
     "selection_rule": "STaR-GNN origin whose 168 h total MAE is closest to the median among the 46 common test origins",
     "selected_origin_position_zero_based": 42,
     "selected_common_index": 70,

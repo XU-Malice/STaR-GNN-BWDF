@@ -53,16 +53,16 @@ STaR-GNN：
 
 ## 4. Journal of Hydrology 投稿版权威证据链
 
-正文采用 **2 张主表 + 4 张主结果图**：
+正文采用 **2 张主表 + 5 张主结果图**：
 
 ```text
 Main Table 1 + Main Fig. 1  Overall four-metric performance
         ↓
-Main Fig. 2 + Table S1       DMA-level performance breadth
+Main Figs. 2–3 + Table S1    DMA-level breadth and local margins
         ↓
-Main Table 2 + Main Fig. 3  Factorial ablation + lead-time stability
+Main Table 2 + Main Fig. 4   Factorial ablation + lead-time stability
         ↓
-Main Fig. 4                 Population-to-instance week-ahead dynamics
+Main Fig. 5                  Population-to-instance week-ahead dynamics
 ```
 
 ### Main Figure 1 — Overall four-metric performance
@@ -72,15 +72,20 @@ Main Fig. 4                 Population-to-instance week-ahead dynamics
 
 ### Main Figure 2 — DMA-level performance breadth
 
-- 九种模型在 24 h 与 168 h 下的逐 DMA、逐指标排名分布；
-- STaR-GNN 在每个 DMA 上四项指标的首位覆盖数，完整绝对值见 Table S1。
+- STaR-GNN 相对八种基线的四指标逐 DMA 有符号改善分布；
+- 保留全部 DMA 点，并用中位数和四分位距概括跨 DMA 覆盖。
 
-### Main Figure 3 — Four-metric ablation and lead-time stability
+### Main Figure 3 — DMA-specific local competitive margin
+
+- 每个 DMA、指标和预测时域均独立选择最强非 STaR-GNN 方法；
+- 连接 24 h 与 168 h 的有符号竞争幅度，完整保留局部例外。
+
+### Main Figure 4 — Four-metric ablation and lead-time stability
 
 - MAE、MAPE、RMSE、NSE 的逐日 paired improvement 与 moving-block 95% CI；
 - 同日水平错位、marker 和 linestyle 共同解决 SAS-Norm 与 STaR-GNN 的视觉重合。
 
-### Main Figure 4 — Week-ahead demand dynamics
+### Main Figure 5 — Week-ahead demand dynamics
 
 - 全部测试窗口 × 7 forecast days 的日内 aggregate-demand error profile；
 - 预先固定 median-error rule 选出的 representative 168 h trajectory；
@@ -101,8 +106,9 @@ paper/tables/submission/
 paper/figures/submission/
   main_fig1_overall_performance.{pdf,svg,png}
   main_fig2_dma_performance.{pdf,svg,png}
-  main_fig3_ablation_leadtime.{pdf,svg,png}
-  main_fig4_week_ahead_dynamics.{pdf,svg,png}
+  main_fig3_dma_local_margin.{pdf,svg,png}
+  main_fig4_ablation_leadtime.{pdf,svg,png}
+  main_fig5_week_ahead_dynamics.{pdf,svg,png}
 ```
 
 图中 STaR-GNN 使用深蓝 `#0F4D92` 作为唯一 hero color；DCRNN/STGCN 使用灰度 baseline，SAS-Norm/FA-DPR 使用低饱和 variant colors。统一样式由 `scripts/reproduce/manuscript_plot_style.py` 管理。
