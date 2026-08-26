@@ -4,7 +4,7 @@
 The audit distinguishes frozen scientific artifacts from submission-facing
 presentation artifacts. Legacy diagnostic figures may remain tracked, but the
 canonical manuscript contract is 2 main tables + 5 main result figures,
-and Supplementary Table S1.
+and Supplementary Tables S1–S2.
 """
 
 from __future__ import annotations
@@ -258,6 +258,7 @@ def _audit_paper(root: Path) -> list[str]:
         "paper/tables/submission/table1_overall_performance.md",
         "paper/tables/submission/table2_factorial_ablation.md",
         "paper/tables/submission/tableS1_dma_metrics.md",
+        "paper/tables/submission/tableS2_dma_local_margin.md",
     )
     for relative in required_submission_tables:
         if not (root / relative).is_file():
@@ -442,7 +443,7 @@ def main() -> None:
     if args.require_frozen:
         print("唯一 checkpoint：10/10；DCRNN/Base无重复")
     if args.require_paper_artifacts:
-        print("Submission Table 1--2 / Main Fig. 1--5 / Table S1：PASS")
+        print("Submission Table 1--2 / Main Fig. 1--5 / Tables S1--S2：PASS")
 
 
 if __name__ == "__main__":

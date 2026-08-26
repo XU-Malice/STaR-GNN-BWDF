@@ -60,8 +60,10 @@ def test_submission_contract_is_documented():
     paper_readme = (ROOT / "paper/README.md").read_text(encoding="utf-8")
     assert "Main Figure 1 — Overall four-metric performance" in paper_readme
     assert "Main Figure 2 — DMA-level performance breadth" in paper_readme
-    assert "Main Figure 3 — Four-metric ablation and lead-time stability" in paper_readme
-    assert "Main Figure 4 — Week-ahead demand dynamics" in paper_readme
+    assert "Main Figure 3 — DMA-specific local competitive margin" in paper_readme
+    assert "Main Figure 4 — Four-metric ablation and lead-time stability" in paper_readme
+    assert "Main Figure 5 — Week-ahead demand dynamics" in paper_readme
+    assert "Supplementary Table S2 — DMA-level local margins" in paper_readme
 
 
 def test_dma_level_comparison_covers_all_models_metrics_and_horizons():
@@ -88,3 +90,19 @@ def test_dma_level_comparison_covers_all_models_metrics_and_horizons():
     graph = pairwise.loc[pairwise["baseline_family"] == "graph"]
     graph_wins = graph.groupby("task")["star_better"].sum().astype(int)
     assert graph_wins.to_dict() == {"168h": 78, "24h": 80}
+
+
+def test_dma_local_margin_supplement_retains_competitors_and_losses():
+    frame = pd.read_csv(
+        ROOT / "paper/tables/literature/table_all_models_dma.csv"
+    )
+    text = tables._dma_local_margin_markdown(frame)
+    data_rows = [
+        line for line in text.splitlines()
+        if line.startswith("| 24 h |") or line.startswith("| 168 h |")
+    ]
+    assert len(data_rows) == 20
+    assert "| 24 h | A | GRU | -9.2 | GRU | -5.2 |" in text
+    assert "| 168 h | I |" in text
+    assert "MSCMNet-WM | -0.046 |" in text
+    assert "All values are retained" in text
