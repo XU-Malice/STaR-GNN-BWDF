@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 """Render the canonical Journal of Hydrology submission result figures.
 
-The five main figures follow the manuscript's claim sequence: overall
+The six main figures follow the manuscript's claim sequence: overall
 performance, cross-DMA pairwise breadth, DMA-specific competitive margins,
-component evidence, and a concrete week-ahead forecast. MAE, MAPE, RMSE and
-NSE are carried through the first four stages instead of treating MAE as a
-proxy for all forecasting quality.
+component evidence, forecast-origin robustness, and a concrete week-ahead
+forecast. MAE, MAPE, RMSE and NSE are carried through the comparative stages
+instead of treating MAE as a proxy for all forecasting quality.
 
 The ablation figure reports paired improvements relative to DCRNN with small
 horizontal offsets and confidence intervals.  This makes the very similar
@@ -355,6 +355,18 @@ def _derive_origin_improvements(
     summary: list[dict[str, Any]] = []
     for task in TASKS:
         star_truth, star_pred, common = _load_common_predictions(release, "STaR-GNN", task)
+        # Demand difficulty is defined from observations only and treats all
+        # DMAs equally. The normalized mean absolute ramp (NMAR) is computed
+        # per DMA and summarized by the median over DMAs. The top
+        # horizon-specific quartile is descriptive and is never used for
+        # training, checkpoint selection, or representative-case selection.
+        dma_level = np.maximum(np.mean(np.abs(star_truth), axis=1), 1.0e-12)
+        normalized_ramp = np.mean(
+            np.abs(np.diff(star_truth, axis=1)), axis=1
+        ) / dma_level
+        difficulty = np.median(normalized_ramp, axis=1)
+        difficulty_q75 = float(np.quantile(difficulty, 0.75))
+        high_variability = difficulty >= difficulty_q75
         for baseline in BASELINE_MODELS:
             base_truth, base_pred, base_common = _load_common_predictions(
                 release, baseline, task
@@ -367,8 +379,8 @@ def _derive_origin_improvements(
                 star = _metric_per_origin(star_truth, star_pred, metric)
                 improvement = _paired_improvement(base, star, metric)
                 mean, lo, hi = _block_ci(improvement, indices)
-                for pos, (common_index, value) in enumerate(
-                    zip(common, improvement)
+                for pos, (common_index, base_value, star_value, value) in enumerate(
+                    zip(common, base, star, improvement)
                 ):
                     rows.append(
                         {
@@ -377,9 +389,16 @@ def _derive_origin_improvements(
                             "metric": metric,
                             "origin_position": pos,
                             "common_index": int(common_index),
+                            "baseline_value": float(base_value),
+                            "star_value": float(star_value),
                             "improvement": float(value),
+                            "normalized_mean_absolute_ramp": float(
+                                difficulty[pos]
+                            ),
+                            "high_variability": bool(high_variability[pos]),
                         }
                     )
+                difficult_values = improvement[high_variability]
                 summary.append(
                     {
                         "task": task,
@@ -392,9 +411,224 @@ def _derive_origin_improvements(
                         "losses": int((improvement < 0).sum()),
                         "ties": int(np.isclose(improvement, 0.0).sum()),
                         "n_origins": int(improvement.size),
+                        "difficulty_q75": difficulty_q75,
+                        "high_variability_mean_improvement": float(
+                            difficult_values.mean()
+                        ),
+                        "high_variability_wins": int(
+                            (difficult_values > 0).sum()
+                        ),
+                        "n_high_variability": int(difficult_values.size),
+                        "spearman_difficulty_improvement": float(
+                            pd.Series(difficulty).corr(
+                                pd.Series(improvement), method="spearman"
+                            )
+                        ),
                     }
                 )
     return pd.DataFrame(rows), pd.DataFrame(summary)
+
+
+def _main_figure5_origin_robustness(
+    paired: pd.DataFrame,
+    summary: pd.DataFrame,
+    output: Path,
+) -> None:
+    """Show paired test-origin effects and a pre-defined difficult stratum."""
+    fig = plt.figure(figsize=(7.25, 5.4))
+    gs = fig.add_gridspec(2, 2, hspace=0.43, wspace=0.40)
+    axes = [
+        fig.add_subplot(gs[0, 0]),
+        fig.add_subplot(gs[0, 1]),
+        fig.add_subplot(gs[1, 0]),
+        fig.add_subplot(gs[1, 1]),
+    ]
+    baseline_style = {
+        "DCRNN": {"color": "#5C5C5C", "marker": "o"},
+        "STGCN": {"color": HERO_BLUE, "marker": "s"},
+    }
+    rng = np.random.default_rng(20260826)
+
+    error_rows = [
+        (metric, baseline)
+        for metric in ("MAE", "MAPE", "RMSE")
+        for baseline in BASELINE_MODELS
+    ]
+    for ax, task, panel in zip(axes[:2], TASKS, ("a", "b")):
+        for y, (metric, baseline) in enumerate(error_rows):
+            values = paired.loc[
+                (paired["task"] == task)
+                & (paired["metric"] == metric)
+                & (paired["baseline"] == baseline),
+                "improvement",
+            ].to_numpy(float)
+            row = summary.loc[
+                (summary["task"] == task)
+                & (summary["metric"] == metric)
+                & (summary["baseline"] == baseline)
+            ].iloc[0]
+            style = baseline_style[baseline]
+            ax.scatter(
+                values,
+                y + rng.uniform(-0.10, 0.10, size=values.size),
+                s=8,
+                color=str(style["color"]),
+                alpha=0.18,
+                edgecolor="none",
+                zorder=1,
+            )
+            mean = float(row["mean_improvement"])
+            lo = float(row["ci95_lower"])
+            hi = float(row["ci95_upper"])
+            ax.errorbar(
+                mean,
+                y,
+                xerr=np.array([[mean - lo], [hi - mean]]),
+                color=str(style["color"]),
+                marker=str(style["marker"]),
+                markersize=5.2,
+                linewidth=1.25,
+                elinewidth=1.6,
+                capsize=2.3,
+                zorder=4,
+            )
+        ax.axvline(0.0, color=ZERO_GRAY, linewidth=0.85, zorder=0)
+        ax.set_yticks(
+            np.arange(len(error_rows)),
+            [f"{metric} | {baseline}" for metric, baseline in error_rows],
+        )
+        ax.invert_yaxis()
+        ax.set_xlabel("Paired error reduction (%)")
+        ax.set_title(task.replace("h", " h"), pad=7, fontweight="bold")
+        ax.xaxis.grid(True, color="#E2E2E2", linewidth=0.55)
+        ax.set_axisbelow(True)
+        ax.spines[["top", "right"]].set_visible(False)
+        add_panel_label(ax, panel)
+
+    ax = axes[2]
+    nse_rows = [(task, baseline) for task in TASKS for baseline in BASELINE_MODELS]
+    for y, (task, baseline) in enumerate(nse_rows):
+        values = paired.loc[
+            (paired["task"] == task)
+            & (paired["metric"] == "NSE")
+            & (paired["baseline"] == baseline),
+            "improvement",
+        ].to_numpy(float)
+        row = summary.loc[
+            (summary["task"] == task)
+            & (summary["metric"] == "NSE")
+            & (summary["baseline"] == baseline)
+        ].iloc[0]
+        style = baseline_style[baseline]
+        ax.scatter(
+            values,
+            y + rng.uniform(-0.10, 0.10, size=values.size),
+            s=8,
+            color=str(style["color"]),
+            alpha=0.18,
+            edgecolor="none",
+            zorder=1,
+        )
+        mean = float(row["mean_improvement"])
+        lo = float(row["ci95_lower"])
+        hi = float(row["ci95_upper"])
+        ax.errorbar(
+            mean,
+            y,
+            xerr=np.array([[mean - lo], [hi - mean]]),
+            color=str(style["color"]),
+            marker=str(style["marker"]),
+            markersize=5.2,
+            linewidth=1.25,
+            elinewidth=1.6,
+            capsize=2.3,
+            zorder=4,
+        )
+    ax.axvline(0.0, color=ZERO_GRAY, linewidth=0.85, zorder=0)
+    ax.set_yticks(
+        np.arange(len(nse_rows)),
+        [f"{task.replace('h', ' h')} | {baseline}" for task, baseline in nse_rows],
+    )
+    ax.invert_yaxis()
+    ax.set_xlabel("Paired NSE improvement ($\\Delta$NSE)")
+    ax.set_title("NSE across forecast origins", pad=7, fontweight="bold")
+    ax.xaxis.grid(True, color="#E2E2E2", linewidth=0.55)
+    ax.set_axisbelow(True)
+    ax.spines[["top", "right"]].set_visible(False)
+    add_panel_label(ax, "c")
+
+    ax = axes[3]
+    groups = [(task, baseline) for task in TASKS for baseline in BASELINE_MODELS]
+    matrix = np.zeros((len(METRICS), len(groups)), dtype=float)
+    labels: list[list[str]] = [["" for _ in groups] for _ in METRICS]
+    for i, metric in enumerate(METRICS):
+        for j, (task, baseline) in enumerate(groups):
+            row = summary.loc[
+                (summary["task"] == task)
+                & (summary["metric"] == metric)
+                & (summary["baseline"] == baseline)
+            ].iloc[0]
+            wins = int(row["high_variability_wins"])
+            n = int(row["n_high_variability"])
+            matrix[i, j] = 100.0 * wins / n
+            labels[i][j] = f"{wins}/{n}"
+    image = ax.imshow(
+        matrix,
+        cmap=light_to_hero_cmap(),
+        vmin=0,
+        vmax=100,
+        aspect="auto",
+        interpolation="nearest",
+    )
+    ax.set_yticks(np.arange(len(METRICS)), METRICS)
+    ax.set_xticks(
+        np.arange(len(groups)),
+        [baseline for _, baseline in groups],
+        rotation=35,
+        ha="right",
+    )
+    ax.tick_params(length=0)
+    ax.spines[:].set_visible(False)
+    ax.axvline(1.5, color="white", linewidth=2.4)
+    ax.text(
+        0.5,
+        1.02,
+        "24 h",
+        transform=ax.get_xaxis_transform(),
+        ha="center",
+        va="bottom",
+        fontsize=8.0,
+        fontweight="bold",
+    )
+    ax.text(
+        2.5,
+        1.02,
+        "168 h",
+        transform=ax.get_xaxis_transform(),
+        ha="center",
+        va="bottom",
+        fontsize=8.0,
+        fontweight="bold",
+    )
+    ax.set_title("High-variability origins", pad=18, fontweight="bold")
+    for i in range(matrix.shape[0]):
+        for j in range(matrix.shape[1]):
+            ax.text(
+                j,
+                i,
+                labels[i][j],
+                ha="center",
+                va="center",
+                fontsize=7.0,
+                color="white" if matrix[i, j] >= 70 else "#202020",
+            )
+    cbar = fig.colorbar(image, ax=ax, fraction=0.045, pad=0.035)
+    cbar.set_label("Win rate (%)", fontsize=8.0)
+    cbar.ax.tick_params(labelsize=7.0)
+    add_panel_label(ax, "d")
+
+    fig.subplots_adjust(left=0.16, right=0.97, top=0.94, bottom=0.12)
+    save_publication_figure(fig, output / "main_fig5_origin_robustness")
 
 
 def _derive_dma_improvement(release: Path) -> pd.DataFrame:
@@ -1226,7 +1460,7 @@ def _main_figure4_week(
         handlelength=2.5,
     )
     fig.subplots_adjust(top=0.86, bottom=0.12, left=0.09, right=0.98)
-    save_publication_figure(fig, output / "main_fig5_week_ahead_dynamics")
+    save_publication_figure(fig, output / "main_fig6_week_ahead_dynamics")
 
 
 def _main_figure_overall(
@@ -1268,7 +1502,7 @@ def _main_figure_overall(
 
     fig, axes = plt.subplots(
         1, 2,
-        figsize=(7.4, 3.6),
+        figsize=(6.8, 3.6),
         gridspec_kw={"width_ratios": [2.8, 1.0]},
     )
     ax_h, ax_n = axes
@@ -1462,6 +1696,7 @@ def _write_audit(
     ranks: pd.DataFrame,
     pairwise: pd.DataFrame,
     strongest: pd.DataFrame,
+    origin_summary: pd.DataFrame,
     representative: dict[str, Any],
     block_length: int,
     bootstrap_iterations: int,
@@ -1483,6 +1718,10 @@ def _write_audit(
                 "paired improvements relative to DCRNN."
             ),
             "main_fig5": (
+                "Paired forecast-origin robustness over all four metrics and "
+                "a pre-defined high-variability demand stratum."
+            ),
+            "main_fig6": (
                 "Scale-to-instance week-ahead dynamics; population diurnal "
                 "error profile plus deterministic representative trajectory."
             ),
@@ -1550,7 +1789,8 @@ def _write_audit(
             for task in TASKS
         },
         "main_fig4_daywise_summary": daywise.to_dict(orient="records"),
-        "main_fig5_representative": representative,
+        "main_fig5_origin_summary": origin_summary.to_dict(orient="records"),
+        "main_fig6_representative": representative,
     }
     path.write_text(
         json.dumps(audit, indent=2, ensure_ascii=False) + "\n",
@@ -1652,19 +1892,36 @@ def main() -> None:
     )
     _main_figure3_ablation(daywise, main_output)
 
+    origin_paired, origin_summary = _derive_origin_improvements(
+        release, indices=indices
+    )
+    origin_paired.to_csv(
+        audit_output / "main_fig5_origin_paired_improvement.csv",
+        index=False,
+        float_format="%.9f",
+    )
+    origin_summary.to_csv(
+        audit_output / "main_fig5_origin_summary.csv",
+        index=False,
+        float_format="%.9f",
+    )
+    _main_figure5_origin_robustness(
+        origin_paired, origin_summary, main_output
+    )
+
     diurnal = _diurnal_profile(release, indices=indices)
     diurnal.to_csv(
-        audit_output / "main_fig5_diurnal_aggregate_error.csv",
+        audit_output / "main_fig6_diurnal_aggregate_error.csv",
         index=False,
         float_format="%.9f",
     )
     trajectory, representative = _select_representative(release)
     trajectory.to_csv(
-        audit_output / "main_fig5_representative_trajectory.csv",
+        audit_output / "main_fig6_representative_trajectory.csv",
         index=False,
         float_format="%.9f",
     )
-    (audit_output / "main_fig5_representative_selection.json").write_text(
+    (audit_output / "main_fig6_representative_selection.json").write_text(
         json.dumps(representative, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
@@ -1676,6 +1933,7 @@ def main() -> None:
         ranks=ranks,
         pairwise=pairwise,
         strongest=strongest,
+        origin_summary=origin_summary,
         representative=representative,
         block_length=args.block_length,
         bootstrap_iterations=args.bootstrap_iterations,
@@ -1688,7 +1946,8 @@ def main() -> None:
     print("  Main Fig. 2 — cross-DMA pairwise improvement distributions")
     print("  Main Fig. 3 — DMA-specific margin to the strongest competitor")
     print("  Main Fig. 4 — four-metric ablation and lead-time stability")
-    print("  Main Fig. 5 — week-ahead demand dynamics")
+    print("  Main Fig. 5 — forecast-origin and difficult-window robustness")
+    print("  Main Fig. 6 — week-ahead demand dynamics")
     print(
         f"Block bootstrap: length={args.block_length}, "
         f"iterations={args.bootstrap_iterations}, seed={args.bootstrap_seed}"

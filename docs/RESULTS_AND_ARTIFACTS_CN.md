@@ -2,7 +2,7 @@
 
 本文档记录当前冻结结果的**数值事实、来源边界与投稿工件位置**。最终实验问题和 Results 证据链见 [`EXPERIMENT_DESIGN_FINAL_CN.md`](EXPERIMENT_DESIGN_FINAL_CN.md)；投稿作图见 [`PLOTTING_CN.md`](PLOTTING_CN.md)。
 
-> **投稿版权威入口：** `paper/tables/submission/`、`paper/figures/submission/`、`paper/figures/supplementary/` 和 `paper/tables/manuscript/submission/`。旧 `manuscript_fig1...5` / `test_*` 工件仅用于历史复现和内部诊断。
+> **历史说明：**本文件记录上一版结果工件，涉及的 supplementary figures 不再属于当前投稿合同。当前权威入口为 `paper/tables/submission/`、`paper/figures/submission/`、`paper/tables/manuscript/submission/`，最终证据计划与 3.1–3.4 结构见 [`EXPERIMENT_EVIDENCE_AUDIT_FINAL_CN.md`](EXPERIMENT_EVIDENCE_AUDIT_FINAL_CN.md)。旧 `manuscript_fig1...5` / `test_*` 工件仅用于历史复现和内部诊断。
 
 ## 1. 模型与消融定义
 

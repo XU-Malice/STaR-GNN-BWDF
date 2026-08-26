@@ -8,6 +8,11 @@ from pathlib import Path
 
 import pandas as pd
 
+from render_submission_figures import (
+    _derive_origin_improvements,
+    _moving_block_indices,
+)
+
 
 METRICS = ("MAE", "MAPE", "RMSE", "NSE")
 DMA_MODELS = (
@@ -224,6 +229,64 @@ def _dma_local_margin_markdown(frame: pd.DataFrame) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _origin_robustness_markdown(frame: pd.DataFrame) -> str:
+    """Render paired forecast-origin and difficult-window evidence."""
+    lines = [
+        "**Table S3. Forecast-origin robustness of STaR-GNN relative to the "
+        "same-protocol graph baselines.**",
+        "",
+        "| Horizon | Baseline | Metric | Mean paired effect | 95% block CI | "
+        "Wins / 46 | High-variability mean | Wins / 12 | Spearman ρ |",
+        "|---|---|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    for task in ("24h", "168h"):
+        for baseline in ("DCRNN", "STGCN"):
+            for metric in METRICS:
+                row = frame.loc[
+                    (frame["task"] == task)
+                    & (frame["baseline"] == baseline)
+                    & (frame["metric"] == metric)
+                ].iloc[0]
+                if metric == "NSE":
+                    effect = f"{float(row['mean_improvement']):+.4f}"
+                    ci = (
+                        f"[{float(row['ci95_lower']):+.4f}, "
+                        f"{float(row['ci95_upper']):+.4f}]"
+                    )
+                    difficult = (
+                        f"{float(row['high_variability_mean_improvement']):+.4f}"
+                    )
+                else:
+                    effect = f"{float(row['mean_improvement']):+.2f}%"
+                    ci = (
+                        f"[{float(row['ci95_lower']):+.2f}%, "
+                        f"{float(row['ci95_upper']):+.2f}%]"
+                    )
+                    difficult = (
+                        f"{float(row['high_variability_mean_improvement']):+.2f}%"
+                    )
+                lines.append(
+                    f"| {task.replace('h', ' h')} | {baseline} | {metric} | "
+                    f"{effect} | {ci} | {int(row['wins'])}/46 | {difficult} | "
+                    f"{int(row['high_variability_wins'])}/12 | "
+                    f"{float(row['spearman_difficulty_improvement']):+.3f} |"
+                )
+    lines += [
+        "",
+        "**Note.** Error-metric effects are per-origin relative reductions; "
+        "NSE effects are absolute differences. Positive values favor "
+        "STaR-GNN. Confidence intervals are from an ordered seven-origin "
+        "moving-block bootstrap (50,000 iterations); adjacent 168 h windows "
+        "overlap and are not treated as independent. Demand difficulty is "
+        "defined from observations only: for each origin, each DMA's mean "
+        "absolute hourly ramp is normalized by its mean demand, and the median "
+        "over ten DMAs is used. The highest horizon-specific quartile contains "
+        "12 origins. Spearman ρ describes the association between this "
+        "difficulty index and paired improvement and is not a causal estimate.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def _load_dma_comparison(release: Path) -> pd.DataFrame:
     model_paths = {
         "DCRNN": "models/star_gnn/Base/{task}/seed_0/evaluation/metrics_common_46.csv",
@@ -268,6 +331,9 @@ def main() -> None:
         type=Path,
         default=Path("results/paper/frozen_v1"),
     )
+    parser.add_argument("--block-length", type=int, default=7)
+    parser.add_argument("--bootstrap-iterations", type=int, default=50000)
+    parser.add_argument("--bootstrap-seed", type=int, default=20260821)
     args = parser.parse_args()
 
     source = args.source_dir.resolve()
@@ -303,6 +369,23 @@ def main() -> None:
     (output / "tableS2_dma_local_margin.md").write_text(
         _dma_local_margin_markdown(dma), encoding="utf-8"
     )
+    bootstrap_indices = _moving_block_indices(
+        46,
+        args.block_length,
+        args.bootstrap_iterations,
+        args.bootstrap_seed,
+    )
+    _, origin_summary = _derive_origin_improvements(
+        args.release.resolve(), indices=bootstrap_indices
+    )
+    origin_summary.to_csv(
+        output / "tableS3_forecast_origin_robustness.csv",
+        index=False,
+        float_format="%.9f",
+    )
+    (output / "tableS3_forecast_origin_robustness.md").write_text(
+        _origin_robustness_markdown(origin_summary), encoding="utf-8"
+    )
     dma.to_csv(
         source / "table_all_models_dma.csv",
         index=False,
@@ -314,6 +397,7 @@ def main() -> None:
     print("  Table 2 — factorial ablation")
     print("  Table S1 — detailed DMA-level metrics")
     print("  Table S2 — DMA-level local competitor identities and margins")
+    print("  Table S3 — forecast-origin and high-variability robustness")
 
 
 if __name__ == "__main__":

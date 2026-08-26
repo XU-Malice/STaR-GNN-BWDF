@@ -18,11 +18,13 @@ Git 仓库包含：
 - **Main Table 1**：9-model overall comparison；
 - **Main Table 2**：4-model factorial ablation = DCRNN / DCRNN + SAS-Norm / DCRNN + FA-DPR / STaR-GNN；
 - **Supplementary Table S1**：DMA A--J detailed metrics；
-- **Main Fig. 1**：ablation mechanism + lead-time stability；
-- **Main Fig. 2**：temporal + spatial robustness；
-- **Main Fig. 3**：population-to-instance week-ahead dynamics；
-- **Fig. S1**：relative improvement over all baselines；
-- **Fig. S2**：per-origin ECDF。
+- **Supplementary Table S2**：DMA-local strongest competitors and signed margins；
+- **Supplementary Table S3**：forecast-origin robustness and high-variability stratum；
+- **Main Fig. 1**：overall four-metric improvement；
+- **Main Figs. 2–3**：DMA breadth and local competitive boundaries；
+- **Main Fig. 4**：factorial ablation + lead-time stability；
+- **Main Fig. 5**：forecast-origin + difficult-window robustness；
+- **Main Fig. 6**：population-to-instance week-ahead dynamics。
 
 STGCN 是独立 graph baseline，不进入 factorial ablation。Manuscript MAE = DMA A--J MAE 之和；internal aggregate-demand MAE 单独保留。Manuscript factorial cell audit = 30/32；legacy aggregate-demand hierarchy = 31/32，仅内部诊断。
 
@@ -31,7 +33,6 @@ STGCN 是独立 graph baseline，不进入 factorial ablation。Manuscript MAE =
 ```text
 paper/tables/submission/
 paper/figures/submission/
-paper/figures/supplementary/
 paper/tables/manuscript/submission/
 ```
 
@@ -64,7 +65,7 @@ bash scripts/reproduce/finalize_public_release.sh \
 3. 重生成并验证 source SHA；
 4. 校验 10 组冻结 checkpoint、协议和 internal aggregate diagnostics；
 5. 重新执行 10 组 common-46 推理；
-6. 重建 full-precision source tables、submission display tables、Main Fig. 1--3 / Fig. S1--S2 和独立审计 CSV/JSON；
+6. 重建 full-precision source tables、submission display tables、Main Fig. 1--6 和独立审计 CSV/JSON；
 7. 审计公开仓库结构、四模型消融、submission artifacts 与大文件边界；
 8. 生成 Release asset（除非使用 `--skip-package`）。
 
@@ -74,10 +75,8 @@ bash scripts/reproduce/finalize_public_release.sh \
 Main Table 1 overall: PASS
 Main Table 2 factorial ablation: 4 models / no STGCN / 30/32 PASS
 Supplementary Table S1 DMA metrics: PASS
-Main Fig. 1 ablation + lead-time: PASS
-Main Fig. 2 temporal + spatial robustness: PASS
-Main Fig. 3 week-ahead dynamics: PASS
-Supplementary Fig. S1--S2: PASS
+Supplementary Tables S2--S3: PASS
+Main Fig. 1--6: PASS
 7-origin moving-block bootstrap: PASS
 ```
 

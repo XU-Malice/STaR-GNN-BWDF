@@ -38,6 +38,8 @@ python scripts/reproduce/render_submission_tables.py \
 paper/tables/submission/table1_overall_performance.md
 paper/tables/submission/table2_factorial_ablation.md
 paper/tables/submission/tableS1_dma_metrics.md
+paper/tables/submission/tableS2_dma_local_margin.md
+paper/tables/submission/tableS3_forecast_origin_robustness.{md,csv}
 ```
 
 Table 1 通过表注说明 Que et al. (2024) 数值与本文流程结果的来源，不使用符号。Table S1 并列报告全部九种模型的逐 DMA 四指标；时序模型 MAPE 已统一转换为百分数。
@@ -65,7 +67,8 @@ Main figures:
   Main Fig. 2 — cross-DMA pairwise improvement distributions
   Main Fig. 3 — DMA-specific margin to the strongest competitor
   Main Fig. 4 — four-metric ablation and lead-time stability
-  Main Fig. 5 — week-ahead demand dynamics
+  Main Fig. 5 — forecast-origin and difficult-window robustness
+  Main Fig. 6 — week-ahead demand dynamics
 ```
 
 每张图同时输出 PDF、editable SVG 和 300 dpi PNG。
@@ -91,6 +94,10 @@ Panel a 为 STaR-GNN 相对六个时序模型与 DCRNN/STGCN 的 MAE、MAPE、RM
 同一 forecast day 内三个模型使用轻微水平错位，并固定 color、marker、linestyle。这样 SAS-Norm 与 STaR-GNN 即使数值接近也能辨认；误差棒为 ordered seven-window moving-block 95% CI。
 
 ### Main Figure 5
+
+Panels a–c 展示同协议 DCRNN/STGCN/STaR-GNN 的 46-origin 四指标 paired effects 与 ordered seven-origin moving-block 95% CI；Panel d 使用仅由观测需求定义的 normalized mean absolute ramp，汇总最高四分位窗口中的胜出数。
+
+### Main Figure 6
 
 采用 scale-to-instance 结构：全部测试窗口 × 7 days 的日内 aggregate-demand error profile、预先规定 median-total-MAE rule 的 representative 168 h trajectory，以及同一窗口的 hourly absolute error。
 

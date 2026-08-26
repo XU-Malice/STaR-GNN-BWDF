@@ -8,8 +8,8 @@
 #   2. 验证冻结文件 SHA、10 个 checkpoint、common-46 与 Test 隔离；
 #   3. 可选重新执行全部 checkpoint 推理；
 #   4. 重建全精度论文源表和 legacy aggregate-demand 诊断；
-#   5. 生成投稿显示 Table 1--2 / Table S1；
-#   6. 通过唯一 canonical renderer 生成 Main Fig. 1--3 / Fig. S1--S2。
+#   5. 生成投稿显示 Table 1--2 / Tables S1--S3；
+#   6. 通过唯一 canonical renderer 生成 Main Fig. 1--6。
 #
 # 内部 aggregate-demand hierarchy 保留 31/32 作为冻结诊断；
 # manuscript-facing factorial ablation 为 4 models / no STGCN / 30/32。
@@ -91,17 +91,18 @@ python scripts/reproduce/build_paper_tables.py \
 # Legacy aggregate-demand diagnostics retained for backward-compatible audit.
 python scripts/reproduce/build_detailed_test_artifacts.py
 
-# Submission-display tables: 2 main + 1 supplementary.
+# Submission-display tables: 2 main + 3 supplementary.
 python scripts/reproduce/render_submission_tables.py \
   --source-dir paper/tables/literature \
-  --output-dir paper/tables/submission
+  --output-dir paper/tables/submission \
+  --release results/paper/frozen_v1
 
 # Canonical submission figures: no Stage-1/Stage-2 overwrite chain.
 python scripts/reproduce/render_submission_figures.py \
   --release results/paper/frozen_v1 \
   --overall-table paper/tables/literature/table_literature_comparison_common46.csv \
+  --dma-table paper/tables/literature/table_all_models_dma.csv \
   --main-output paper/figures/submission \
-  --supp-output paper/figures/supplementary \
   --audit-output paper/tables/manuscript/submission \
   --block-length 7 \
   --bootstrap-iterations 50000 \
@@ -111,11 +112,8 @@ echo "============================================"
 echo "冻结 checkpoint、common-46 Test 与 submission artifacts：PASS"
 echo "Main Table 1：publisher-compatible overall comparison"
 echo "Main Table 2：4-model factorial ablation / no STGCN / 30/32"
-echo "Supplementary Table S1：STaR-GNN DMA-level metrics"
-echo "Main Fig. 1：ablation mechanism + lead-time stability"
-echo "Main Fig. 2：temporal + spatial robustness"
-echo "Main Fig. 3：week-ahead demand dynamics"
-echo "Fig. S1--S2：overall relative improvement + origin ECDF"
+echo "Supplementary Tables S1--S3：DMA details + origin robustness"
+echo "Main Fig. 1--6：overall / DMA / ablation / robustness / week dynamics"
 echo "legacy aggregate-demand hierarchy：31/32 internal diagnostic only"
 echo "实验设计：docs/EXPERIMENT_DESIGN_FINAL_CN.md"
 echo "============================================"

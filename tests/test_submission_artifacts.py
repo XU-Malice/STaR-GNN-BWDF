@@ -62,8 +62,10 @@ def test_submission_contract_is_documented():
     assert "Main Figure 2 — DMA-level performance breadth" in paper_readme
     assert "Main Figure 3 — DMA-specific local competitive margin" in paper_readme
     assert "Main Figure 4 — Four-metric ablation and lead-time stability" in paper_readme
-    assert "Main Figure 5 — Week-ahead demand dynamics" in paper_readme
+    assert "Main Figure 5 — Forecast-origin and difficult-window robustness" in paper_readme
+    assert "Main Figure 6 — Week-ahead demand dynamics" in paper_readme
     assert "Supplementary Table S2 — DMA-level local margins" in paper_readme
+    assert "Supplementary Table S3 — Forecast-origin robustness" in paper_readme
 
 
 def test_dma_level_comparison_covers_all_models_metrics_and_horizons():
@@ -106,3 +108,35 @@ def test_dma_local_margin_supplement_retains_competitors_and_losses():
     assert "| 168 h | I |" in text
     assert "MSCMNet-WM | -0.046 |" in text
     assert "All values are retained" in text
+
+
+def test_forecast_origin_robustness_uses_observed_difficulty_and_common46():
+    summary = pd.read_csv(
+        ROOT
+        / "paper/tables/manuscript/submission/main_fig5_origin_summary.csv"
+    )
+    assert summary.shape[0] == 2 * 2 * 4
+    assert set(summary["n_origins"]) == {46}
+    assert set(summary["n_high_variability"]) == {12}
+
+    mae_168_dcrnn = summary.loc[
+        (summary["task"] == "168h")
+        & (summary["baseline"] == "DCRNN")
+        & (summary["metric"] == "MAE")
+    ].iloc[0]
+    assert int(mae_168_dcrnn["wins"]) == 46
+    assert int(mae_168_dcrnn["high_variability_wins"]) == 12
+    assert float(mae_168_dcrnn["ci95_lower"]) > 0.0
+
+    mape_24_dcrnn = summary.loc[
+        (summary["task"] == "24h")
+        & (summary["baseline"] == "DCRNN")
+        & (summary["metric"] == "MAPE")
+    ].iloc[0]
+    assert float(mape_24_dcrnn["ci95_lower"]) < 0.0
+    assert float(mape_24_dcrnn["ci95_upper"]) > 0.0
+
+    display = tables._origin_robustness_markdown(summary)
+    assert "45/46" in display
+    assert "12/12" in display
+    assert "not treated as independent" in display
