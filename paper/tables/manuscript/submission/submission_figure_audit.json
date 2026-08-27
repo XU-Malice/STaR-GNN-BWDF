@@ -2,7 +2,7 @@
   "figure_architecture": {
     "main_fig1": "Overall four-metric performance against eight baselines.",
     "main_fig2": "Cross-DMA distributions of signed pairwise improvements against each of eight baselines.",
-    "main_fig3": "DMA-specific signed margins to the strongest competing method and their transition from 24 h to 168 h.",
+    "main_fig3": "DMA-specific absolute performance of STaR-GNN and the locally best competing method at 24 h and 168 h.",
     "main_fig4": "Four-metric factorial ablation and lead-time stability; paired improvements relative to DCRNN.",
     "main_fig5": "Paired forecast-origin robustness over all four metrics and a pre-defined high-variability demand stratum.",
     "main_fig6": "Scale-to-instance week-ahead dynamics; population diurnal error profile plus deterministic representative trajectory."

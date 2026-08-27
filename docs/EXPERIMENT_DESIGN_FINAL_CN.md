@@ -39,7 +39,7 @@ STGCN 是独立 graph baseline，不属于消融。
 
 ### Supplementary Table S1 — DMA-level metrics
 
-并列报告全部九种模型在 DMA A--J 的四指标绝对值。正文用 Main Fig. 2 概括相对各基线的跨 DMA 改善分布，用 Main Fig. 3 定位相对最强局部竞争者的幅度与时域变化。
+并列报告全部九种模型在 DMA A--J 的四指标绝对值。正文用 Main Fig. 2 概括相对各基线的跨 DMA 改善分布，用 Main Fig. 3 直接比较 STaR-GNN 与各局部最优基线的绝对性能及其跨时域变化。
 
 ---
 

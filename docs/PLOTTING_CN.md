@@ -65,7 +65,7 @@ Submission figure renderer: PASS
 Main figures:
   Main Fig. 1 — overall four-metric performance
   Main Fig. 2 — cross-DMA pairwise improvement distributions
-  Main Fig. 3 — DMA-specific margin to the strongest competitor
+  Main Fig. 3 — absolute DMA performance against the best baseline
   Main Fig. 4 — four-metric ablation and lead-time stability
   Main Fig. 5 — forecast-origin and difficult-window robustness
   Main Fig. 6 — week-ahead demand dynamics
@@ -85,7 +85,7 @@ Panel a 为 STaR-GNN 相对六个时序模型与 DCRNN/STGCN 的 MAE、MAPE、RM
 
 ### Main Figure 3
 
-四个 panel 分别给出 STaR-GNN 相对每个 DMA–指标–预测时域内最强竞争者的有符号幅度。纵轴保留 DMA A–J；同一 DMA 的 24 h 与 168 h 点用线连接，红色点表示局部非最优。完整绝对值见 Supplementary Table S1。
+图按四行两列排列：四行依次为 MAE、MAPE、RMSE 和 NSE，两列分别为 24 h 与 168 h。每个 DMA 的成对柱直接比较 STaR-GNN 与该位置上的最优基线绝对值；基线优于 STaR-GNN 时改用橙色并标注模型名称。
 
 ### Main Figure 4
 
@@ -129,6 +129,6 @@ python scripts/reproduce/audit_public_repository.py \
 - 最终表图中没有额外符号和内部工程措辞；
 - PDF/SVG/PNG 均可打开，SVG 文字可编辑；
 - Main Fig. 2 的基线轴、改善轴、预测时域与分布统计含义完整；
-- Main Fig. 3 的 DMA 轴、零线、负向例外和最强竞争者定义完整；
+- Main Fig. 3 的 DMA 轴、绝对指标尺度、最优基线定义和橙色例外完整；
 - Main Fig. 4 的三条 variant series 可分辨；
 - caption、审计 CSV/JSON 与图中数值一致。

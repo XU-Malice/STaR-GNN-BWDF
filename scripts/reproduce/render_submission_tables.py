@@ -179,13 +179,14 @@ def _dma_markdown(frame: pd.DataFrame) -> str:
         "model results are transcribed from the supplementary material of Que "
         "et al. (2024); its fractional MAPE values were multiplied by 100 for "
         "consistent display. The same results support the signed DMA-level "
-        "comparisons in Main Figs. 2 and 3.",
+        "comparisons in Main Fig. 2 and the absolute best-baseline comparison "
+        "in Main Fig. 3.",
     ]
     return "\n".join(lines) + "\n"
 
 
 def _dma_local_margin_markdown(frame: pd.DataFrame) -> str:
-    """Render the exact comparator identity and signed margin used in Fig. 3."""
+    """Render comparator identities and signed margins complementing Fig. 3."""
     lines = [
         "**Table S2. DMA-level margins of STaR-GNN relative to the locally "
         "strongest competing model.**",

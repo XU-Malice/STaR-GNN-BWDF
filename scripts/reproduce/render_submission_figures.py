@@ -2,7 +2,7 @@
 """Render the canonical Journal of Hydrology submission result figures.
 
 The six main figures follow the manuscript's claim sequence: overall
-performance, cross-DMA pairwise breadth, DMA-specific competitive margins,
+performance, cross-DMA pairwise breadth, DMA-specific absolute performance,
 component evidence, forecast-origin robustness, and a concrete week-ahead
 forecast. MAE, MAPE, RMSE and NSE are carried through the comparative stages
 instead of treating MAE as a proxy for all forecasting quality.
@@ -961,92 +961,160 @@ def _main_figure2_dma_pairwise_distribution(
     save_publication_figure(fig, output / "main_fig2_dma_performance")
 
 
-def _main_figure3_dma_local_margin(
+def _main_figure3_dma_absolute_performance(
     strongest: pd.DataFrame,
     output: Path,
 ) -> None:
-    """Locate the conservative local margin and its 24-to-168 h transition."""
-    fig, axes = plt.subplots(2, 2, figsize=(7.4, 5.55))
-    colors = {"24h": "#8FB6D5", "168h": HERO_BLUE}
-    markers = {"24h": "o", "168h": "s"}
-    for ax, metric, panel in zip(axes.flat, METRICS, "abcd"):
-        block = strongest.loc[strongest["metric"] == metric]
-        for y_pos, dma in enumerate(DMAS):
-            row24 = block.loc[
-                (block["task"] == "24h") & (block["DMA"] == dma)
-            ].iloc[0]
-            row168 = block.loc[
-                (block["task"] == "168h") & (block["DMA"] == dma)
-            ].iloc[0]
-            x24 = float(row24["improvement"])
-            x168 = float(row168["improvement"])
-            ax.plot(
-                [x24, x168],
-                [y_pos, y_pos],
-                color="#B9B9B9",
-                linewidth=0.8,
-                zorder=1,
+    """Compare absolute DMA metrics with the locally best baseline."""
+    fig, axes = plt.subplots(
+        4,
+        2,
+        figsize=(7.4, 8.8),
+        sharey="row",
+    )
+    star_color = HERO_BLUE
+    baseline_color = "#C9CED4"
+    baseline_win_color = "#C65A46"
+    metric_labels = {
+        "MAE": "MAE ↓",
+        "MAPE": "MAPE (%) ↓",
+        "RMSE": "RMSE ↓",
+        "NSE": "NSE ↑",
+    }
+    short_model_labels = {
+        "MSCMNet-WM": "MSCM-WM",
+        "MSCMNet-M": "MSCM-M",
+        "MSCMNet-W": "MSCM-W",
+    }
+    x = np.arange(len(DMAS), dtype=float)
+    width = 0.34
+    panel = iter("abcdefgh")
+
+    for row_pos, metric in enumerate(METRICS):
+        metric_block = strongest.loc[strongest["metric"] == metric]
+        metric_max = float(
+            metric_block[["star_value", "competitor_value"]]
+            .to_numpy(float)
+            .max()
+        )
+        upper = (
+            max(1.02, metric_max * 1.22)
+            if metric == "NSE"
+            else metric_max * 1.22
+        )
+
+        for col_pos, task in enumerate(TASKS):
+            ax = axes[row_pos, col_pos]
+            block = (
+                metric_block.loc[metric_block["task"] == task]
+                .set_index("DMA")
+                .reindex(DMAS)
             )
-            for task, x in (("24h", x24), ("168h", x168)):
-                negative = x < 0.0
-                ax.scatter(
-                    [x],
-                    [y_pos],
-                    s=29,
-                    marker=markers[task],
-                    facecolor=colors[task] if not negative else "#C65A46",
-                    edgecolor="white",
-                    linewidth=0.55,
-                    zorder=3,
+            if block.isna().any().any():
+                raise ValueError(
+                    f"Incomplete strongest competitor block: {task}/{metric}"
                 )
-        ax.axvline(0.0, color=ZERO_GRAY, linewidth=0.9, zorder=0)
-        ax.set_yticks(np.arange(len(DMAS)), DMAS)
-        ax.invert_yaxis()
-        ax.set_xlabel(_improvement_label(metric))
-        ax.set_ylabel("DMA")
-        ax.set_title(metric, pad=7, fontweight="bold")
-        ax.xaxis.grid(True, color="#E2E2E2", linewidth=0.55)
-        ax.set_axisbelow(True)
-        ax.spines[["top", "right"]].set_visible(False)
-        add_panel_label(ax, panel)
+
+            star_values = block["star_value"].to_numpy(float)
+            competitor_values = block["competitor_value"].to_numpy(float)
+            star_better = block["star_better"].to_numpy(bool)
+            competitor_colors = [
+                baseline_color if better else baseline_win_color
+                for better in star_better
+            ]
+
+            ax.bar(
+                x - width / 2,
+                competitor_values,
+                width=width,
+                color=competitor_colors,
+                edgecolor="white",
+                linewidth=0.45,
+                zorder=3,
+            )
+            ax.bar(
+                x + width / 2,
+                star_values,
+                width=width,
+                color=star_color,
+                edgecolor="white",
+                linewidth=0.45,
+                zorder=3,
+            )
+
+            for dma_pos, (better, competitor_value) in enumerate(
+                zip(star_better, competitor_values)
+            ):
+                if better:
+                    continue
+                model = str(block.iloc[dma_pos]["best_competitor"])
+                ax.text(
+                    x[dma_pos] - width / 2,
+                    competitor_value + upper * 0.018,
+                    short_model_labels.get(model, model),
+                    ha="center",
+                    va="bottom",
+                    fontsize=5.8,
+                    color="#9E3E2E",
+                    fontweight="bold",
+                    clip_on=False,
+                )
+
+            ax.set_xticks(x, DMAS)
+            ax.set_xlim(-0.62, len(DMAS) - 0.38)
+            ax.set_ylim(0.0, upper)
+            ax.locator_params(axis="y", nbins=4)
+            ax.grid(axis="y", color="#E2E2E2", linewidth=0.55)
+            ax.set_axisbelow(True)
+            ax.spines[["top", "right"]].set_visible(False)
+            if col_pos == 0:
+                ax.set_ylabel(metric_labels[metric])
+            if row_pos == 0:
+                ax.set_title(task.replace("h", " h"), pad=8, fontweight="bold")
+            if row_pos == len(METRICS) - 1:
+                ax.set_xlabel("DMA")
+            add_panel_label(ax, next(panel))
 
     handles = [
-        plt.Line2D(
-            [],
-            [],
-            color=colors[t],
-            marker=markers[t],
-            linestyle="",
-            markersize=5.2,
-            label=t.replace("h", " h"),
-        )
-        for t in TASKS
+        Rectangle(
+            (0, 0),
+            1,
+            1,
+            facecolor=star_color,
+            edgecolor="none",
+            label="STaR-GNN",
+        ),
+        Rectangle(
+            (0, 0),
+            1,
+            1,
+            facecolor=baseline_color,
+            edgecolor="none",
+            label="Best baseline",
+        ),
+        Rectangle(
+            (0, 0),
+            1,
+            1,
+            facecolor=baseline_win_color,
+            edgecolor="none",
+            label="Baseline better",
+        ),
     ]
-    handles.append(
-        plt.Line2D(
-            [],
-            [],
-            color="#C65A46",
-            marker="o",
-            linestyle="",
-            markersize=5.2,
-            label="Local loss",
-        )
-    )
     fig.legend(
         handles=handles,
         loc="upper center",
-        bbox_to_anchor=(0.5, 1.005),
+        bbox_to_anchor=(0.5, 0.998),
         ncol=3,
-        columnspacing=1.2,
+        columnspacing=1.25,
     )
     fig.subplots_adjust(
-        left=0.11,
-        right=0.98,
-        top=0.91,
-        bottom=0.10,
-        wspace=0.34,
-        hspace=0.34,
+        left=0.10,
+        right=0.985,
+        top=0.915,
+        bottom=0.065,
+        wspace=0.12,
+        hspace=0.48,
     )
     save_publication_figure(fig, output / "main_fig3_dma_local_margin")
 
@@ -1708,8 +1776,8 @@ def _write_audit(
                 "against each of eight baselines."
             ),
             "main_fig3": (
-                "DMA-specific signed margins to the strongest competing method "
-                "and their transition from 24 h to 168 h."
+                "DMA-specific absolute performance of STaR-GNN and the locally "
+                "best competing method at 24 h and 168 h."
             ),
             "main_fig4": (
                 "Four-metric factorial ablation and lead-time stability; "
@@ -1880,7 +1948,7 @@ def main() -> None:
         float_format="%.9f",
     )
     _main_figure2_dma_pairwise_distribution(pairwise, main_output)
-    _main_figure3_dma_local_margin(strongest, main_output)
+    _main_figure3_dma_absolute_performance(strongest, main_output)
 
     daywise = _derive_daywise(release, indices=indices)
     daywise.to_csv(
@@ -1942,7 +2010,7 @@ def main() -> None:
     print("Main figures:")
     print("  Main Fig. 1 — overall four-metric performance")
     print("  Main Fig. 2 — cross-DMA pairwise improvement distributions")
-    print("  Main Fig. 3 — DMA-specific margin to the strongest competitor")
+    print("  Main Fig. 3 — absolute DMA performance against the best baseline")
     print("  Main Fig. 4 — four-metric ablation and lead-time stability")
     print("  Main Fig. 5 — forecast-origin and difficult-window robustness")
     print("  Main Fig. 6 — week-ahead demand dynamics")

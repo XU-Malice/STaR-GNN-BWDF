@@ -24,7 +24,7 @@
 ```text
 Table 1 + Main Fig. 1 → overall four-metric performance
 Main Fig. 2 + Table S1 → all-model DMA-level performance breadth
-Main Fig. 3 + Table S1 → strongest local competitor and horizon transition
+Main Fig. 3 + Table S1 → absolute DMA performance against the best local baseline
 Table 2 + Main Fig. 4 → factorial ablation + lead-time stability
 Main Fig. 5 → forecast-origin and difficult-window robustness
 Main Fig. 6 → week-ahead demand dynamics, implications, limitations

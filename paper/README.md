@@ -85,7 +85,7 @@ tables/literature/table_all_models_dma.csv
 tables/submission/tableS2_dma_local_margin.md
 ```
 
-对每个“预测时域–DMA–指标”组合，表中独立给出最强非 STaR-GNN 竞争模型及 Fig. 3 使用的有符号幅度。所有负值均被保留。
+对每个“预测时域–DMA–指标”组合，表中独立给出最强非 STaR-GNN 竞争模型及有符号幅度，作为 Fig. 3 绝对指标比较的精确补充。所有负值均被保留。
 
 ## Supplementary Table S3 — Forecast-origin robustness
 
@@ -128,7 +128,7 @@ figures/submission/main_fig2_dma_performance.png
 
 回答：**相对不同模型族的改善是否广泛分布于 DMA，而非由少数分区驱动？**
 
-## Main Figure 3 — DMA-specific local competitive margin
+## Main Figure 3 — Absolute DMA performance against the best baseline
 
 ```text
 figures/submission/main_fig3_dma_local_margin.pdf
@@ -136,10 +136,10 @@ figures/submission/main_fig3_dma_local_margin.svg
 figures/submission/main_fig3_dma_local_margin.png
 ```
 
-- 四个 panel：STaR-GNN 相对每个 DMA–指标–预测时域内最强竞争者的有符号幅度；
-- 连接 24 h 与 168 h，保留局部负值和 DMA 身份。
+- 四行两列分别呈现四项绝对指标及 24/168 h 两个预测时域；
+- 每个 DMA 直接比较 STaR-GNN 与局部最优基线，并用橙色标出局部失利。
 
-回答：**系统级优势在不同 DMA 中如何保持、收窄或反转？**
+回答：**系统级优势落到各 DMA 的绝对性能后，在哪里保持、接近或反转？**
 
 ## Main Figure 4 — Four-metric ablation and lead-time stability
 
