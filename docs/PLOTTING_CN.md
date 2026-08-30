@@ -82,15 +82,15 @@ Panel a 为 STaR-GNN 相对六个时序模型与 DCRNN/STGCN 的 MAE、MAPE、RM
 
 ### Main Figure 2
 
-四个 panel 分别为 MAE、MAPE、RMSE、NSE。纵轴为八种基线，横轴为 STaR-GNN 相对每个基线的有符号逐 DMA 改善。小点保留十个 DMA，大点与线段分别为中位数和四分位距；圆和方形区分 24 h 与 168 h。
+四个 panel 分别为 MAE、MAPE、RMSE、NSE。纵轴为八种对比模型，横轴为 STaR-GNN 相对每个对比模型的有符号逐 DMA 改善。小点保留十个 DMA，大点与线段分别为中位数和四分位距；圆和方形区分 24 h 与 168 h。
 
 ### Main Figure 3
 
-2 × 2 分面分别呈现 MAE、MAPE、RMSE 和 NSE。每个 DMA 使用蓝色方点和灰色空心圆直接比较 STaR-GNN 与该位置上的最优基线 24 h 绝对值，并以竖向线段连接；局部最优基线占优时，空心圆及连线改为橙色。MAPE 和 NSE 使用明确标示的聚焦纵轴。
+2 × 2 分面分别呈现 MAE、MAPE、RMSE 和 NSE。每个 DMA 使用蓝色柱和灰色柱直接比较 STaR-GNN 与该位置上的最优对比模型 24 h 绝对值；最优对比模型占优时，其柱改为橙色。全部纵轴从零开始，并使用更细的主、次刻度辅助读取相近数值。
 
 ### Main Figure 4
 
-沿用 Main Fig. 3 的 2 × 2 分面、配对点和颜色编码，但单独呈现 168 h 结果。相同指标与 24 h 图共用纵轴范围，以支持跨预测时域的直接比较。
+沿用 Main Fig. 3 的 2 × 2 分面、成对柱和颜色编码，但单独呈现 168 h 结果。全部纵轴从零开始，并使用更细的主、次刻度辅助读取相近数值。
 
 ### Main Figure 5
 
@@ -133,7 +133,7 @@ python scripts/reproduce/audit_public_repository.py \
 
 - 最终表图中没有额外符号和内部工程措辞；
 - PDF/SVG/PNG 均可打开，SVG 文字可编辑；
-- Main Fig. 2 的基线轴、改善轴、预测时域与分布统计含义完整；
-- Main Figs. 3–4 的 DMA 轴、独立绝对指标尺度、最优基线定义和橙色例外完整；
+- Main Fig. 2 的对比模型轴、改善轴、预测时域与分布统计含义完整；
+- Main Figs. 3–4 的 DMA 轴、独立绝对指标尺度、最优对比模型定义和橙色例外完整；
 - Main Fig. 5 的三条 variant series 可分辨；
 - caption、审计 CSV/JSON 与图中数值一致。

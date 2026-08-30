@@ -3,7 +3,7 @@
 本文件定义 STaR-GNN 论文实验部分的最终组织。目标不是堆叠更多 benchmark，而是同时满足：
 
 1. **Journal of Hydrology 优先**：围绕真实多 DMA 供水需求、预测时域、空间异质性和周尺度运行意义展开；
-2. **高水平时空预测论文的实验严谨性**：统一协议、强 baseline、严格 factorial ablation、paired robustness、长时域行为和可复现审计；
+2. **高水平时空预测论文的实验严谨性**：统一协议、具有竞争力的对比模型、严格 factorial ablation、paired robustness、长时域行为和可复现审计；
 3. **Nature-style claim-driven evidence architecture**：每张主图回答一个 Results-level scientific question，panel 承担不同推理角色；
 4. **figures4papers-style publication graphics**：固定视觉层级、最终出版尺寸、克制配色、直接标注关键量、PDF/SVG 可编辑矢量输出。
 
@@ -33,13 +33,13 @@
 3. DCRNN + FA-DPR；
 4. STaR-GNN。
 
-STGCN 是独立 graph baseline，不属于消融。
+STGCN 是独立图对比模型，不属于消融。
 
 168 h total MAE 中 SAS-Norm-only 为 12.208，STaR-GNN 为 12.234；完整模型在 MAPE、RMSE 和 NSE 上最好。该 0.21% MAE 点估计差异不用于声称任一模型稳定占优，长时域稳定性由 Main Fig. 5 和 moving-block bootstrap 进一步限定。
 
 ### Supplementary Table S1 — DMA-level metrics
 
-并列报告全部九种模型在 DMA A--J 的四指标绝对值。正文用 Main Fig. 2 概括相对各基线的跨 DMA 改善分布，用 Main Figs. 3--4 分别呈现 24 h 与 168 h 下 STaR-GNN 和局部最优基线的绝对性能。
+并列报告全部九种模型在 DMA A--J 的四指标绝对值。正文用 Main Fig. 2 概括相对各对比模型的跨 DMA 改善分布，用 Main Figs. 3--4 分别呈现 24 h 与 168 h 下 STaR-GNN 和局部最优对比模型的绝对性能。
 
 ---
 
@@ -59,9 +59,9 @@ Panel a 用热图展示相对六个 published sequence/multiscale models 与 DCR
 
 **Results-level question：**相对不同模型族的改善是否广泛分布于 DMA，而非由少数分区驱动？
 
-四个 panel 分别展示 MAE、MAPE、RMSE 和 NSE。纵轴为八种基线，横轴为 STaR-GNN 相对每个基线的有符号逐 DMA 改善；小点保留十个 DMA，大点与线段给出中位数和四分位距，圆和方形区分 24 h 与 168 h。误差指标采用相对降幅，NSE 采用绝对增益，正值始终代表 STaR-GNN 更优。
+四个 panel 分别展示 MAE、MAPE、RMSE 和 NSE。纵轴为八种对比模型，横轴为 STaR-GNN 相对每个对比模型的有符号逐 DMA 改善；小点保留十个 DMA，大点与线段给出中位数和四分位距，圆和方形区分 24 h 与 168 h。误差指标采用相对降幅，NSE 采用绝对增益，正值始终代表 STaR-GNN 更优。
 
-Main inference：STaR-GNN 的改善在时序模型和图模型两类基线中均具有广泛的跨 DMA 覆盖，但分布的负向尾部说明其并非在所有局部任务上占优。
+Main inference：STaR-GNN 的改善在时序模型和图模型两类对比方法中均具有广泛的跨 DMA 覆盖，但分布的负向尾部说明其并非在所有局部任务上占优。
 
 ---
 
@@ -69,9 +69,9 @@ Main inference：STaR-GNN 的改善在时序模型和图模型两类基线中均
 
 **Results-level question：**日前预测的系统级优势落到各 DMA 后，在哪里保持、接近或反转？
 
-四个 panel 分别给出 MAE、MAPE、RMSE 和 NSE 的绝对值。每个 DMA–指标组合独立选择最强非 STaR-GNN 方法，并与 STaR-GNN 采用配对点比较；蓝色方点和灰色空心圆之间的线段表示两者的绝对差异，局部最优基线占优时，空心圆及连线改为橙色。
+四个 panel 分别给出 MAE、MAPE、RMSE 和 NSE 的绝对值。每个 DMA–指标组合独立选择最强非 STaR-GNN 方法，并与 STaR-GNN 采用成对柱比较；蓝色柱表示 STaR-GNN，灰色柱表示局部最优对比模型，后者占优时改为橙色。柱状图从零起始，主、次网格用于辅助读取相近数值。
 
-Main inference：24 h 的四个例外集中于 DMA A。STaR-GNN 在其余九个 DMA 上均保持四指标领先，但不同 DMA 的配对点间距显示领先幅度并不均衡。
+Main inference：24 h 的四个例外集中于 DMA A。STaR-GNN 在其余九个 DMA 上均保持四指标领先，但不同 DMA 的成对柱高差异显示领先幅度并不均衡。
 
 ---
 
@@ -79,7 +79,7 @@ Main inference：24 h 的四个例外集中于 DMA A。STaR-GNN 在其余九个 
 
 **Results-level question：**预测时域延长后，哪些 DMA 的局部竞争关系发生改变？
 
-沿用 Main Fig. 3 的四指标分面、配对点和颜色编码，并对相同指标采用一致的聚焦纵轴，使 24 h 与 168 h 结果可直接比较，同时避免宽泛坐标范围压缩局部差异。
+沿用 Main Fig. 3 的四指标分面、成对柱和颜色编码。全部纵轴从零开始，并通过更细的主、次刻度提高相近数值的可读性。
 
 Main inference：DMA A、E 和 G 的四项指标及 DMA I 的 NSE 由其他方法取得更优结果。与 Main Fig. 3 对照可见，预测时域延长并未造成所有 DMA 同步退化，而是改变了分区从模型结构中获得的相对收益。
 
@@ -149,7 +149,7 @@ Main inference：168 h 的四指标改善在绝大多数预测起点中保持；
 原则：
 
 - proposed method 是唯一 hero hue；
-- baseline 不与 proposed model 争夺视觉注意力；
+- 对比模型不与 proposed model 争夺视觉注意力；
 - variants 属于 proposed-family，使用低饱和近邻色；
 - 同一模型在所有 panel 中永不换色；
 - 同时使用 linestyle/marker，保证灰度打印仍可识别；
@@ -172,7 +172,7 @@ scripts/reproduce/manuscript_plot_style.py
 
 证据：Table 1 + Main Fig. 1 + Main Figs. 2--4 + Supplementary Table S1。
 
-写法：claim → quantitative evidence → sequence/multiscale comparison → graph baseline comparison → bounded inference。
+写法：claim → quantitative evidence → sequence/multiscale comparison → graph-model comparison → bounded inference。
 
 ### 3.2 Component contributions and lead-time dependence
 

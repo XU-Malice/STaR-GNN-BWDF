@@ -29,9 +29,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
-from matplotlib.ticker import FixedLocator, FormatStrFormatter
+from matplotlib.ticker import FormatStrFormatter, MultipleLocator
 
 from manuscript_plot_style import (
     HERO_BLUE,
@@ -714,7 +713,7 @@ def _main_figure2(
         images.append(ax.imshow(matrix, cmap=cmap, vmin=0, vmax=100, aspect="auto"))
         ax.set_yticks(np.arange(4), METRICS)
         ax.set_xticks(np.arange(4), labels)
-        ax.set_xlabel("Baseline model")
+        ax.set_xlabel("Comparison model")
         ax.set_ylabel("Evaluation metric")
         ax.tick_params(length=0)
         ax.spines[:].set_visible(False)
@@ -867,7 +866,7 @@ def _main_figure2_dma_pairwise_distribution(
     pairwise: pd.DataFrame,
     output: Path,
 ) -> None:
-    """Show effect-size distributions over DMAs for every individual baseline."""
+    """Show DMA effect-size distributions for every comparison model."""
     fig, axes = plt.subplots(2, 2, figsize=(7.4, 5.55))
     horizon_style = {
         "24h": {"color": "#8FB6D5", "marker": "o", "offset": -0.16},
@@ -927,7 +926,7 @@ def _main_figure2_dma_pairwise_distribution(
         ax.set_yticks(np.arange(len(DMA_MODELS) - 1), DMA_MODELS[:-1])
         ax.invert_yaxis()
         ax.set_xlabel(_improvement_label(metric))
-        ax.set_ylabel("Baseline model")
+        ax.set_ylabel("Comparison model")
         ax.set_title(metric, pad=7, fontweight="bold")
         ax.xaxis.grid(True, color="#E2E2E2", linewidth=0.55)
         ax.set_axisbelow(True)
@@ -970,15 +969,14 @@ def _main_figure_dma_absolute_performance(
     output: Path,
     output_stem: str,
 ) -> None:
-    """Pair absolute DMA metrics with the locally best baseline."""
+    """Compare absolute DMA metrics with the strongest comparator."""
     if task not in TASKS:
         raise ValueError(f"Unknown forecasting task: {task}")
 
     fig, axes = plt.subplots(2, 2, figsize=(7.4, 5.75))
     star_color = HERO_BLUE
-    baseline_color = "#AEB4BA"
-    connector_color = "#B8BDC3"
-    baseline_win_color = "#C65A46"
+    comparator_color = "#C9CED4"
+    comparator_win_color = "#C65A46"
     metric_labels = {
         "MAE": "MAE",
         "MAPE": "MAPE (%)",
@@ -986,32 +984,13 @@ def _main_figure_dma_absolute_performance(
         "NSE": "NSE",
     }
     metric_scales = {
-        "MAE": {
-            "lower": 0.0,
-            "upper": 2.5,
-            "major": 0.5,
-            "format": "%.1f",
-        },
-        "MAPE": {
-            "lower": 1.0,
-            "upper": 13.0,
-            "major": 2.0,
-            "format": "%.0f",
-        },
-        "RMSE": {
-            "lower": 0.0,
-            "upper": 3.0,
-            "major": 0.5,
-            "format": "%.1f",
-        },
-        "NSE": {
-            "lower": 0.5,
-            "upper": 1.0,
-            "major": 0.1,
-            "format": "%.1f",
-        },
+        "MAE": {"major": 0.5, "minor": 0.25, "format": "%.1f"},
+        "MAPE": {"major": 2.0, "minor": 1.0, "format": "%.0f"},
+        "RMSE": {"major": 0.5, "minor": 0.25, "format": "%.1f"},
+        "NSE": {"major": 0.2, "minor": 0.1, "format": "%.1f"},
     }
     x = np.arange(len(DMAS), dtype=float)
+    width = 0.34
     panel = iter("abcd")
 
     for metric_pos, metric in enumerate(METRICS):
@@ -1033,72 +1012,70 @@ def _main_figure_dma_absolute_performance(
         competitor_values = block["competitor_value"].to_numpy(float)
         star_better = block["star_better"].to_numpy(bool)
         competitor_colors = [
-            baseline_color if better else baseline_win_color
+            comparator_color if better else comparator_win_color
             for better in star_better
         ]
+        metric_max = float(
+            block[["star_value", "competitor_value"]].to_numpy(float).max()
+        )
         scale = metric_scales[metric]
-        paired_values = block[
-            ["star_value", "competitor_value"]
-        ].to_numpy(float)
-        lower = float(scale["lower"])
-        upper = float(scale["upper"])
-        if paired_values.min() < lower or paired_values.max() > upper:
-            raise ValueError(
-                f"Focused axis does not cover {task}/{metric}: "
-                f"[{paired_values.min():.6f}, {paired_values.max():.6f}] "
-                f"outside [{lower:.6f}, {upper:.6f}]"
+        upper = (
+            1.05
+            if metric == "NSE"
+            else math.ceil(
+                metric_max * 1.08 / float(scale["major"])
             )
+            * float(scale["major"])
+        )
 
-        for dma_pos in range(len(DMAS)):
-            ax.plot(
-                [x[dma_pos], x[dma_pos]],
-                [competitor_values[dma_pos], star_values[dma_pos]],
-                color=(
-                    connector_color
-                    if star_better[dma_pos]
-                    else baseline_win_color
-                ),
-                linewidth=1.45,
-                zorder=2,
-            )
-
-        ax.scatter(
-            x,
+        ax.bar(
+            x - width / 2,
             competitor_values,
-            s=31,
-            marker="o",
-            facecolors="white",
-            edgecolors=competitor_colors,
-            linewidths=1.25,
+            width=width,
+            color=competitor_colors,
+            edgecolor="white",
+            linewidth=0.45,
             zorder=3,
         )
-        ax.scatter(
-            x,
+        ax.bar(
+            x + width / 2,
             star_values,
-            s=31,
-            marker="s",
+            width=width,
             color=star_color,
             edgecolor="white",
             linewidth=0.45,
-            zorder=4,
+            zorder=3,
         )
 
         ax.set_xticks(x, DMAS)
-        ax.set_xlim(-0.55, len(DMAS) - 0.45)
-        ax.set_ylim(lower, upper)
-        tick_step = float(scale["major"])
+        ax.set_xlim(-0.62, len(DMAS) - 0.38)
+        ax.set_ylim(0.0, upper)
         ax.yaxis.set_major_locator(
-            FixedLocator(
-                np.arange(lower, upper + tick_step / 2.0, tick_step)
-            )
+            MultipleLocator(float(scale["major"]))
+        )
+        ax.yaxis.set_minor_locator(
+            MultipleLocator(float(scale["minor"]))
         )
         ax.yaxis.set_major_formatter(
             FormatStrFormatter(str(scale["format"]))
         )
         ax.grid(
             axis="y",
-            color="#E4E4E4",
-            linewidth=0.50,
+            which="major",
+            color="#DEDEDE",
+            linewidth=0.52,
+        )
+        ax.grid(
+            axis="y",
+            which="minor",
+            color="#F0F0F0",
+            linewidth=0.32,
+        )
+        ax.tick_params(
+            axis="y",
+            which="minor",
+            length=2.0,
+            color="#A8A8A8",
         )
         ax.set_axisbelow(True)
         ax.spines[["top", "right"]].set_visible(False)
@@ -1108,35 +1085,29 @@ def _main_figure_dma_absolute_performance(
         add_panel_label(ax, next(panel))
 
     handles = [
-        Line2D(
-            [0],
-            [0],
-            marker="s",
-            linestyle="none",
-            markersize=6.5,
-            markerfacecolor=star_color,
-            markeredgecolor="white",
+        Rectangle(
+            (0, 0),
+            1,
+            1,
+            facecolor=star_color,
+            edgecolor="none",
             label="STaR-GNN",
         ),
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            linestyle="none",
-            markersize=6.5,
-            markerfacecolor="white",
-            markeredgecolor=baseline_color,
-            label="Best baseline",
+        Rectangle(
+            (0, 0),
+            1,
+            1,
+            facecolor=comparator_color,
+            edgecolor="none",
+            label="Best comparator",
         ),
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            linestyle="none",
-            markersize=6.5,
-            markerfacecolor="white",
-            markeredgecolor=baseline_win_color,
-            label="Baseline better",
+        Rectangle(
+            (0, 0),
+            1,
+            1,
+            facecolor=comparator_win_color,
+            edgecolor="none",
+            label="Comparator better",
         ),
     ]
     fig.legend(
@@ -1623,7 +1594,7 @@ def _main_figure_overall(
     ax_h.set_yticks(np.arange(len(clean_names)), clean_names)
     ax_h.set_xticks(np.arange(6), labels)
     ax_h.set_xlabel("Error metric")
-    ax_h.set_ylabel("Baseline model")
+    ax_h.set_ylabel("Comparison model")
     ax_h.set_title(
         "Relative reduction in forecasting errors",
         pad=17,
@@ -1676,7 +1647,7 @@ def _main_figure_overall(
     ax_n.tick_params(axis="y", labelsize=6.7, pad=3)
     ax_n.invert_yaxis()
     ax_n.set_xlabel("Absolute NSE improvement ($\\Delta$NSE)")
-    ax_n.set_ylabel("Baseline model")
+    ax_n.set_ylabel("Comparison model")
     ax_n.yaxis.set_label_position("right")
     ax_n.set_title(
         "Improvement in NSE",
@@ -1746,7 +1717,7 @@ def _supp_figure_s1_dma(
         add_panel_label(ax, panel)
     axes[0, 0].set_ylabel("DMA")
     axes[1, 0].set_ylabel("DMA")
-    fig.supxlabel("Baseline model", y=0.015, fontsize=9)
+    fig.supxlabel("Comparison model", y=0.015, fontsize=9)
     fig.subplots_adjust(wspace=0.30, hspace=0.32, bottom=0.10, top=0.94)
     save_publication_figure(fig, output / "supp_figS1_dma_improvement")
 
@@ -1808,10 +1779,10 @@ def _write_audit(
 ) -> None:
     audit = {
         "figure_architecture": {
-            "main_fig1": "Overall four-metric performance against eight baselines.",
+            "main_fig1": "Overall four-metric performance against eight comparison models.",
             "main_fig2": (
                 "Cross-DMA distributions of signed pairwise improvements "
-                "against each of eight baselines."
+                "against each of eight comparison models."
             ),
             "main_fig3": (
                 "DMA-specific absolute performance of STaR-GNN and the locally "
