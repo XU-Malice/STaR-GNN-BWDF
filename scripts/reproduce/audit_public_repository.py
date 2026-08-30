@@ -3,7 +3,7 @@
 
 The audit distinguishes frozen scientific artifacts from submission-facing
 presentation artifacts. Legacy diagnostic figures may remain tracked, but the
-canonical manuscript contract is 2 main tables + 6 main result figures,
+canonical manuscript contract is 2 main tables + 7 main result figures,
 and Supplementary Tables S1–S3.
 """
 
@@ -271,10 +271,11 @@ def _audit_paper(root: Path) -> list[str]:
     required_main = (
         "main_fig1_overall_performance",
         "main_fig2_dma_performance",
-        "main_fig3_dma_local_margin",
-        "main_fig4_ablation_leadtime",
-        "main_fig5_origin_robustness",
-        "main_fig6_week_ahead_dynamics",
+        "main_fig3_dma_absolute_24h",
+        "main_fig4_dma_absolute_168h",
+        "main_fig5_ablation_leadtime",
+        "main_fig6_origin_robustness",
+        "main_fig7_week_ahead_dynamics",
     )
     for stem in required_main:
         for ext in ("pdf", "svg", "png"):
@@ -287,12 +288,12 @@ def _audit_paper(root: Path) -> list[str]:
         "paper/tables/manuscript/submission/main_fig2_dma_ranks.csv",
         "paper/tables/manuscript/submission/main_fig2_dma_pairwise_improvement.csv",
         "paper/tables/manuscript/submission/main_fig3_dma_strongest_competitor.csv",
-        "paper/tables/manuscript/submission/main_fig4_daywise_paired_improvement.csv",
-        "paper/tables/manuscript/submission/main_fig5_origin_paired_improvement.csv",
-        "paper/tables/manuscript/submission/main_fig5_origin_summary.csv",
-        "paper/tables/manuscript/submission/main_fig6_diurnal_aggregate_error.csv",
-        "paper/tables/manuscript/submission/main_fig6_representative_trajectory.csv",
-        "paper/tables/manuscript/submission/main_fig6_representative_selection.json",
+        "paper/tables/manuscript/submission/main_fig5_daywise_paired_improvement.csv",
+        "paper/tables/manuscript/submission/main_fig6_origin_paired_improvement.csv",
+        "paper/tables/manuscript/submission/main_fig6_origin_summary.csv",
+        "paper/tables/manuscript/submission/main_fig7_diurnal_aggregate_error.csv",
+        "paper/tables/manuscript/submission/main_fig7_representative_trajectory.csv",
+        "paper/tables/manuscript/submission/main_fig7_representative_selection.json",
         "paper/tables/manuscript/submission/submission_figure_audit.json",
     )
     for relative in required_audits:
@@ -348,19 +349,19 @@ def _audit_paper(root: Path) -> list[str]:
         if local != expected_local:
             errors.append(f"Main Fig. 3 DMA audit drift：{local}")
 
-        origin_rows = audit.get("main_fig5_origin_summary", [])
+        origin_rows = audit.get("main_fig6_origin_summary", [])
         if len(origin_rows) != 16:
             errors.append(
-                "Main Fig. 5 origin audit should contain 16 "
+                "Main Fig. 6 origin audit should contain 16 "
                 f"horizon-baseline-metric rows, got {len(origin_rows)}"
             )
         elif any(int(row.get("n_origins", -1)) != 46 for row in origin_rows):
-            errors.append("Main Fig. 5 origin audit is not common-46")
+            errors.append("Main Fig. 6 origin audit is not common-46")
         elif any(
             int(row.get("n_high_variability", -1)) != 12
             for row in origin_rows
         ):
-            errors.append("Main Fig. 5 high-variability stratum is not 12 origins")
+            errors.append("Main Fig. 6 high-variability stratum is not 12 origins")
 
     return errors
 
@@ -441,7 +442,7 @@ def main() -> None:
         ],
         "submission_contract": {
             "main_tables": 2,
-            "main_result_figures": 6,
+            "main_result_figures": 7,
             "supplementary_figures": 0,
             "supplementary_tables": 3,
         },
@@ -464,7 +465,7 @@ def main() -> None:
     if args.require_frozen:
         print("唯一 checkpoint：10/10；DCRNN/Base无重复")
     if args.require_paper_artifacts:
-        print("Submission Table 1--2 / Main Fig. 1--6 / Tables S1--S3：PASS")
+        print("Submission Table 1--2 / Main Fig. 1--7 / Tables S1--S3：PASS")
 
 
 if __name__ == "__main__":

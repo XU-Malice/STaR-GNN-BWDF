@@ -9,7 +9,7 @@
 #   3. 封存并验证当前 public-source SHA；
 #   4. 校验 10 个冻结 checkpoint、协议与内部 aggregate 诊断；
 #   5. 重新执行 10 组 common-46 推理；
-#   6. 重建源表、submission tables、Main Fig. 1--6；
+#   6. 重建源表、submission tables、Main Fig. 1--7；
 #   7. 审计 GitHub 发布边界；
 #   8. 可选生成 GitHub Release checkpoint asset。
 #
@@ -176,7 +176,7 @@ checkpoint common-46 复推理：10/10
 Main Table 1 overall：PASS
 Main Table 2 factorial ablation：4 models / no STGCN / 30/32 PASS
 Supplementary Tables S1--S3：PASS
-Main Fig. 1--6：PASS
+Main Fig. 1--7：PASS
 7-origin moving-block bootstrap：PASS
 公开文档与发布边界：PASS
 GitHub Release checkpoint资产：${ASSET_STATUS}

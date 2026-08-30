@@ -9,7 +9,7 @@
 3. [`EXPERIMENT_DESIGN_FINAL_CN.md`](EXPERIMENT_DESIGN_FINAL_CN.md) — **最终实验问题、主表/主图和 Results 证据链**；
 4. [`RESULTS_DISCUSSION_JOH_AUDIT_FINAL_CN.md`](RESULTS_DISCUSSION_JOH_AUDIT_FINAL_CN.md) — 五篇参考论文对标、逐图表审计与 3.1--3.4 终稿说明；
 5. [`RESULTS_AND_ARTIFACTS_CN.md`](RESULTS_AND_ARTIFACTS_CN.md) — 上一版结果审计记录，仅作历史追溯；
-6. [`PLOTTING_CN.md`](PLOTTING_CN.md) — 从冻结预测一次性生成 submission tables 与 Main Fig. 1--6；
+6. [`PLOTTING_CN.md`](PLOTTING_CN.md) — 从冻结预测一次性生成 submission tables 与 Main Fig. 1--7；
 7. [`FULL_PIPELINE_CN.md`](FULL_PIPELINE_CN.md) — 从环境、数据、图、训练到 Test/clean-room 的完整流程；
 8. [`RELEASE_CN.md`](RELEASE_CN.md) — GitHub Release、冻结资产和独立验收。
 
@@ -24,10 +24,10 @@
 ```text
 Table 1 + Main Fig. 1 → overall four-metric performance
 Main Fig. 2 + Table S1 → all-model DMA-level performance breadth
-Main Fig. 3 + Table S1 → absolute DMA performance against the best local baseline
-Table 2 + Main Fig. 4 → factorial ablation + lead-time stability
-Main Fig. 5 → forecast-origin and difficult-window robustness
-Main Fig. 6 → week-ahead demand dynamics, implications, limitations
+Main Figs. 3–4 + Table S1 → horizon-specific absolute DMA performance
+Table 2 + Main Fig. 5 → factorial ablation + lead-time stability
+Main Fig. 6 → forecast-origin and difficult-window robustness
+Main Fig. 7 → week-ahead demand dynamics, implications, limitations
 ```
 
 ### 指标定义
@@ -53,10 +53,11 @@ paper/tables/submission/tableS3_forecast_origin_robustness.{md,csv}
 ```text
 paper/figures/submission/main_fig1_overall_performance.*
 paper/figures/submission/main_fig2_dma_performance.*
-paper/figures/submission/main_fig3_dma_local_margin.*
-paper/figures/submission/main_fig4_ablation_leadtime.*
-paper/figures/submission/main_fig5_origin_robustness.*
-paper/figures/submission/main_fig6_week_ahead_dynamics.*
+paper/figures/submission/main_fig3_dma_absolute_24h.*
+paper/figures/submission/main_fig4_dma_absolute_168h.*
+paper/figures/submission/main_fig5_ablation_leadtime.*
+paper/figures/submission/main_fig6_origin_robustness.*
+paper/figures/submission/main_fig7_week_ahead_dynamics.*
 ```
 
 ### Figure captions
@@ -111,7 +112,7 @@ factorial ablation 为 **30/32**。必须透明保留：
 - FA-DPR 168 h MAPE 略差于 DCRNN；
 - SAS-Norm-only 168 h MAE `12.207835` 略低于 STaR-GNN `12.233590`。
 
-这两个边界不被隐藏；Main Fig. 4 用 ordered moving-block evidence 说明 Full 与 SAS 的 168 h MAE 点估计接近，同时揭示 SAS-Norm 与 FA-DPR 对四指标和 lead-time stability 的不同作用。
+这两个边界不被隐藏；Main Fig. 5 用 ordered moving-block evidence 说明 Full 与 SAS 的 168 h MAE 点估计接近，同时揭示 SAS-Norm 与 FA-DPR 对四指标和 lead-time stability 的不同作用。
 
 ## 6. 当前 Results 证据链
 
@@ -120,16 +121,16 @@ Overall capability
   Table 1 + Main Fig. 1
       ↓
 Spatial breadth across DMAs
-  Main Figs. 2--3 + Table S1
+  Main Figs. 2--4 + Table S1
       ↓
 Component mechanism
-  Table 2 + Main Fig. 4
+  Table 2 + Main Fig. 5
       ↓
 Forecast-origin and difficult-condition robustness
-  Main Fig. 5 + Table S3
+  Main Fig. 6 + Table S3
       ↓
 Population-to-instance week-ahead behavior
-  Main Fig. 6
+  Main Fig. 7
 ```
 
 每个 subsection 采用：

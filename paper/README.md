@@ -55,7 +55,7 @@ STaR-GNN
 
 STGCN 是独立 graph baseline，不属于消融。
 
-168 h total MAE：SAS-Norm-only `12.208`，STaR-GNN `12.234`；差约 `0.21%`。该点估计差异由 Main Fig. 4 的 ordered moving-block evidence 限定解释；完整模型在 168 h 的 MAPE、RMSE、NSE 以及 aggregate-demand MAE 上更优。
+168 h total MAE：SAS-Norm-only `12.208`，STaR-GNN `12.234`；差约 `0.21%`。该点估计差异由 Main Fig. 5 的 ordered moving-block evidence 限定解释；完整模型在 168 h 的 MAPE、RMSE、NSE 以及 aggregate-demand MAE 上更优。
 
 ---
 
@@ -100,7 +100,7 @@ tables/submission/tableS3_forecast_origin_robustness.csv
 
 # Main result figures
 
-最终正文保留六张核心结果图，按“总体优势—跨 DMA 分布—局部竞争边界—组件作用—逐起点稳健性—实际轨迹”展开。
+最终正文保留七张核心结果图，按“总体优势—跨 DMA 分布—分时域局部竞争边界—组件作用—逐起点稳健性—实际轨迹”展开。
 
 ## Main Figure 1 — Overall four-metric performance
 
@@ -128,25 +128,38 @@ figures/submission/main_fig2_dma_performance.png
 
 回答：**相对不同模型族的改善是否广泛分布于 DMA，而非由少数分区驱动？**
 
-## Main Figure 3 — Absolute DMA performance against the best baseline
+## Main Figure 3 — 24 h DMA-level absolute performance
 
 ```text
-figures/submission/main_fig3_dma_local_margin.pdf
-figures/submission/main_fig3_dma_local_margin.svg
-figures/submission/main_fig3_dma_local_margin.png
+figures/submission/main_fig3_dma_absolute_24h.pdf
+figures/submission/main_fig3_dma_absolute_24h.svg
+figures/submission/main_fig3_dma_absolute_24h.png
 ```
 
-- 四行两列分别呈现四项绝对指标及 24/168 h 两个预测时域；
-- 每个 DMA 直接比较 STaR-GNN 与局部最优基线，并用橙色标出局部失利。
+- 四个独立 panel 分别呈现 MAE、MAPE、RMSE 和 NSE；
+- 每个 DMA 直接比较 STaR-GNN 与局部最优基线的 24 h 绝对指标，并用橙色标出局部失利。
 
-回答：**系统级优势落到各 DMA 的绝对性能后，在哪里保持、接近或反转？**
+回答：**日前预测的系统级优势落到各 DMA 后，在哪里保持、接近或反转？**
 
-## Main Figure 4 — Four-metric ablation and lead-time stability
+## Main Figure 4 — 168 h DMA-level absolute performance
 
 ```text
-figures/submission/main_fig4_ablation_leadtime.pdf
-figures/submission/main_fig4_ablation_leadtime.svg
-figures/submission/main_fig4_ablation_leadtime.png
+figures/submission/main_fig4_dma_absolute_168h.pdf
+figures/submission/main_fig4_dma_absolute_168h.svg
+figures/submission/main_fig4_dma_absolute_168h.png
+```
+
+- 沿用 Main Fig. 3 的四指标分面和颜色编码；
+- 各指标使用独立纵轴，直接呈现 168 h 局部竞争边界。
+
+回答：**预测时域延长后，哪些 DMA 的局部竞争关系发生改变？**
+
+## Main Figure 5 — Four-metric ablation and lead-time stability
+
+```text
+figures/submission/main_fig5_ablation_leadtime.pdf
+figures/submission/main_fig5_ablation_leadtime.svg
+figures/submission/main_fig5_ablation_leadtime.png
 ```
 
 - 四个 panel 分别给出 MAE、MAPE、RMSE、NSE；
@@ -154,12 +167,12 @@ figures/submission/main_fig4_ablation_leadtime.png
 
 回答：**SAS-Norm 与 FA-DPR 分别如何影响周尺度准确性与 lead-time stability？**
 
-## Main Figure 5 — Forecast-origin and difficult-window robustness
+## Main Figure 6 — Forecast-origin and difficult-window robustness
 
 ```text
-figures/submission/main_fig5_origin_robustness.pdf
-figures/submission/main_fig5_origin_robustness.svg
-figures/submission/main_fig5_origin_robustness.png
+figures/submission/main_fig6_origin_robustness.pdf
+figures/submission/main_fig6_origin_robustness.svg
+figures/submission/main_fig6_origin_robustness.png
 ```
 
 - Panels a–c：46 个共同起点上的四指标 paired effects 与 ordered moving-block 95% CI；
@@ -167,12 +180,12 @@ figures/submission/main_fig5_origin_robustness.png
 
 回答：**平均优势是否跨预测起点成立，并在困难需水条件下保持？**
 
-## Main Figure 6 — Week-ahead demand dynamics
+## Main Figure 7 — Week-ahead demand dynamics
 
 ```text
-figures/submission/main_fig6_week_ahead_dynamics.pdf
-figures/submission/main_fig6_week_ahead_dynamics.svg
-figures/submission/main_fig6_week_ahead_dynamics.png
+figures/submission/main_fig7_week_ahead_dynamics.pdf
+figures/submission/main_fig7_week_ahead_dynamics.svg
+figures/submission/main_fig7_week_ahead_dynamics.png
 ```
 
 - Panel a：全部测试窗口 × 7 days 的 diurnal aggregate-demand absolute-error profile；
@@ -197,12 +210,12 @@ tables/manuscript/submission/
 main_fig2_dma_ranks.csv
 main_fig2_dma_pairwise_improvement.csv
 main_fig3_dma_strongest_competitor.csv
-main_fig4_daywise_paired_improvement.csv
-main_fig5_origin_paired_improvement.csv
-main_fig5_origin_summary.csv
-main_fig6_diurnal_aggregate_error.csv
-main_fig6_representative_trajectory.csv
-main_fig6_representative_selection.json
+main_fig5_daywise_paired_improvement.csv
+main_fig6_origin_paired_improvement.csv
+main_fig6_origin_summary.csv
+main_fig7_diurnal_aggregate_error.csv
+main_fig7_representative_trajectory.csv
+main_fig7_representative_selection.json
 submission_figure_audit.json
 ```
 

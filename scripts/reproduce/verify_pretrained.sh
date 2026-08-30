@@ -9,7 +9,7 @@
 #   3. 可选重新执行全部 checkpoint 推理；
 #   4. 重建全精度论文源表和 legacy aggregate-demand 诊断；
 #   5. 生成投稿显示 Table 1--2 / Tables S1--S3；
-#   6. 通过唯一 canonical renderer 生成 Main Fig. 1--6。
+#   6. 通过唯一 canonical renderer 生成 Main Fig. 1--7。
 #
 # 内部 aggregate-demand hierarchy 保留 31/32 作为冻结诊断；
 # manuscript-facing factorial ablation 为 4 models / no STGCN / 30/32。
@@ -113,7 +113,7 @@ echo "冻结 checkpoint、common-46 Test 与 submission artifacts：PASS"
 echo "Main Table 1：publisher-compatible overall comparison"
 echo "Main Table 2：4-model factorial ablation / no STGCN / 30/32"
 echo "Supplementary Tables S1--S3：DMA details + origin robustness"
-echo "Main Fig. 1--6：overall / DMA / ablation / robustness / week dynamics"
+echo "Main Fig. 1--7：overall / DMA / ablation / robustness / week dynamics"
 echo "legacy aggregate-demand hierarchy：31/32 internal diagnostic only"
 echo "实验设计：docs/EXPERIMENT_DESIGN_FINAL_CN.md"
 echo "============================================"

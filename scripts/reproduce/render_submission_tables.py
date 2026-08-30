@@ -133,13 +133,11 @@ def _ablation_markdown(frame: pd.DataFrame) -> str:
             )
     lines += [
         "",
-        "**Note.** MAE is the sum of the ten DMA-level MAEs; MAPE, RMSE and "
-        "NSE are evaluated on aggregate demand. STGCN is an independent graph "
-        "baseline and is excluded from the factorial ablation. At 168 h, "
-        "SAS-Norm-only has the marginally lower MAE (12.208 vs. 12.234), "
-        "whereas the full "
-        "STaR-GNN is best in MAPE, RMSE and NSE. The corresponding paired "
-        "moving-block analysis is reported with Main Fig. 4.",
+        "**Note.** MAE is the sum of the ten DMA-level MAEs. MAPE, RMSE and "
+        "NSE are evaluated on aggregate demand. Error reductions are "
+        "calculated relative to DCRNN, and positive values indicate lower "
+        "errors. NSE gain is the absolute difference from DCRNN. STGCN is an "
+        "independent graph baseline and is not part of the factorial design.",
     ]
     return "\n".join(lines) + "\n"
 
@@ -179,14 +177,14 @@ def _dma_markdown(frame: pd.DataFrame) -> str:
         "model results are transcribed from the supplementary material of Que "
         "et al. (2024); its fractional MAPE values were multiplied by 100 for "
         "consistent display. The same results support the signed DMA-level "
-        "comparisons in Main Fig. 2 and the absolute best-baseline comparison "
-        "in Main Fig. 3.",
+        "comparisons in Main Fig. 2 and the horizon-specific absolute "
+        "best-baseline comparisons in Main Figs. 3–4.",
     ]
     return "\n".join(lines) + "\n"
 
 
 def _dma_local_margin_markdown(frame: pd.DataFrame) -> str:
-    """Render comparator identities and signed margins complementing Fig. 3."""
+    """Render comparator identities and margins complementing Figs. 3–4."""
     lines = [
         "**Table S2. DMA-level margins of STaR-GNN relative to the locally "
         "strongest competing model.**",

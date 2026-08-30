@@ -53,18 +53,18 @@ The 168 h total-MAE point estimates of SAS-Norm-only and STaR-GNN differ by only
 
 ## Journal of Hydrology submission evidence chain
 
-The canonical submission structure is **two main tables + six main result figures**:
+The canonical submission structure is **two main tables + seven main result figures**:
 
 ```text
 Main Table 1 + Main Fig. 1  Overall four-metric performance
         ↓
-Main Figs. 2–3 + Table S1   DMA-level breadth and local margins
+Main Figs. 2–4 + Table S1   DMA-level breadth and local absolute performance
         ↓
-Main Table 2 + Main Fig. 4  Factorial ablation + lead-time stability
+Main Table 2 + Main Fig. 5  Factorial ablation + lead-time stability
         ↓
-Main Fig. 5                 Forecast-origin + difficult-window robustness
+Main Fig. 6                 Forecast-origin + difficult-window robustness
         ↓
-Main Fig. 6                 Population-to-instance week-ahead dynamics
+Main Fig. 7                 Population-to-instance week-ahead dynamics
 ```
 
 ### Main Figure 1 — Overall four-metric performance
@@ -77,22 +77,27 @@ Main Fig. 6                 Population-to-instance week-ahead dynamics
 - signed DMA-level improvements over each of the eight baselines for all four metrics;
 - individual DMAs, medians and interquartile ranges shown at both horizons.
 
-### Main Figure 3 — DMA-specific local competitive margin
+### Main Figure 3 — 24 h DMA-level absolute performance
 
-- signed margins relative to the strongest competing method in every local cell;
-- connected 24 h and 168 h values retain DMA identities and negative exceptions.
+- four independent panels for MAE, MAPE, RMSE, and NSE;
+- absolute 24 h metrics comparing STaR-GNN with the best-performing baseline in each DMA.
 
-### Main Figure 4 — Four-metric ablation and lead-time stability
+### Main Figure 4 — 168 h DMA-level absolute performance
+
+- the same panel and color design as Main Fig. 3;
+- independent axes expose the local exceptions in DMAs A, E, G, and I–NSE.
+
+### Main Figure 5 — Four-metric ablation and lead-time stability
 
 - day-wise paired improvements and moving-block 95% CIs for MAE, MAPE, RMSE and NSE;
 - within-day offsets, markers and line styles keep SAS-Norm and STaR-GNN legible when their estimates are close.
 
-### Main Figure 5 — Forecast-origin and difficult-window robustness
+### Main Figure 6 — Forecast-origin and difficult-window robustness
 
 - paired four-metric effects over 46 common origins for DCRNN, STGCN, and STaR-GNN;
 - ordered seven-origin moving-block 95% CIs and an observed-demand high-variability stratum.
 
-### Main Figure 6 — Week-ahead demand dynamics
+### Main Figure 7 — Week-ahead demand dynamics
 
 - population-level diurnal aggregate-demand error profile over 46 origins × 7 forecast days;
 - a representative 168 h trajectory selected with a pre-specified median-error rule;
@@ -119,10 +124,11 @@ paper/tables/submission/
 paper/figures/submission/
   main_fig1_overall_performance.{pdf,svg,png}
   main_fig2_dma_performance.{pdf,svg,png}
-  main_fig3_dma_local_margin.{pdf,svg,png}
-  main_fig4_ablation_leadtime.{pdf,svg,png}
-  main_fig5_origin_robustness.{pdf,svg,png}
-  main_fig6_week_ahead_dynamics.{pdf,svg,png}
+  main_fig3_dma_absolute_24h.{pdf,svg,png}
+  main_fig4_dma_absolute_168h.{pdf,svg,png}
+  main_fig5_ablation_leadtime.{pdf,svg,png}
+  main_fig6_origin_robustness.{pdf,svg,png}
+  main_fig7_week_ahead_dynamics.{pdf,svg,png}
 ```
 
 STaR-GNN is the visual hero method (`#0F4D92` deep blue); DCRNN/STGCN use gray baselines, while SAS-Norm and FA-DPR use restrained variant colors. The shared style is centralized in `scripts/reproduce/manuscript_plot_style.py`.

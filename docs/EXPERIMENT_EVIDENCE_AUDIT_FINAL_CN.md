@@ -48,16 +48,16 @@
 | 10 DMA 四指标 | 多站点研究常见 | ① | ① | ② | Que S1；metrics/predictions | 已有/可重算，低 | Table S1；正文概括 |
 | 各 DMA relative improvement | 常见 | ② | ② | ② | DMA 平均指标 | 已有，低 | Fig. 2 |
 | Cross-DMA distribution | 常见 | ② | ② | ② | DMA 平均指标 | 已有，低 | Fig. 2；描述性 |
-| DMA absolute best-baseline comparison | 价值高 | ② | ② | — | 全九模型 DMA 指标 | 已有，低 | Fig. 3/Table S1–S2 |
-| 46-origin 四指标分布 | 常见且重要 | ⑤ | ② | ② | frozen predictions | 新增统计，低 | Fig. 5；仅 B/C |
+| DMA absolute best-baseline comparison | 价值高 | ② | ② | — | 全九模型 DMA 指标 | 已有，低 | Figs. 3–4/Table S1–S2 |
+| 46-origin 四指标分布 | 常见且重要 | ⑤ | ② | ② | frozen predictions | 新增统计，低 | Fig. 6；仅 B/C |
 | Boxplot / ECDF | 常见 | ⑤ | ③ | ③ | frozen predictions | MAE ECDF 已有，低 | Supplement；主图不用重复 |
-| Paired win rate | 高水平 ML 常见 | ⑤ | ② | ② | 同一 common-46 | 新增，低 | Fig. 5/Table S3 |
-| Moving-block CI | 统计价值高 | ⑤ | ③ | ③ | 有序 common-46 | 消融已有；总体新增，低 | Figs. 4–5 |
-| Day 1–Day 7 | 长时域研究常见 | ⑤ | ② | ① | 168 h predictions | 已有，低 | Fig. 4 |
-| Component × lead time | 创新验证必要 | — | — | ① | factorial outputs | 已有，低 | Fig. 4 |
-| Representative 168 h trajectory | 常见 | ⑤ | ① | ① | frozen predictions | 已有，低 | Fig. 6 |
-| Hourly absolute error/profile | 常见 | ⑤ | ① | ① | frozen predictions | 已有，低 | Fig. 6 |
-| Difficult-demand windows | 常见/价值高 | ⑤ | ② | ② | observed targets + predictions | 新增，低 | Fig. 5d/Table S3 |
+| Paired win rate | 高水平 ML 常见 | ⑤ | ② | ② | 同一 common-46 | 新增，低 | Fig. 6/Table S3 |
+| Moving-block CI | 统计价值高 | ⑤ | ③ | ③ | 有序 common-46 | 消融已有；总体新增，低 | Figs. 5–6 |
+| Day 1–Day 7 | 长时域研究常见 | ⑤ | ② | ① | 168 h predictions | 已有，低 | Fig. 5 |
+| Component × lead time | 创新验证必要 | — | — | ① | factorial outputs | 已有，低 | Fig. 5 |
+| Representative 168 h trajectory | 常见 | ⑤ | ① | ① | frozen predictions | 已有，低 | Fig. 7 |
+| Hourly absolute error/profile | 常见 | ⑤ | ① | ① | frozen predictions | 已有，低 | Fig. 7 |
+| Difficult-demand windows | 常见/价值高 | ⑤ | ② | ② | observed targets + predictions | 新增，低 | Fig. 6d/Table S3 |
 | Extreme cases | 常见但易选择偏差 | ⑤ | ② | ② | predictions | 可做，低 | 不另设主图；中位规则替代 |
 | Training convergence | 偶见 | 论文中有，仓库无原始值 | ① | ① | histories | 已有，中 | 不做；不回答核心 claim |
 | Parameter count | 偶见 | ⑤ | ③ | ①/③ | summaries/checkpoints | 部分已有，中 | 暂不做；协议不完整 |
@@ -100,10 +100,10 @@
 
 | Section | Scientific question | Models / metrics | Table / Figure 与 panel | 数据与状态 | Main claim | Limit of inference | Supplement / priority |
 |---|---|---|---|---|---|---|---|
-| **3.1 Predictive performance across forecasting horizons and DMAs** | 总体优势是否跨时域、指标和 DMA 广泛成立；局部边界在哪里？ | 九模型；MAE/MAPE/RMSE/NSE；24/168 h | Table 1 绝对系统值；Fig. 1 相对总体改善；Fig. 2 各基线跨 DMA 效应分布；Fig. 3 与局部最优基线的绝对指标比较 | Table/Figs. 1–3 均为① | STaR-GNN 在系统级全部指标最优，优势由多数 DMA 支撑，但长时域存在 A/E/G 与 I-NSE 等局部例外 | 跨来源模型只用于性能定位；DMA 比较是描述性且只有 10 个区域，不能作空间因果归因 | Tables S1–S2；最高优先级 |
-| **3.2 Component contributions and lead-time dependence** | 两组件各贡献什么，贡献如何随 Day 1–7 变化？ | DCRNN、SAS-only、FA-only、Full；四指标 | Table 2 factorial；Fig. 4 四指标逐日 paired improvement + moving-block CI | ① | SAS-Norm 是长时域稳定性的主要来源；FA-DPR 贡献较小且依赖指标；Full 的综合指标更均衡 | Ablation 支持功能贡献，不证明物理因果；Full 与 SAS-only 的 168 h MAE 不可声称有稳定差异 | 精确日级 CSV；最高优先级 |
-| **3.3 Robustness across forecast origins and demand conditions** | 平均优势是否跨测试起点成立，在高波动窗口是否保持？ | 同协议 DCRNN/STGCN/STaR-GNN；四指标 | Fig. 5a–b 46-origin 三误差配对分布与块 CI；c NSE；d 观测定义的高波动四分位 win rate | ②→①，无重训 | 168 h 改善在绝大多数起点和高波动窗口保持；24 h MAPE/RMSE 的均值 CI 对 DCRNN 跨零，需诚实限定 | 仅适用于 B 类同协议模型；高波动 n=12 为描述性分层，不作多重显著性检验 | Table S3；最高优先级 |
-| **3.4 Week-ahead demand dynamics and practical implications** | 统计优势在实际周轨迹中表现为何，仍有哪些误差和应用边界？ | DCRNN/STGCN/STaR-GNN；aggregate absolute error | Fig. 6a 全测试窗口日内误差；b 中位规则周轨迹；c 同窗逐小时误差 | ① | 优势覆盖大多数日内小时，典型周中更好地跟踪水平转换；快速变化仍产生尖峰 | 单系统、不评价控制成本、不提供概率区间、固定功能图；不把典型案例当总体证明 | 选择规则 JSON/轨迹 CSV；高优先级 |
+| **3.1 Predictive performance across forecasting horizons and DMAs** | 总体优势是否跨时域、指标和 DMA 广泛成立；局部边界在哪里？ | 九模型；MAE/MAPE/RMSE/NSE；24/168 h | Table 1 绝对系统值；Fig. 1 相对总体改善；Fig. 2 各基线跨 DMA 效应分布；Figs. 3–4 分时域比较局部最优基线的绝对指标 | Table/Figs. 1–4 均为① | STaR-GNN 在系统级全部指标最优，优势由多数 DMA 支撑，但长时域存在 A/E/G 与 I-NSE 等局部例外 | 跨来源模型只用于性能定位；DMA 比较是描述性且只有 10 个区域，不能作空间因果归因 | Tables S1–S2；最高优先级 |
+| **3.2 Component contributions and lead-time dependence** | 两组件各贡献什么，贡献如何随 Day 1–7 变化？ | DCRNN、SAS-only、FA-only、Full；四指标 | Table 2 factorial；Fig. 5 四指标逐日 paired improvement + moving-block CI | ① | SAS-Norm 是长时域稳定性的主要来源；FA-DPR 贡献较小且依赖指标；Full 的综合指标更均衡 | Ablation 支持功能贡献，不证明物理因果；Full 与 SAS-only 的 168 h MAE 不可声称有稳定差异 | 精确日级 CSV；最高优先级 |
+| **3.3 Robustness across forecast origins and demand conditions** | 平均优势是否跨测试起点成立，在高波动窗口是否保持？ | 同协议 DCRNN/STGCN/STaR-GNN；四指标 | Fig. 6a–b 46-origin 三误差配对分布与块 CI；c NSE；d 观测定义的高波动四分位 win rate | ②→①，无重训 | 168 h 改善在绝大多数起点和高波动窗口保持；24 h MAPE/RMSE 的均值 CI 对 DCRNN 跨零，需诚实限定 | 仅适用于 B 类同协议模型；高波动 n=12 为描述性分层，不作多重显著性检验 | Table S3；最高优先级 |
+| **3.4 Week-ahead demand dynamics and practical implications** | 统计优势在实际周轨迹中表现为何，仍有哪些误差和应用边界？ | DCRNN/STGCN/STaR-GNN；aggregate absolute error | Fig. 7a 全测试窗口日内误差；b 中位规则周轨迹；c 同窗逐小时误差 | ① | 优势覆盖大多数日内小时，典型周中更好地跟踪水平转换；快速变化仍产生尖峰 | 单系统、不评价控制成本、不提供概率区间、固定功能图；不把典型案例当总体证明 | 选择规则 JSON/轨迹 CSV；高优先级 |
 
 递进关系为：系统与空间范围（在哪里成立）→ 组件和提前期（由什么贡献、何时出现）→ 测试样本和困难条件（是否稳定）→ 真实周行为、应用意义与边界（如何表现、能推断到哪里）。没有单列 3.5–3.7，discussion 在每节局部展开，并在 3.4 收束。
 
@@ -123,7 +123,7 @@
 
 ### 修改记录
 
-1. 新增 Fig. 5 与 Table S3，只对同协议模型做逐起点配对分析。
+1. 新增 Fig. 6 与 Table S3，只对同协议模型做逐起点配对分析。
 2. 采用 ordered seven-origin moving-block bootstrap，保留 168 h 窗口重叠依赖。
 3. 以观测需求的 normalized mean absolute ramp 定义高波动窗口；阈值为各时域 46 个起点的第 75 百分位，不参考模型误差。
 4. 将正文压缩为 3.1–3.4；总体与 DMA 合并，实际周行为与 discussion/limitations 合并。
@@ -136,5 +136,5 @@
 ## L. 执行清单
 
 1. **P1 — 统计与审计**：校验 release checksum；生成 46-origin 四指标、moving-block CI、win rate、NMAR 高波动分层和 Table S3。
-2. **P2 — 投稿图件**：生成 Main Fig. 5；将现有周轨迹顺延为 Main Fig. 6；核对 PDF/SVG/300-dpi PNG、轴、单位、图例和碰撞。
+2. **P2 — 投稿图件**：生成 Main Fig. 6；将现有周轨迹顺延为 Main Fig. 7；核对 PDF/SVG/300-dpi PNG、轴、单位、图例和碰撞。
 3. **P3 — 正文与复现**：将中英文 Results and Discussion 改为 3.1–3.4；更新 captions、README、实验设计、artifact audit、tests 与 checksum；执行全仓审计后合并。

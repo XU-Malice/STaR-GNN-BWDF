@@ -35,15 +35,15 @@
 
 STGCN 是独立 graph baseline，不属于消融。
 
-168 h total MAE 中 SAS-Norm-only 为 12.208，STaR-GNN 为 12.234；完整模型在 MAPE、RMSE 和 NSE 上最好。该 0.21% MAE 点估计差异不用于声称任一模型稳定占优，长时域稳定性由 Main Fig. 4 和 moving-block bootstrap 进一步限定。
+168 h total MAE 中 SAS-Norm-only 为 12.208，STaR-GNN 为 12.234；完整模型在 MAPE、RMSE 和 NSE 上最好。该 0.21% MAE 点估计差异不用于声称任一模型稳定占优，长时域稳定性由 Main Fig. 5 和 moving-block bootstrap 进一步限定。
 
 ### Supplementary Table S1 — DMA-level metrics
 
-并列报告全部九种模型在 DMA A--J 的四指标绝对值。正文用 Main Fig. 2 概括相对各基线的跨 DMA 改善分布，用 Main Fig. 3 直接比较 STaR-GNN 与各局部最优基线的绝对性能及其跨时域变化。
+并列报告全部九种模型在 DMA A--J 的四指标绝对值。正文用 Main Fig. 2 概括相对各基线的跨 DMA 改善分布，用 Main Figs. 3--4 分别呈现 24 h 与 168 h 下 STaR-GNN 和局部最优基线的绝对性能。
 
 ---
 
-## 2. 正文六张核心结果图
+## 2. 正文七张核心结果图
 
 ## Main Figure 1 — Overall four-metric performance
 
@@ -65,17 +65,27 @@ Main inference：STaR-GNN 的改善在时序模型和图模型两类基线中均
 
 ---
 
-## Main Figure 3 — DMA-specific local competitive margin
+## Main Figure 3 — 24 h DMA-level absolute performance
 
-**Results-level question：**相对每个 DMA 的最强替代方法，STaR-GNN 的优势在预测时域延长后如何保持、收窄或反转？
+**Results-level question：**日前预测的系统级优势落到各 DMA 后，在哪里保持、接近或反转？
 
-四个 panel 对应四项指标。每个 DMA–指标–预测时域组合独立选择最强非 STaR-GNN 方法，并计算有符号竞争幅度。同一 DMA 的 24 h 与 168 h 点相连；红色点保留局部非最优结果。
+四个 panel 分别给出 MAE、MAPE、RMSE 和 NSE 的绝对值。每个 DMA–指标组合独立选择最强非 STaR-GNN 方法，并与 STaR-GNN 采用成对柱比较；局部最优基线占优时，灰色柱改为橙色。
 
-Main inference：24 h 的四个例外集中于 DMA A；168 h 时，A、E 和 G 的四项指标及 I 的 NSE 由其他方法取得更优结果。该图说明总体优势由多数 DMA 支撑，但局部竞争边界随预测时域呈明显异质性。
+Main inference：24 h 的四个例外集中于 DMA A。STaR-GNN 在其余九个 DMA 上均保持四指标领先，但不同 DMA 的柱高差异显示领先幅度并不均衡。
 
 ---
 
-## Main Figure 4 — Four-metric ablation and lead-time stability
+## Main Figure 4 — 168 h DMA-level absolute performance
+
+**Results-level question：**预测时域延长后，哪些 DMA 的局部竞争关系发生改变？
+
+沿用 Main Fig. 3 的四指标分面、成对柱和颜色编码，但各指标根据 168 h 数据使用独立纵轴，避免跨时域共用尺度压缩局部差异。
+
+Main inference：DMA A、E 和 G 的四项指标及 DMA I 的 NSE 由其他方法取得更优结果。与 Main Fig. 3 对照可见，预测时域延长并未造成所有 DMA 同步退化，而是改变了分区从模型结构中获得的相对收益。
+
+---
+
+## Main Figure 5 — Four-metric ablation and lead-time stability
 
 **Results-level question：**SAS-Norm 与 FA-DPR 如何影响一周预测中的准确性和稳定性？
 
@@ -85,7 +95,7 @@ Main inference：24 h 的四个例外集中于 DMA A；168 h 时，A、E 和 G �
 
 ---
 
-## Main Figure 5 — Forecast-origin and difficult-window robustness
+## Main Figure 6 — Forecast-origin and difficult-window robustness
 
 **Results-level question：**系统级平均优势是否跨测试起点成立，并能否在需求快速变化的窗口中保持？
 
@@ -95,7 +105,7 @@ Main inference：168 h 的四指标改善在绝大多数预测起点中保持；
 
 ---
 
-## Main Figure 6 — Week-ahead demand dynamics
+## Main Figure 7 — Week-ahead demand dynamics
 
 **Results-level question：**统计上的改进在真实一周需求轨迹中具体表现为什么？
 
@@ -160,13 +170,13 @@ scripts/reproduce/manuscript_plot_style.py
 
 ### 3.1 Predictive performance across forecasting horizons and DMAs
 
-证据：Table 1 + Main Fig. 1 + Main Figs. 2--3 + Supplementary Table S1。
+证据：Table 1 + Main Fig. 1 + Main Figs. 2--4 + Supplementary Table S1。
 
 写法：claim → quantitative evidence → sequence/multiscale comparison → graph baseline comparison → bounded inference。
 
 ### 3.2 Component contributions and lead-time dependence
 
-证据：Table 2 + Main Fig. 4。
+证据：Table 2 + Main Fig. 5。
 
 开头直接给 scientific finding，不以“Table 2 shows...”起句。
 
@@ -176,13 +186,13 @@ scripts/reproduce/manuscript_plot_style.py
 
 ### 3.3 Robustness across forecast origins and demand conditions
 
-证据：Main Fig. 5 + Supplementary Table S3。
+证据：Main Fig. 6 + Supplementary Table S3。
 
 只对同协议 DCRNN、STGCN、STaR-GNN 做配对统计，并明确 overlapping 168 h windows 的移动块处理。困难条件只由观测需求定义。
 
 ### 3.4 Week-ahead demand dynamics and practical implications
 
-证据：Main Fig. 6。
+证据：Main Fig. 7。
 
 代表案例定义为 population analysis 的 instance-level validation，而不是额外 leaderboard；实际意义与限制由该过程证据自然导出，不另设独立 summary/discussion 小节。
 

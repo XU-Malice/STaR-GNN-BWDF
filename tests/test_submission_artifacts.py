@@ -60,10 +60,11 @@ def test_submission_contract_is_documented():
     paper_readme = (ROOT / "paper/README.md").read_text(encoding="utf-8")
     assert "Main Figure 1 — Overall four-metric performance" in paper_readme
     assert "Main Figure 2 — DMA-level performance breadth" in paper_readme
-    assert "Main Figure 3 — DMA-specific local competitive margin" in paper_readme
-    assert "Main Figure 4 — Four-metric ablation and lead-time stability" in paper_readme
-    assert "Main Figure 5 — Forecast-origin and difficult-window robustness" in paper_readme
-    assert "Main Figure 6 — Week-ahead demand dynamics" in paper_readme
+    assert "Main Figure 3 — 24 h DMA-level absolute performance" in paper_readme
+    assert "Main Figure 4 — 168 h DMA-level absolute performance" in paper_readme
+    assert "Main Figure 5 — Four-metric ablation and lead-time stability" in paper_readme
+    assert "Main Figure 6 — Forecast-origin and difficult-window robustness" in paper_readme
+    assert "Main Figure 7 — Week-ahead demand dynamics" in paper_readme
     assert "Supplementary Table S2 — DMA-level local margins" in paper_readme
     assert "Supplementary Table S3 — Forecast-origin robustness" in paper_readme
 
@@ -113,7 +114,7 @@ def test_dma_local_margin_supplement_retains_competitors_and_losses():
 def test_forecast_origin_robustness_uses_observed_difficulty_and_common46():
     summary = pd.read_csv(
         ROOT
-        / "paper/tables/manuscript/submission/main_fig5_origin_summary.csv"
+        / "paper/tables/manuscript/submission/main_fig6_origin_summary.csv"
     )
     assert summary.shape[0] == 2 * 2 * 4
     assert set(summary["n_origins"]) == {46}

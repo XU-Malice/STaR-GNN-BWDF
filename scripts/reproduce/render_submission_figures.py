@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 """Render the canonical Journal of Hydrology submission result figures.
 
-The six main figures follow the manuscript's claim sequence: overall
-performance, cross-DMA pairwise breadth, DMA-specific absolute performance,
-component evidence, forecast-origin robustness, and a concrete week-ahead
-forecast. MAE, MAPE, RMSE and NSE are carried through the comparative stages
-instead of treating MAE as a proxy for all forecasting quality.
+The seven main figures follow the manuscript's claim sequence: overall
+performance, cross-DMA pairwise breadth, horizon-specific DMA absolute
+performance, component evidence, forecast-origin robustness, and a concrete
+week-ahead forecast. MAE, MAPE, RMSE and NSE are carried through the
+comparative stages instead of treating MAE as a proxy for all forecasting
+quality.
 
 The ablation figure reports paired improvements relative to DCRNN with small
 horizontal offsets and confidence intervals.  This makes the very similar
@@ -287,7 +288,7 @@ def _derive_daywise(
     return pd.DataFrame(rows)
 
 
-def _main_figure3_ablation(
+def _main_figure5_ablation(
     daywise: pd.DataFrame,
     output: Path,
 ) -> None:
@@ -343,7 +344,7 @@ def _main_figure3_ablation(
         handlelength=2.5,
     )
     fig.subplots_adjust(top=0.86, wspace=0.36, hspace=0.34, bottom=0.10)
-    save_publication_figure(fig, output / "main_fig4_ablation_leadtime")
+    save_publication_figure(fig, output / "main_fig5_ablation_leadtime")
 
 
 def _derive_origin_improvements(
@@ -429,7 +430,7 @@ def _derive_origin_improvements(
     return pd.DataFrame(rows), pd.DataFrame(summary)
 
 
-def _main_figure5_origin_robustness(
+def _main_figure6_origin_robustness(
     paired: pd.DataFrame,
     summary: pd.DataFrame,
     output: Path,
@@ -628,7 +629,7 @@ def _main_figure5_origin_robustness(
     add_panel_label(ax, "d")
 
     fig.subplots_adjust(left=0.16, right=0.97, top=0.94, bottom=0.12)
-    save_publication_figure(fig, output / "main_fig5_origin_robustness")
+    save_publication_figure(fig, output / "main_fig6_origin_robustness")
 
 
 def _derive_dma_improvement(release: Path) -> pd.DataFrame:
@@ -961,119 +962,91 @@ def _main_figure2_dma_pairwise_distribution(
     save_publication_figure(fig, output / "main_fig2_dma_performance")
 
 
-def _main_figure3_dma_absolute_performance(
+def _main_figure_dma_absolute_performance(
     strongest: pd.DataFrame,
+    task: str,
     output: Path,
+    output_stem: str,
 ) -> None:
     """Compare absolute DMA metrics with the locally best baseline."""
-    fig, axes = plt.subplots(
-        4,
-        2,
-        figsize=(7.4, 8.8),
-        sharey="row",
-    )
+    if task not in TASKS:
+        raise ValueError(f"Unknown forecasting task: {task}")
+
+    fig, axes = plt.subplots(2, 2, figsize=(7.4, 5.75))
     star_color = HERO_BLUE
     baseline_color = "#C9CED4"
     baseline_win_color = "#C65A46"
     metric_labels = {
-        "MAE": "MAE ↓",
-        "MAPE": "MAPE (%) ↓",
-        "RMSE": "RMSE ↓",
-        "NSE": "NSE ↑",
-    }
-    short_model_labels = {
-        "MSCMNet-WM": "MSCM-WM",
-        "MSCMNet-M": "MSCM-M",
-        "MSCMNet-W": "MSCM-W",
+        "MAE": "MAE",
+        "MAPE": "MAPE (%)",
+        "RMSE": "RMSE",
+        "NSE": "NSE",
     }
     x = np.arange(len(DMAS), dtype=float)
     width = 0.34
-    panel = iter("abcdefgh")
+    panel = iter("abcd")
 
-    for row_pos, metric in enumerate(METRICS):
-        metric_block = strongest.loc[strongest["metric"] == metric]
+    for metric_pos, metric in enumerate(METRICS):
+        ax = axes.flat[metric_pos]
+        block = (
+            strongest.loc[
+                (strongest["task"] == task)
+                & (strongest["metric"] == metric)
+            ]
+            .set_index("DMA")
+            .reindex(DMAS)
+        )
+        if block.isna().any().any():
+            raise ValueError(
+                f"Incomplete strongest competitor block: {task}/{metric}"
+            )
+
+        star_values = block["star_value"].to_numpy(float)
+        competitor_values = block["competitor_value"].to_numpy(float)
+        star_better = block["star_better"].to_numpy(bool)
+        competitor_colors = [
+            baseline_color if better else baseline_win_color
+            for better in star_better
+        ]
         metric_max = float(
-            metric_block[["star_value", "competitor_value"]]
-            .to_numpy(float)
-            .max()
+            block[["star_value", "competitor_value"]].to_numpy(float).max()
         )
         upper = (
-            max(1.02, metric_max * 1.22)
+            max(1.02, metric_max * 1.15)
             if metric == "NSE"
-            else metric_max * 1.22
+            else metric_max * 1.19
         )
 
-        for col_pos, task in enumerate(TASKS):
-            ax = axes[row_pos, col_pos]
-            block = (
-                metric_block.loc[metric_block["task"] == task]
-                .set_index("DMA")
-                .reindex(DMAS)
-            )
-            if block.isna().any().any():
-                raise ValueError(
-                    f"Incomplete strongest competitor block: {task}/{metric}"
-                )
+        ax.bar(
+            x - width / 2,
+            competitor_values,
+            width=width,
+            color=competitor_colors,
+            edgecolor="white",
+            linewidth=0.45,
+            zorder=3,
+        )
+        ax.bar(
+            x + width / 2,
+            star_values,
+            width=width,
+            color=star_color,
+            edgecolor="white",
+            linewidth=0.45,
+            zorder=3,
+        )
 
-            star_values = block["star_value"].to_numpy(float)
-            competitor_values = block["competitor_value"].to_numpy(float)
-            star_better = block["star_better"].to_numpy(bool)
-            competitor_colors = [
-                baseline_color if better else baseline_win_color
-                for better in star_better
-            ]
-
-            ax.bar(
-                x - width / 2,
-                competitor_values,
-                width=width,
-                color=competitor_colors,
-                edgecolor="white",
-                linewidth=0.45,
-                zorder=3,
-            )
-            ax.bar(
-                x + width / 2,
-                star_values,
-                width=width,
-                color=star_color,
-                edgecolor="white",
-                linewidth=0.45,
-                zorder=3,
-            )
-
-            for dma_pos, (better, competitor_value) in enumerate(
-                zip(star_better, competitor_values)
-            ):
-                if better:
-                    continue
-                model = str(block.iloc[dma_pos]["best_competitor"])
-                ax.text(
-                    x[dma_pos] - width / 2,
-                    competitor_value + upper * 0.018,
-                    short_model_labels.get(model, model),
-                    ha="center",
-                    va="bottom",
-                    fontsize=5.8,
-                    color="#9E3E2E",
-                    fontweight="bold",
-                    clip_on=False,
-                )
-
-            ax.set_xticks(x, DMAS)
-            ax.set_xlim(-0.62, len(DMAS) - 0.38)
-            ax.set_ylim(0.0, upper)
-            ax.locator_params(axis="y", nbins=4)
-            ax.grid(axis="y", color="#E2E2E2", linewidth=0.55)
-            ax.set_axisbelow(True)
-            ax.spines[["top", "right"]].set_visible(False)
-            if col_pos == 0:
-                ax.set_ylabel(metric_labels[metric])
-            if row_pos == 0:
-                ax.set_title(task.replace("h", " h"), pad=8, fontweight="bold")
-            if row_pos == len(METRICS) - 1:
-                ax.set_xlabel("DMA")
-            add_panel_label(ax, next(panel))
+        ax.set_xticks(x, DMAS)
+        ax.set_xlim(-0.62, len(DMAS) - 0.38)
+        ax.set_ylim(0.0, upper)
+        ax.locator_params(axis="y", nbins=4)
+        ax.grid(axis="y", color="#E2E2E2", linewidth=0.55)
+        ax.set_axisbelow(True)
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.set_xlabel("DMA")
+        ax.set_ylabel(metric_labels[metric])
+        ax.set_title(metric, pad=7, fontweight="bold")
+        add_panel_label(ax, next(panel))
 
     handles = [
         Rectangle(
@@ -1104,19 +1077,19 @@ def _main_figure3_dma_absolute_performance(
     fig.legend(
         handles=handles,
         loc="upper center",
-        bbox_to_anchor=(0.5, 0.998),
+        bbox_to_anchor=(0.5, 0.995),
         ncol=3,
         columnspacing=1.25,
     )
     fig.subplots_adjust(
-        left=0.10,
+        left=0.095,
         right=0.985,
-        top=0.915,
-        bottom=0.065,
-        wspace=0.12,
-        hspace=0.48,
+        top=0.895,
+        bottom=0.10,
+        wspace=0.24,
+        hspace=0.40,
     )
-    save_publication_figure(fig, output / "main_fig3_dma_local_margin")
+    save_publication_figure(fig, output / output_stem)
 
 
 def _main_figure2_dma_ranks(
@@ -1419,7 +1392,7 @@ def _select_representative(
     return frame, meta
 
 
-def _main_figure4_week(
+def _main_figure7_week(
     diurnal: pd.DataFrame,
     trajectory: pd.DataFrame,
     output: Path,
@@ -1526,7 +1499,7 @@ def _main_figure4_week(
         handlelength=2.5,
     )
     fig.subplots_adjust(top=0.86, bottom=0.12, left=0.09, right=0.98)
-    save_publication_figure(fig, output / "main_fig6_week_ahead_dynamics")
+    save_publication_figure(fig, output / "main_fig7_week_ahead_dynamics")
 
 
 def _main_figure_overall(
@@ -1777,17 +1750,21 @@ def _write_audit(
             ),
             "main_fig3": (
                 "DMA-specific absolute performance of STaR-GNN and the locally "
-                "best competing method at 24 h and 168 h."
+                "best competing method at 24 h."
             ),
             "main_fig4": (
+                "DMA-specific absolute performance of STaR-GNN and the locally "
+                "best competing method at 168 h."
+            ),
+            "main_fig5": (
                 "Four-metric factorial ablation and lead-time stability; "
                 "paired improvements relative to DCRNN."
             ),
-            "main_fig5": (
+            "main_fig6": (
                 "Paired forecast-origin robustness over all four metrics and "
                 "a pre-defined high-variability demand stratum."
             ),
-            "main_fig6": (
+            "main_fig7": (
                 "Scale-to-instance week-ahead dynamics; population diurnal "
                 "error profile plus deterministic representative trajectory."
             ),
@@ -1854,9 +1831,9 @@ def _write_audit(
             }
             for task in TASKS
         },
-        "main_fig4_daywise_summary": daywise.to_dict(orient="records"),
-        "main_fig5_origin_summary": origin_summary.to_dict(orient="records"),
-        "main_fig6_representative": representative,
+        "main_fig5_daywise_summary": daywise.to_dict(orient="records"),
+        "main_fig6_origin_summary": origin_summary.to_dict(orient="records"),
+        "main_fig7_representative": representative,
     }
     path.write_text(
         json.dumps(audit, indent=2, ensure_ascii=False) + "\n",
@@ -1948,50 +1925,61 @@ def main() -> None:
         float_format="%.9f",
     )
     _main_figure2_dma_pairwise_distribution(pairwise, main_output)
-    _main_figure3_dma_absolute_performance(strongest, main_output)
+    _main_figure_dma_absolute_performance(
+        strongest,
+        "24h",
+        main_output,
+        "main_fig3_dma_absolute_24h",
+    )
+    _main_figure_dma_absolute_performance(
+        strongest,
+        "168h",
+        main_output,
+        "main_fig4_dma_absolute_168h",
+    )
 
     daywise = _derive_daywise(release, indices=indices)
     daywise.to_csv(
-        audit_output / "main_fig4_daywise_paired_improvement.csv",
+        audit_output / "main_fig5_daywise_paired_improvement.csv",
         index=False,
         float_format="%.9f",
     )
-    _main_figure3_ablation(daywise, main_output)
+    _main_figure5_ablation(daywise, main_output)
 
     origin_paired, origin_summary = _derive_origin_improvements(
         release, indices=indices
     )
     origin_paired.to_csv(
-        audit_output / "main_fig5_origin_paired_improvement.csv",
+        audit_output / "main_fig6_origin_paired_improvement.csv",
         index=False,
         float_format="%.9f",
     )
     origin_summary.to_csv(
-        audit_output / "main_fig5_origin_summary.csv",
+        audit_output / "main_fig6_origin_summary.csv",
         index=False,
         float_format="%.9f",
     )
-    _main_figure5_origin_robustness(
+    _main_figure6_origin_robustness(
         origin_paired, origin_summary, main_output
     )
 
     diurnal = _diurnal_profile(release, indices=indices)
     diurnal.to_csv(
-        audit_output / "main_fig6_diurnal_aggregate_error.csv",
+        audit_output / "main_fig7_diurnal_aggregate_error.csv",
         index=False,
         float_format="%.9f",
     )
     trajectory, representative = _select_representative(release)
     trajectory.to_csv(
-        audit_output / "main_fig6_representative_trajectory.csv",
+        audit_output / "main_fig7_representative_trajectory.csv",
         index=False,
         float_format="%.9f",
     )
-    (audit_output / "main_fig6_representative_selection.json").write_text(
+    (audit_output / "main_fig7_representative_selection.json").write_text(
         json.dumps(representative, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    _main_figure4_week(diurnal, trajectory, main_output)
+    _main_figure7_week(diurnal, trajectory, main_output)
 
     _write_audit(
         audit_output / "submission_figure_audit.json",
@@ -2010,10 +1998,11 @@ def main() -> None:
     print("Main figures:")
     print("  Main Fig. 1 — overall four-metric performance")
     print("  Main Fig. 2 — cross-DMA pairwise improvement distributions")
-    print("  Main Fig. 3 — absolute DMA performance against the best baseline")
-    print("  Main Fig. 4 — four-metric ablation and lead-time stability")
-    print("  Main Fig. 5 — forecast-origin and difficult-window robustness")
-    print("  Main Fig. 6 — week-ahead demand dynamics")
+    print("  Main Fig. 3 — 24 h absolute DMA performance")
+    print("  Main Fig. 4 — 168 h absolute DMA performance")
+    print("  Main Fig. 5 — four-metric ablation and lead-time stability")
+    print("  Main Fig. 6 — forecast-origin and difficult-window robustness")
+    print("  Main Fig. 7 — week-ahead demand dynamics")
     print(
         f"Block bootstrap: length={args.block_length}, "
         f"iterations={args.bootstrap_iterations}, seed={args.bootstrap_seed}"

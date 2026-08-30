@@ -21,10 +21,10 @@ Git 仓库包含：
 - **Supplementary Table S2**：DMA-local strongest competitors and signed margins；
 - **Supplementary Table S3**：forecast-origin robustness and high-variability stratum；
 - **Main Fig. 1**：overall four-metric improvement；
-- **Main Figs. 2–3**：DMA breadth and local competitive boundaries；
-- **Main Fig. 4**：factorial ablation + lead-time stability；
-- **Main Fig. 5**：forecast-origin + difficult-window robustness；
-- **Main Fig. 6**：population-to-instance week-ahead dynamics。
+- **Main Figs. 2–4**：DMA breadth and horizon-specific local absolute performance；
+- **Main Fig. 5**：factorial ablation + lead-time stability；
+- **Main Fig. 6**：forecast-origin + difficult-window robustness；
+- **Main Fig. 7**：population-to-instance week-ahead dynamics。
 
 STGCN 是独立 graph baseline，不进入 factorial ablation。Manuscript MAE = DMA A--J MAE 之和；internal aggregate-demand MAE 单独保留。Manuscript factorial cell audit = 30/32；legacy aggregate-demand hierarchy = 31/32，仅内部诊断。
 
@@ -65,7 +65,7 @@ bash scripts/reproduce/finalize_public_release.sh \
 3. 重生成并验证 source SHA；
 4. 校验 10 组冻结 checkpoint、协议和 internal aggregate diagnostics；
 5. 重新执行 10 组 common-46 推理；
-6. 重建 full-precision source tables、submission display tables、Main Fig. 1--6 和独立审计 CSV/JSON；
+6. 重建 full-precision source tables、submission display tables、Main Fig. 1--7 和独立审计 CSV/JSON；
 7. 审计公开仓库结构、四模型消融、submission artifacts 与大文件边界；
 8. 生成 Release asset（除非使用 `--skip-package`）。
 
@@ -76,7 +76,7 @@ Main Table 1 overall: PASS
 Main Table 2 factorial ablation: 4 models / no STGCN / 30/32 PASS
 Supplementary Table S1 DMA metrics: PASS
 Supplementary Tables S2--S3: PASS
-Main Fig. 1--6: PASS
+Main Fig. 1--7: PASS
 7-origin moving-block bootstrap: PASS
 ```
 

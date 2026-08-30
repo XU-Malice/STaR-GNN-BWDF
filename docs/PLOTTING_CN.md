@@ -65,10 +65,11 @@ Submission figure renderer: PASS
 Main figures:
   Main Fig. 1 — overall four-metric performance
   Main Fig. 2 — cross-DMA pairwise improvement distributions
-  Main Fig. 3 — absolute DMA performance against the best baseline
-  Main Fig. 4 — four-metric ablation and lead-time stability
-  Main Fig. 5 — forecast-origin and difficult-window robustness
-  Main Fig. 6 — week-ahead demand dynamics
+  Main Fig. 3 — 24 h absolute DMA performance
+  Main Fig. 4 — 168 h absolute DMA performance
+  Main Fig. 5 — four-metric ablation and lead-time stability
+  Main Fig. 6 — forecast-origin and difficult-window robustness
+  Main Fig. 7 — week-ahead demand dynamics
 ```
 
 每张图同时输出 PDF、editable SVG 和 300 dpi PNG。
@@ -85,19 +86,23 @@ Panel a 为 STaR-GNN 相对六个时序模型与 DCRNN/STGCN 的 MAE、MAPE、RM
 
 ### Main Figure 3
 
-图按四行两列排列：四行依次为 MAE、MAPE、RMSE 和 NSE，两列分别为 24 h 与 168 h。每个 DMA 的成对柱直接比较 STaR-GNN 与该位置上的最优基线绝对值；基线优于 STaR-GNN 时改用橙色并标注模型名称。
+2 × 2 分面分别呈现 MAE、MAPE、RMSE 和 NSE。每个 DMA 的成对柱直接比较 STaR-GNN 与该位置上的最优基线 24 h 绝对值；局部最优基线占优时，灰色柱改为橙色。
 
 ### Main Figure 4
+
+沿用 Main Fig. 3 的 2 × 2 分面、成对柱和颜色编码，但单独呈现 168 h 结果。四项指标均使用自身纵轴，不与 24 h 共用尺度。
+
+### Main Figure 5
 
 四个 panel 分别为 MAE、MAPE、RMSE、NSE。SAS-Norm-only、FA-DPR-only 与 Full 均相对 DCRNN 做逐日 paired improvement；误差指标为相对降幅，NSE 为绝对增益。
 
 同一 forecast day 内三个模型使用轻微水平错位，并固定 color、marker、linestyle。这样 SAS-Norm 与 STaR-GNN 即使数值接近也能辨认；误差棒为 ordered seven-window moving-block 95% CI。
 
-### Main Figure 5
+### Main Figure 6
 
 Panels a–c 展示同协议 DCRNN/STGCN/STaR-GNN 的 46-origin 四指标 paired effects 与 ordered seven-origin moving-block 95% CI；Panel d 使用仅由观测需求定义的 normalized mean absolute ramp，汇总最高四分位窗口中的胜出数。
 
-### Main Figure 6
+### Main Figure 7
 
 采用 scale-to-instance 结构：全部测试窗口 × 7 days 的日内 aggregate-demand error profile、预先规定 median-total-MAE rule 的 representative 168 h trajectory，以及同一窗口的 hourly absolute error。
 
@@ -129,6 +134,6 @@ python scripts/reproduce/audit_public_repository.py \
 - 最终表图中没有额外符号和内部工程措辞；
 - PDF/SVG/PNG 均可打开，SVG 文字可编辑；
 - Main Fig. 2 的基线轴、改善轴、预测时域与分布统计含义完整；
-- Main Fig. 3 的 DMA 轴、绝对指标尺度、最优基线定义和橙色例外完整；
-- Main Fig. 4 的三条 variant series 可分辨；
+- Main Figs. 3–4 的 DMA 轴、独立绝对指标尺度、最优基线定义和橙色例外完整；
+- Main Fig. 5 的三条 variant series 可分辨；
 - caption、审计 CSV/JSON 与图中数值一致。

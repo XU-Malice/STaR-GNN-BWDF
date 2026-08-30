@@ -2,10 +2,11 @@
   "figure_architecture": {
     "main_fig1": "Overall four-metric performance against eight baselines.",
     "main_fig2": "Cross-DMA distributions of signed pairwise improvements against each of eight baselines.",
-    "main_fig3": "DMA-specific absolute performance of STaR-GNN and the locally best competing method at 24 h and 168 h.",
-    "main_fig4": "Four-metric factorial ablation and lead-time stability; paired improvements relative to DCRNN.",
-    "main_fig5": "Paired forecast-origin robustness over all four metrics and a pre-defined high-variability demand stratum.",
-    "main_fig6": "Scale-to-instance week-ahead dynamics; population diurnal error profile plus deterministic representative trajectory."
+    "main_fig3": "DMA-specific absolute performance of STaR-GNN and the locally best competing method at 24 h.",
+    "main_fig4": "DMA-specific absolute performance of STaR-GNN and the locally best competing method at 168 h.",
+    "main_fig5": "Four-metric factorial ablation and lead-time stability; paired improvements relative to DCRNN.",
+    "main_fig6": "Paired forecast-origin robustness over all four metrics and a pre-defined high-variability demand stratum.",
+    "main_fig7": "Scale-to-instance week-ahead dynamics; population diurnal error profile plus deterministic representative trajectory."
   },
   "block_bootstrap": {
     "block_length_origins": 7,
@@ -65,7 +66,7 @@
       }
     }
   },
-  "main_fig4_daywise_summary": [
+  "main_fig5_daywise_summary": [
     {
       "model": "DCRNN + SAS-Norm",
       "metric": "MAE",
@@ -907,7 +908,7 @@
       "n_origins": 46
     }
   ],
-  "main_fig5_origin_summary": [
+  "main_fig6_origin_summary": [
     {
       "task": "24h",
       "baseline": "DCRNN",
@@ -1181,7 +1182,7 @@
       "spearman_difficulty_improvement": -0.42090656799259946
     }
   ],
-  "main_fig6_representative": {
+  "main_fig7_representative": {
     "selection_rule": "STaR-GNN origin whose 168 h total MAE is closest to the median among the 46 common test origins",
     "selected_origin_position_zero_based": 42,
     "selected_common_index": 70,
