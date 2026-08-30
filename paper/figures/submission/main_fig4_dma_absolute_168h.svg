@@ -514,6 +514,21 @@ z
    <g id="text_21">
     <text style="font-weight: 700; font-size: 9.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="146.758304" y="37.5" transform="rotate(-0 146.758304 37.5)">MAE</text>
    </g>
+   <g id="text_22">
+    <g clip-path="url(#pc706136883)">
+     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(51.787628 189.988384) rotate(-90)">MSCMNet-W</text>
+    </g>
+   </g>
+   <g id="text_23">
+    <g clip-path="url(#pc706136883)">
+     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(134.48015 139.986578) rotate(-90)">MSCMNet-M</text>
+    </g>
+   </g>
+   <g id="text_24">
+    <g clip-path="url(#pc706136883)">
+     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(175.826411 174.270953) rotate(-90)">MSCMNet-M</text>
+    </g>
+   </g>
   </g>
   <g id="axes_2">
    <g id="patch_25">
@@ -531,7 +546,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="316.228359" y="181.6375" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_22">
+     <g id="text_25">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="316.228359" y="195.096172" transform="rotate(-0 316.228359 195.096172)">A</text>
      </g>
     </g>
@@ -541,7 +556,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="336.901489" y="181.6375" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_23">
+     <g id="text_26">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="336.901489" y="195.096172" transform="rotate(-0 336.901489 195.096172)">B</text>
      </g>
     </g>
@@ -551,7 +566,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="357.57462" y="181.6375" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_24">
+     <g id="text_27">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="357.57462" y="195.096172" transform="rotate(-0 357.57462 195.096172)">C</text>
      </g>
     </g>
@@ -561,7 +576,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="378.247751" y="181.6375" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_25">
+     <g id="text_28">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="378.247751" y="195.096172" transform="rotate(-0 378.247751 195.096172)">D</text>
      </g>
     </g>
@@ -571,7 +586,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="398.920881" y="181.6375" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_26">
+     <g id="text_29">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="398.920881" y="195.096172" transform="rotate(-0 398.920881 195.096172)">E</text>
      </g>
     </g>
@@ -581,7 +596,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="419.594012" y="181.6375" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_27">
+     <g id="text_30">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="419.594012" y="195.096172" transform="rotate(-0 419.594012 195.096172)">F</text>
      </g>
     </g>
@@ -591,7 +606,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="440.267142" y="181.6375" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_28">
+     <g id="text_31">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="440.267142" y="195.096172" transform="rotate(-0 440.267142 195.096172)">G</text>
      </g>
     </g>
@@ -601,7 +616,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="460.940273" y="181.6375" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_29">
+     <g id="text_32">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="460.940273" y="195.096172" transform="rotate(-0 460.940273 195.096172)">H</text>
      </g>
     </g>
@@ -611,7 +626,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="481.613403" y="181.6375" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_30">
+     <g id="text_33">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="481.613403" y="195.096172" transform="rotate(-0 481.613403 195.096172)">I</text>
      </g>
     </g>
@@ -621,11 +636,11 @@ z
        <use xlink:href="#m2a17d5b9e1" x="502.286534" y="181.6375" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_31">
+     <g id="text_34">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="502.286534" y="195.096172" transform="rotate(-0 502.286534 195.096172)">J</text>
      </g>
     </g>
-    <g id="text_32">
+    <g id="text_35">
      <text style="font-size: 9.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="409.257446" y="208.082422" transform="rotate(-0 409.257446 208.082422)">DMA</text>
     </g>
    </g>
@@ -641,7 +656,7 @@ L 515.103875 181.6375
        <use xlink:href="#m1d4d90922f" x="303.411018" y="181.6375" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_33">
+     <g id="text_36">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="296.411018" y="184.866836" transform="rotate(-0 296.411018 184.866836)">0</text>
      </g>
     </g>
@@ -656,7 +671,7 @@ L 515.103875 162.046429
        <use xlink:href="#m1d4d90922f" x="303.411018" y="162.046429" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_34">
+     <g id="text_37">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="296.411018" y="165.275765" transform="rotate(-0 296.411018 165.275765)">2</text>
      </g>
     </g>
@@ -671,7 +686,7 @@ L 515.103875 142.455357
        <use xlink:href="#m1d4d90922f" x="303.411018" y="142.455357" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_35">
+     <g id="text_38">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="296.411018" y="145.684693" transform="rotate(-0 296.411018 145.684693)">4</text>
      </g>
     </g>
@@ -686,7 +701,7 @@ L 515.103875 122.864286
        <use xlink:href="#m1d4d90922f" x="303.411018" y="122.864286" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_36">
+     <g id="text_39">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="296.411018" y="126.093622" transform="rotate(-0 296.411018 126.093622)">6</text>
      </g>
     </g>
@@ -701,7 +716,7 @@ L 515.103875 103.273214
        <use xlink:href="#m1d4d90922f" x="303.411018" y="103.273214" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_37">
+     <g id="text_40">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="296.411018" y="106.50255" transform="rotate(-0 296.411018 106.50255)">8</text>
      </g>
     </g>
@@ -716,7 +731,7 @@ L 515.103875 83.682143
        <use xlink:href="#m1d4d90922f" x="303.411018" y="83.682143" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_38">
+     <g id="text_41">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="296.411018" y="86.911479" transform="rotate(-0 296.411018 86.911479)">10</text>
      </g>
     </g>
@@ -731,7 +746,7 @@ L 515.103875 64.091071
        <use xlink:href="#m1d4d90922f" x="303.411018" y="64.091071" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_39">
+     <g id="text_42">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="296.411018" y="67.320407" transform="rotate(-0 296.411018 67.320407)">12</text>
      </g>
     </g>
@@ -746,7 +761,7 @@ L 515.103875 44.5
        <use xlink:href="#m1d4d90922f" x="303.411018" y="44.5" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_40">
+     <g id="text_43">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="296.411018" y="47.729336" transform="rotate(-0 296.411018 47.729336)">14</text>
      </g>
     </g>
@@ -834,7 +849,7 @@ L 515.103875 54.295536
       </g>
      </g>
     </g>
-    <g id="text_41">
+    <g id="text_44">
      <text style="font-size: 9.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="279.619065" y="113.06875" transform="rotate(-90 279.619065 113.06875)">MAPE (%)</text>
     </g>
    </g>
@@ -1008,11 +1023,26 @@ L 502.286534 114.305148
 z
 " clip-path="url(#p5746c9f90d)" style="fill: #0f4d92; stroke: #ffffff; stroke-width: 0.45; stroke-linejoin: miter"/>
    </g>
-   <g id="text_42">
+   <g id="text_45">
     <text style="font-weight: 700; font-size: 10px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: start" x="278.007875" y="38.306187" transform="rotate(-0 278.007875 38.306187)">b</text>
    </g>
-   <g id="text_43">
+   <g id="text_46">
     <text style="font-weight: 700; font-size: 9.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="409.257446" y="37.5" transform="rotate(-0 409.257446 37.5)">MAPE</text>
+   </g>
+   <g id="text_47">
+    <g clip-path="url(#p5746c9f90d)">
+     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(314.28677 108.887879) rotate(-90)">MSCMNet-W</text>
+    </g>
+   </g>
+   <g id="text_48">
+    <g clip-path="url(#p5746c9f90d)">
+     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(396.979293 182.714337) rotate(-90)">MSNet</text>
+    </g>
+   </g>
+   <g id="text_49">
+    <g clip-path="url(#p5746c9f90d)">
+     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(438.325554 181.996366) rotate(-90)">MSCMNet-M</text>
+    </g>
    </g>
   </g>
   <g id="axes_3">
@@ -1031,7 +1061,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="53.729216" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_44">
+     <g id="text_50">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="53.729216" y="387.088672" transform="rotate(-0 53.729216 387.088672)">A</text>
      </g>
     </g>
@@ -1041,7 +1071,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="74.402347" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_45">
+     <g id="text_51">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="74.402347" y="387.088672" transform="rotate(-0 74.402347 387.088672)">B</text>
      </g>
     </g>
@@ -1051,7 +1081,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="95.075477" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_46">
+     <g id="text_52">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="95.075477" y="387.088672" transform="rotate(-0 95.075477 387.088672)">C</text>
      </g>
     </g>
@@ -1061,7 +1091,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="115.748608" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_47">
+     <g id="text_53">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="115.748608" y="387.088672" transform="rotate(-0 115.748608 387.088672)">D</text>
      </g>
     </g>
@@ -1071,7 +1101,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="136.421738" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_48">
+     <g id="text_54">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="136.421738" y="387.088672" transform="rotate(-0 136.421738 387.088672)">E</text>
      </g>
     </g>
@@ -1081,7 +1111,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="157.094869" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_49">
+     <g id="text_55">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="157.094869" y="387.088672" transform="rotate(-0 157.094869 387.088672)">F</text>
      </g>
     </g>
@@ -1091,7 +1121,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="177.767999" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_50">
+     <g id="text_56">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="177.767999" y="387.088672" transform="rotate(-0 177.767999 387.088672)">G</text>
      </g>
     </g>
@@ -1101,7 +1131,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="198.44113" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_51">
+     <g id="text_57">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="198.44113" y="387.088672" transform="rotate(-0 198.44113 387.088672)">H</text>
      </g>
     </g>
@@ -1111,7 +1141,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="219.114261" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_52">
+     <g id="text_58">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="219.114261" y="387.088672" transform="rotate(-0 219.114261 387.088672)">I</text>
      </g>
     </g>
@@ -1121,11 +1151,11 @@ z
        <use xlink:href="#m2a17d5b9e1" x="239.787391" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_53">
+     <g id="text_59">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="239.787391" y="387.088672" transform="rotate(-0 239.787391 387.088672)">J</text>
      </g>
     </g>
-    <g id="text_54">
+    <g id="text_60">
      <text style="font-size: 9.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="146.758304" y="400.074922" transform="rotate(-0 146.758304 400.074922)">DMA</text>
     </g>
    </g>
@@ -1141,7 +1171,7 @@ L 252.604732 373.63
        <use xlink:href="#m1d4d90922f" x="40.911875" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_55">
+     <g id="text_61">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="33.911875" y="376.859336" transform="rotate(-0 33.911875 376.859336)">0.0</text>
      </g>
     </g>
@@ -1156,7 +1186,7 @@ L 252.604732 354.038929
        <use xlink:href="#m1d4d90922f" x="40.911875" y="354.038929" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_56">
+     <g id="text_62">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="33.911875" y="357.268265" transform="rotate(-0 33.911875 357.268265)">0.5</text>
      </g>
     </g>
@@ -1171,7 +1201,7 @@ L 252.604732 334.447857
        <use xlink:href="#m1d4d90922f" x="40.911875" y="334.447857" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_57">
+     <g id="text_63">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="33.911875" y="337.677193" transform="rotate(-0 33.911875 337.677193)">1.0</text>
      </g>
     </g>
@@ -1186,7 +1216,7 @@ L 252.604732 314.856786
        <use xlink:href="#m1d4d90922f" x="40.911875" y="314.856786" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_58">
+     <g id="text_64">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="33.911875" y="318.086122" transform="rotate(-0 33.911875 318.086122)">1.5</text>
      </g>
     </g>
@@ -1201,7 +1231,7 @@ L 252.604732 295.265714
        <use xlink:href="#m1d4d90922f" x="40.911875" y="295.265714" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_59">
+     <g id="text_65">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="33.911875" y="298.49505" transform="rotate(-0 33.911875 298.49505)">2.0</text>
      </g>
     </g>
@@ -1216,7 +1246,7 @@ L 252.604732 275.674643
        <use xlink:href="#m1d4d90922f" x="40.911875" y="275.674643" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_60">
+     <g id="text_66">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="33.911875" y="278.903979" transform="rotate(-0 33.911875 278.903979)">2.5</text>
      </g>
     </g>
@@ -1231,7 +1261,7 @@ L 252.604732 256.083571
        <use xlink:href="#m1d4d90922f" x="40.911875" y="256.083571" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_61">
+     <g id="text_67">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="33.911875" y="259.312907" transform="rotate(-0 33.911875 259.312907)">3.0</text>
      </g>
     </g>
@@ -1246,7 +1276,7 @@ L 252.604732 236.4925
        <use xlink:href="#m1d4d90922f" x="40.911875" y="236.4925" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_62">
+     <g id="text_68">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="33.911875" y="239.721836" transform="rotate(-0 33.911875 239.721836)">3.5</text>
      </g>
     </g>
@@ -1334,7 +1364,7 @@ L 252.604732 246.288036
       </g>
      </g>
     </g>
-    <g id="text_63">
+    <g id="text_69">
      <text style="font-size: 9.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="14.418516" y="305.06125" transform="rotate(-90 14.418516 305.06125)">RMSE</text>
     </g>
    </g>
@@ -1508,11 +1538,26 @@ L 239.787391 294.547584
 z
 " clip-path="url(#p935eb9c53d)" style="fill: #0f4d92; stroke: #ffffff; stroke-width: 0.45; stroke-linejoin: miter"/>
    </g>
-   <g id="text_64">
+   <g id="text_70">
     <text style="font-weight: 700; font-size: 10px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: start" x="15.508732" y="230.298687" transform="rotate(-0 15.508732 230.298687)">c</text>
    </g>
-   <g id="text_65">
+   <g id="text_71">
     <text style="font-weight: 700; font-size: 9.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="146.758304" y="229.4925" transform="rotate(-0 146.758304 229.4925)">RMSE</text>
+   </g>
+   <g id="text_72">
+    <g clip-path="url(#p935eb9c53d)">
+     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(51.787628 380.655222) rotate(-90)">MSCMNet-W</text>
+    </g>
+   </g>
+   <g id="text_73">
+    <g clip-path="url(#p935eb9c53d)">
+     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(134.48015 304.570801) rotate(-90)">MSNet</text>
+    </g>
+   </g>
+   <g id="text_74">
+    <g clip-path="url(#p935eb9c53d)">
+     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(175.826411 364.506787) rotate(-90)">MSCMNet-M</text>
+    </g>
    </g>
   </g>
   <g id="axes_4">
@@ -1531,7 +1576,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="316.228359" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_66">
+     <g id="text_75">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="316.228359" y="387.088672" transform="rotate(-0 316.228359 387.088672)">A</text>
      </g>
     </g>
@@ -1541,7 +1586,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="336.901489" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_67">
+     <g id="text_76">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="336.901489" y="387.088672" transform="rotate(-0 336.901489 387.088672)">B</text>
      </g>
     </g>
@@ -1551,7 +1596,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="357.57462" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_68">
+     <g id="text_77">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="357.57462" y="387.088672" transform="rotate(-0 357.57462 387.088672)">C</text>
      </g>
     </g>
@@ -1561,7 +1606,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="378.247751" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_69">
+     <g id="text_78">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="378.247751" y="387.088672" transform="rotate(-0 378.247751 387.088672)">D</text>
      </g>
     </g>
@@ -1571,7 +1616,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="398.920881" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_70">
+     <g id="text_79">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="398.920881" y="387.088672" transform="rotate(-0 398.920881 387.088672)">E</text>
      </g>
     </g>
@@ -1581,7 +1626,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="419.594012" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_71">
+     <g id="text_80">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="419.594012" y="387.088672" transform="rotate(-0 419.594012 387.088672)">F</text>
      </g>
     </g>
@@ -1591,7 +1636,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="440.267142" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_72">
+     <g id="text_81">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="440.267142" y="387.088672" transform="rotate(-0 440.267142 387.088672)">G</text>
      </g>
     </g>
@@ -1601,7 +1646,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="460.940273" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_73">
+     <g id="text_82">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="460.940273" y="387.088672" transform="rotate(-0 460.940273 387.088672)">H</text>
      </g>
     </g>
@@ -1611,7 +1656,7 @@ z
        <use xlink:href="#m2a17d5b9e1" x="481.613403" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_74">
+     <g id="text_83">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="481.613403" y="387.088672" transform="rotate(-0 481.613403 387.088672)">I</text>
      </g>
     </g>
@@ -1621,11 +1666,11 @@ z
        <use xlink:href="#m2a17d5b9e1" x="502.286534" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_75">
+     <g id="text_84">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="502.286534" y="387.088672" transform="rotate(-0 502.286534 387.088672)">J</text>
      </g>
     </g>
-    <g id="text_76">
+    <g id="text_85">
      <text style="font-size: 9.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="409.257446" y="400.074922" transform="rotate(-0 409.257446 400.074922)">DMA</text>
     </g>
    </g>
@@ -1641,7 +1686,7 @@ L 515.103875 373.63
        <use xlink:href="#m1d4d90922f" x="303.411018" y="373.63" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_77">
+     <g id="text_86">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="296.411018" y="376.859336" transform="rotate(-0 296.411018 376.859336)">0.0</text>
      </g>
     </g>
@@ -1656,7 +1701,7 @@ L 515.103875 347.508571
        <use xlink:href="#m1d4d90922f" x="303.411018" y="347.508571" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_78">
+     <g id="text_87">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="296.411018" y="350.737907" transform="rotate(-0 296.411018 350.737907)">0.2</text>
      </g>
     </g>
@@ -1671,7 +1716,7 @@ L 515.103875 321.387143
        <use xlink:href="#m1d4d90922f" x="303.411018" y="321.387143" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_79">
+     <g id="text_88">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="296.411018" y="324.616479" transform="rotate(-0 296.411018 324.616479)">0.4</text>
      </g>
     </g>
@@ -1686,7 +1731,7 @@ L 515.103875 295.265714
        <use xlink:href="#m1d4d90922f" x="303.411018" y="295.265714" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_80">
+     <g id="text_89">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="296.411018" y="298.49505" transform="rotate(-0 296.411018 298.49505)">0.6</text>
      </g>
     </g>
@@ -1701,7 +1746,7 @@ L 515.103875 269.144286
        <use xlink:href="#m1d4d90922f" x="303.411018" y="269.144286" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_81">
+     <g id="text_90">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="296.411018" y="272.373622" transform="rotate(-0 296.411018 272.373622)">0.8</text>
      </g>
     </g>
@@ -1716,7 +1761,7 @@ L 515.103875 243.022857
        <use xlink:href="#m1d4d90922f" x="303.411018" y="243.022857" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
-     <g id="text_82">
+     <g id="text_91">
       <text style="font-size: 8.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: end" x="296.411018" y="246.252193" transform="rotate(-0 296.411018 246.252193)">1.0</text>
      </g>
     </g>
@@ -1780,7 +1825,7 @@ L 515.103875 256.083571
       </g>
      </g>
     </g>
-    <g id="text_83">
+    <g id="text_92">
      <text style="font-size: 9.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="276.917658" y="305.06125" transform="rotate(-90 276.917658 305.06125)">NSE</text>
     </g>
    </g>
@@ -1954,11 +1999,31 @@ L 502.286534 280.322988
 z
 " clip-path="url(#p576b605001)" style="fill: #0f4d92; stroke: #ffffff; stroke-width: 0.45; stroke-linejoin: miter"/>
    </g>
-   <g id="text_84">
+   <g id="text_93">
     <text style="font-weight: 700; font-size: 10px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: start" x="278.007875" y="230.298687" transform="rotate(-0 278.007875 230.298687)">d</text>
    </g>
-   <g id="text_85">
+   <g id="text_94">
     <text style="font-weight: 700; font-size: 9.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="409.257446" y="229.4925" transform="rotate(-0 409.257446 229.4925)">NSE</text>
+   </g>
+   <g id="text_95">
+    <g clip-path="url(#p576b605001)">
+     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(314.28677 313.092147) rotate(-90)">MSCMNet-W</text>
+    </g>
+   </g>
+   <g id="text_96">
+    <g clip-path="url(#p576b605001)">
+     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(396.979293 270.286426) rotate(-90)">MSNet</text>
+    </g>
+   </g>
+   <g id="text_97">
+    <g clip-path="url(#p576b605001)">
+     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(438.325554 297.45308) rotate(-90)">MSCMNet-M</text>
+    </g>
+   </g>
+   <g id="text_98">
+    <g clip-path="url(#p576b605001)">
+     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(479.671815 342.273823) rotate(-90)">MSCMNet-WM</text>
+    </g>
    </g>
   </g>
   <g id="legend_1">
@@ -1970,7 +2035,7 @@ L 118.853234 10.970719
 z
 " style="fill: #0f4d92"/>
    </g>
-   <g id="text_86">
+   <g id="text_99">
     <text style="font-size: 8.2px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: start" x="141.813234" y="16.710719" transform="rotate(-0 141.813234 16.710719)">STaR-GNN</text>
    </g>
    <g id="patch_95">
@@ -1981,7 +2046,7 @@ L 193.197766 10.970719
 z
 " style="fill: #c9ced4"/>
    </g>
-   <g id="text_87">
+   <g id="text_100">
     <text style="font-size: 8.2px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: start" x="216.157766" y="16.710719" transform="rotate(-0 216.157766 16.710719)">Best comparator</text>
    </g>
    <g id="patch_96">
@@ -1992,7 +2057,7 @@ L 294.914922 10.970719
 z
 " style="fill: #c65a46"/>
    </g>
-   <g id="text_88">
+   <g id="text_101">
     <text style="font-size: 8.2px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: start" x="317.874922" y="16.710719" transform="rotate(-0 317.874922 16.710719)">Comparator better</text>
    </g>
   </g>

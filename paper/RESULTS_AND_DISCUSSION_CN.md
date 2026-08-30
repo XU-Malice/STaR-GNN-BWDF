@@ -22,13 +22,13 @@ Fig. 2 所示的广泛改善并不意味着 STaR-GNN 在每个 DMA 上均达到�
 
 ![STaR-GNN 与最优对比模型在不同 DMA 上的 24 h 预测性能](figures/submission/main_fig3_dma_absolute_24h.png)
 
-**Fig. 3. STaR-GNN 与最优对比模型在不同 DMA 上的 24 h 预测性能。** 子图分别表示 (a) MAE、(b) MAPE、(c) RMSE 和 (d) NSE。每个 DMA 中，蓝色柱表示 STaR-GNN，灰色柱表示八种对比模型中的最优结果；当对比模型优于 STaR-GNN 时，该柱以橙色标示。纵轴均从零开始，细网格用于辅助辨认相近数值。MAE、MAPE 和 RMSE 越低越好，NSE 越高越好。
+**Fig. 3. STaR-GNN 与最优对比模型在不同 DMA 上的 24 h 预测性能。** 子图分别表示 (a) MAE、(b) MAPE、(c) RMSE 和 (d) NSE。每个 DMA 中，蓝色柱表示 STaR-GNN，灰色柱表示八种对比模型中的最优结果；当对比模型优于 STaR-GNN 时，该柱以橙色标示，并在柱内注明模型名称。纵轴均从零开始，细网格用于辅助辨认相近数值。MAE、MAPE 和 RMSE 越低越好，NSE 越高越好。
 
 当预测时域延长至 168 h 后，Fig. 4 中的橙色柱由一个 DMA 扩展至 DMA A、E 和 G，并出现在 DMA I 的 NSE 上，显示局部竞争关系随预测时域延长而分化。尽管如此，STaR-GNN 在 DMA B、C、D、F、H 和 J 上仍保持四项指标最优，并在 DMA I 的三项误差指标上领先。DMA D 的成对柱高仍较为接近，而 DMA J 的差异更为明显，说明长时域并未引起各分区性能的同步变化，而是改变了不同 DMA 从模型结构中获得的相对收益。这一空间异质性进一步引出对模型组件及其长提前期贡献的分析。
 
 ![STaR-GNN 与最优对比模型在不同 DMA 上的 168 h 预测性能](figures/submission/main_fig4_dma_absolute_168h.png)
 
-**Fig. 4. STaR-GNN 与最优对比模型在不同 DMA 上的 168 h 预测性能。** 子图分别表示 (a) MAE、(b) MAPE、(c) RMSE 和 (d) NSE。每个 DMA 中，蓝色柱表示 STaR-GNN，灰色柱表示八种对比模型中的最优结果；当对比模型优于 STaR-GNN 时，该柱以橙色标示。纵轴均从零开始，细网格用于辅助辨认相近数值。MAE、MAPE 和 RMSE 越低越好，NSE 越高越好。
+**Fig. 4. STaR-GNN 与最优对比模型在不同 DMA 上的 168 h 预测性能。** 子图分别表示 (a) MAE、(b) MAPE、(c) RMSE 和 (d) NSE。每个 DMA 中，蓝色柱表示 STaR-GNN，灰色柱表示八种对比模型中的最优结果；当对比模型优于 STaR-GNN 时，该柱以橙色标示，并在柱内注明模型名称。纵轴均从零开始，细网格用于辅助辨认相近数值。MAE、MAPE 和 RMSE 越低越好，NSE 越高越好。
 
 ## 3.2 模型组件的贡献及其提前期依赖性
 

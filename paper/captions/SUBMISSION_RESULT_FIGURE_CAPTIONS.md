@@ -10,11 +10,11 @@
 
 ## Main Figure 3
 
-**DMA-level performance of STaR-GNN and the best-performing comparator for 24 h forecasting.** Panels show **a**, MAE; **b**, MAPE; **c**, RMSE; and **d**, NSE across DMAs A–J. For each DMA and metric, the best-performing comparator is selected from GRU, LSTM, MSNet, MSCMNet-WM, MSCMNet-M, MSCMNet-W, DCRNN and STGCN. Blue bars denote STaR-GNN and gray bars denote the best-performing comparator; a comparator bar is shown in orange when it outperforms STaR-GNN. All vertical axes begin at zero, and light minor gridlines aid the reading of similar values. Lower MAE, MAPE and RMSE and higher NSE indicate better performance.
+**DMA-level performance of STaR-GNN and the best-performing comparator for 24 h forecasting.** Panels show **a**, MAE; **b**, MAPE; **c**, RMSE; and **d**, NSE across DMAs A–J. For each DMA and metric, the best-performing comparator is selected from GRU, LSTM, MSNet, MSCMNet-WM, MSCMNet-M, MSCMNet-W, DCRNN and STGCN. Blue bars denote STaR-GNN and gray bars denote the best-performing comparator; a comparator bar is shown in orange and labeled directly with the model name when it outperforms STaR-GNN. All vertical axes begin at zero, and light minor gridlines aid the reading of similar values. Lower MAE, MAPE and RMSE and higher NSE indicate better performance.
 
 ## Main Figure 4
 
-**DMA-level performance of STaR-GNN and the best-performing comparator for 168 h forecasting.** Panels show **a**, MAE; **b**, MAPE; **c**, RMSE; and **d**, NSE across DMAs A–J. For each DMA and metric, the best-performing comparator is selected from GRU, LSTM, MSNet, MSCMNet-WM, MSCMNet-M, MSCMNet-W, DCRNN and STGCN. Blue bars denote STaR-GNN and gray bars denote the best-performing comparator; a comparator bar is shown in orange when it outperforms STaR-GNN. All vertical axes begin at zero, and light minor gridlines aid the reading of similar values. Lower MAE, MAPE and RMSE and higher NSE indicate better performance.
+**DMA-level performance of STaR-GNN and the best-performing comparator for 168 h forecasting.** Panels show **a**, MAE; **b**, MAPE; **c**, RMSE; and **d**, NSE across DMAs A–J. For each DMA and metric, the best-performing comparator is selected from GRU, LSTM, MSNet, MSCMNet-WM, MSCMNet-M, MSCMNet-W, DCRNN and STGCN. Blue bars denote STaR-GNN and gray bars denote the best-performing comparator; a comparator bar is shown in orange and labeled directly with the model name when it outperforms STaR-GNN. All vertical axes begin at zero, and light minor gridlines aid the reading of similar values. Lower MAE, MAPE and RMSE and higher NSE indicate better performance.
 
 ## Main Figure 5
 

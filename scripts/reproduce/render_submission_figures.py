@@ -1010,6 +1010,7 @@ def _main_figure_dma_absolute_performance(
 
         star_values = block["star_value"].to_numpy(float)
         competitor_values = block["competitor_value"].to_numpy(float)
+        competitor_names = block["best_competitor"].astype(str).to_numpy()
         star_better = block["star_better"].to_numpy(bool)
         competitor_colors = [
             comparator_color if better else comparator_win_color
@@ -1046,6 +1047,28 @@ def _main_figure_dma_absolute_performance(
             linewidth=0.45,
             zorder=3,
         )
+
+        for x_pos, value, better, name in zip(
+            x - width / 2,
+            competitor_values,
+            star_better,
+            competitor_names,
+        ):
+            if better:
+                continue
+            ax.text(
+                x_pos,
+                value - 0.018 * upper,
+                name,
+                ha="center",
+                va="top",
+                rotation=90,
+                fontsize=5.7,
+                fontweight="semibold",
+                color="white",
+                clip_on=True,
+                zorder=4,
+            )
 
         ax.set_xticks(x, DMAS)
         ax.set_xlim(-0.62, len(DMAS) - 0.38)
