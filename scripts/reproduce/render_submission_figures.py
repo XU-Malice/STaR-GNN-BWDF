@@ -29,8 +29,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
-from matplotlib.ticker import FormatStrFormatter, MultipleLocator
+from matplotlib.ticker import FixedLocator, FormatStrFormatter
 
 from manuscript_plot_style import (
     HERO_BLUE,
@@ -969,13 +970,14 @@ def _main_figure_dma_absolute_performance(
     output: Path,
     output_stem: str,
 ) -> None:
-    """Compare absolute DMA metrics with the locally best baseline."""
+    """Pair absolute DMA metrics with the locally best baseline."""
     if task not in TASKS:
         raise ValueError(f"Unknown forecasting task: {task}")
 
     fig, axes = plt.subplots(2, 2, figsize=(7.4, 5.75))
     star_color = HERO_BLUE
-    baseline_color = "#C9CED4"
+    baseline_color = "#AEB4BA"
+    connector_color = "#B8BDC3"
     baseline_win_color = "#C65A46"
     metric_labels = {
         "MAE": "MAE",
@@ -984,13 +986,32 @@ def _main_figure_dma_absolute_performance(
         "NSE": "NSE",
     }
     metric_scales = {
-        "MAE": {"major": 0.5, "minor": 0.25, "format": "%.1f"},
-        "MAPE": {"major": 2.0, "minor": 1.0, "format": "%.0f"},
-        "RMSE": {"major": 0.5, "minor": 0.25, "format": "%.1f"},
-        "NSE": {"major": 0.2, "minor": 0.1, "format": "%.1f"},
+        "MAE": {
+            "lower": 0.0,
+            "upper": 2.5,
+            "major": 0.5,
+            "format": "%.1f",
+        },
+        "MAPE": {
+            "lower": 1.0,
+            "upper": 13.0,
+            "major": 2.0,
+            "format": "%.0f",
+        },
+        "RMSE": {
+            "lower": 0.0,
+            "upper": 3.0,
+            "major": 0.5,
+            "format": "%.1f",
+        },
+        "NSE": {
+            "lower": 0.5,
+            "upper": 1.0,
+            "major": 0.1,
+            "format": "%.1f",
+        },
     }
     x = np.arange(len(DMAS), dtype=float)
-    width = 0.34
     panel = iter("abcd")
 
     for metric_pos, metric in enumerate(METRICS):
@@ -1015,67 +1036,69 @@ def _main_figure_dma_absolute_performance(
             baseline_color if better else baseline_win_color
             for better in star_better
         ]
-        metric_max = float(
-            block[["star_value", "competitor_value"]].to_numpy(float).max()
-        )
         scale = metric_scales[metric]
-        upper = (
-            1.05
-            if metric == "NSE"
-            else math.ceil(
-                metric_max * 1.08 / float(scale["major"])
+        paired_values = block[
+            ["star_value", "competitor_value"]
+        ].to_numpy(float)
+        lower = float(scale["lower"])
+        upper = float(scale["upper"])
+        if paired_values.min() < lower or paired_values.max() > upper:
+            raise ValueError(
+                f"Focused axis does not cover {task}/{metric}: "
+                f"[{paired_values.min():.6f}, {paired_values.max():.6f}] "
+                f"outside [{lower:.6f}, {upper:.6f}]"
             )
-            * float(scale["major"])
-        )
 
-        ax.bar(
-            x - width / 2,
+        for dma_pos in range(len(DMAS)):
+            ax.plot(
+                [x[dma_pos], x[dma_pos]],
+                [competitor_values[dma_pos], star_values[dma_pos]],
+                color=(
+                    connector_color
+                    if star_better[dma_pos]
+                    else baseline_win_color
+                ),
+                linewidth=1.45,
+                zorder=2,
+            )
+
+        ax.scatter(
+            x,
             competitor_values,
-            width=width,
-            color=competitor_colors,
-            edgecolor="white",
-            linewidth=0.45,
+            s=31,
+            marker="o",
+            facecolors="white",
+            edgecolors=competitor_colors,
+            linewidths=1.25,
             zorder=3,
         )
-        ax.bar(
-            x + width / 2,
+        ax.scatter(
+            x,
             star_values,
-            width=width,
+            s=31,
+            marker="s",
             color=star_color,
             edgecolor="white",
             linewidth=0.45,
-            zorder=3,
+            zorder=4,
         )
 
         ax.set_xticks(x, DMAS)
-        ax.set_xlim(-0.62, len(DMAS) - 0.38)
-        ax.set_ylim(0.0, upper)
+        ax.set_xlim(-0.55, len(DMAS) - 0.45)
+        ax.set_ylim(lower, upper)
+        tick_step = float(scale["major"])
         ax.yaxis.set_major_locator(
-            MultipleLocator(float(scale["major"]))
-        )
-        ax.yaxis.set_minor_locator(
-            MultipleLocator(float(scale["minor"]))
+            FixedLocator(
+                np.arange(lower, upper + tick_step / 2.0, tick_step)
+            )
         )
         ax.yaxis.set_major_formatter(
             FormatStrFormatter(str(scale["format"]))
         )
         ax.grid(
             axis="y",
-            which="major",
-            color="#DEDEDE",
-            linewidth=0.52,
-        )
-        ax.grid(
-            axis="y",
-            which="minor",
-            color="#F0F0F0",
-            linewidth=0.32,
-        )
-        ax.tick_params(
-            axis="y",
-            which="minor",
-            length=2.0,
-            color="#A8A8A8",
+            color="#E4E4E4",
+            linewidth=0.50,
         )
         ax.set_axisbelow(True)
         ax.spines[["top", "right"]].set_visible(False)
@@ -1085,28 +1108,34 @@ def _main_figure_dma_absolute_performance(
         add_panel_label(ax, next(panel))
 
     handles = [
-        Rectangle(
-            (0, 0),
-            1,
-            1,
-            facecolor=star_color,
-            edgecolor="none",
+        Line2D(
+            [0],
+            [0],
+            marker="s",
+            linestyle="none",
+            markersize=6.5,
+            markerfacecolor=star_color,
+            markeredgecolor="white",
             label="STaR-GNN",
         ),
-        Rectangle(
-            (0, 0),
-            1,
-            1,
-            facecolor=baseline_color,
-            edgecolor="none",
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            linestyle="none",
+            markersize=6.5,
+            markerfacecolor="white",
+            markeredgecolor=baseline_color,
             label="Best baseline",
         ),
-        Rectangle(
-            (0, 0),
-            1,
-            1,
-            facecolor=baseline_win_color,
-            edgecolor="none",
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            linestyle="none",
+            markersize=6.5,
+            markerfacecolor="white",
+            markeredgecolor=baseline_win_color,
             label="Baseline better",
         ),
     ]

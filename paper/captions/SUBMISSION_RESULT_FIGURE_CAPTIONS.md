@@ -10,11 +10,11 @@
 
 ## Main Figure 3
 
-**DMA-level performance of STaR-GNN and the best-performing baseline for 24 h forecasting.** Panels show **a**, MAE; **b**, MAPE; **c**, RMSE; and **d**, NSE across DMAs A–J. For each DMA and metric, the best-performing baseline is selected from GRU, LSTM, MSNet, MSCMNet-WM, MSCMNet-M, MSCMNet-W, DCRNN and STGCN. Blue bars denote STaR-GNN, gray bars denote the best-performing baseline, and orange replaces gray when that baseline outperforms STaR-GNN. Lower MAE, MAPE and RMSE and higher NSE indicate better performance.
+**DMA-level performance of STaR-GNN and the best-performing baseline for 24 h forecasting.** Panels show **a**, MAE; **b**, MAPE; **c**, RMSE; and **d**, NSE across DMAs A–J. For each DMA and metric, the best-performing baseline is selected from GRU, LSTM, MSNet, MSCMNet-WM, MSCMNet-M, MSCMNet-W, DCRNN and STGCN. Blue squares denote STaR-GNN, gray open circles denote the best-performing baseline, and vertical segments connect the two absolute values. Circles and segments are orange when the baseline outperforms STaR-GNN. Focused vertical ranges are used for MAPE and NSE to improve the legibility of local differences. Lower MAE, MAPE and RMSE and higher NSE indicate better performance.
 
 ## Main Figure 4
 
-**DMA-level performance of STaR-GNN and the best-performing baseline for 168 h forecasting.** Panels show **a**, MAE; **b**, MAPE; **c**, RMSE; and **d**, NSE across DMAs A–J. For each DMA and metric, the best-performing baseline is selected from GRU, LSTM, MSNet, MSCMNet-WM, MSCMNet-M, MSCMNet-W, DCRNN and STGCN. Blue bars denote STaR-GNN, gray bars denote the best-performing baseline, and orange replaces gray when that baseline outperforms STaR-GNN. Lower MAE, MAPE and RMSE and higher NSE indicate better performance.
+**DMA-level performance of STaR-GNN and the best-performing baseline for 168 h forecasting.** Panels show **a**, MAE; **b**, MAPE; **c**, RMSE; and **d**, NSE across DMAs A–J. For each DMA and metric, the best-performing baseline is selected from GRU, LSTM, MSNet, MSCMNet-WM, MSCMNet-M, MSCMNet-W, DCRNN and STGCN. Blue squares denote STaR-GNN, gray open circles denote the best-performing baseline, and vertical segments connect the two absolute values. Circles and segments are orange when the baseline outperforms STaR-GNN. Focused vertical ranges are used for MAPE and NSE to improve the legibility of local differences. Lower MAE, MAPE and RMSE and higher NSE indicate better performance.
 
 ## Main Figure 5
 

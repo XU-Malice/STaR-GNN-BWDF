@@ -18,17 +18,17 @@ Fig. 1 进一步比较了相对于各基线的改善幅度。热图中所有单�
 
 **Fig. 2. STaR-GNN 相对各基线模型的跨 DMA 改善分布。** 小点表示单个 DMA，较大标记和水平线段分别表示十个 DMA 的中位数与四分位距。圆形和方形分别对应 24 h 与 168 h 预测，零线右侧表示 STaR-GNN 优于相应基线。误差指标采用相对降幅，NSE 采用绝对差值，水平分隔线区分时序基线与图基线。
 
-Fig. 2 所示的广泛改善并不意味着 STaR-GNN 在每个 DMA 上均达到最优，因为最具竞争力的替代模型会随分区、指标和预测时域而变化。为直接刻画这一局部竞争边界，Fig. 3 以绝对指标比较 24 h 任务中 STaR-GNN 与各 DMA 的最优基线。除 DMA A 外，STaR-GNN 在 DMA B 至 DMA J 上均取得更低的 MAE、MAPE 和 RMSE 以及更高的 NSE。DMA C 和 DMA E 的成对柱差异较为明显，而 DMA D 和 DMA J 的柱高接近，表明日前预测优势虽覆盖多数分区，其幅度并不均衡。DMA A 的四项橙色柱则直接标示了该分区的局部失利。
+Fig. 2 所示的广泛改善并不意味着 STaR-GNN 在每个 DMA 上均达到最优，因为最具竞争力的替代模型会随分区、指标和预测时域而变化。为直接刻画这一局部竞争边界，Fig. 3 以绝对指标比较 24 h 任务中 STaR-GNN 与各 DMA 的最优基线。除 DMA A 外，STaR-GNN 在 DMA B 至 DMA J 上均取得更低的 MAE、MAPE 和 RMSE 以及更高的 NSE。DMA C 和 DMA E 的配对点间距较为明显，而 DMA D 和 DMA J 的两个标记更为接近，表明日前预测优势虽覆盖多数分区，其幅度并不均衡。DMA A 的四个橙色空心圆则直接标示了该分区的局部失利。
 
 ![STaR-GNN 与最优基线在不同 DMA 上的 24 h 预测性能](figures/submission/main_fig3_dma_absolute_24h.png)
 
-**Fig. 3. STaR-GNN 与最优基线在不同 DMA 上的 24 h 预测性能。** 子图分别表示 (a) MAE、(b) MAPE、(c) RMSE 和 (d) NSE。蓝色柱表示 STaR-GNN，灰色柱表示相同 DMA 和指标下八种基线中的最优结果；当该基线优于 STaR-GNN 时以橙色表示。MAE、MAPE 和 RMSE 越低越好，NSE 越高越好。
+**Fig. 3. STaR-GNN 与最优基线在不同 DMA 上的 24 h 预测性能。** 子图分别表示 (a) MAE、(b) MAPE、(c) RMSE 和 (d) NSE。蓝色方点表示 STaR-GNN，灰色空心圆表示相同 DMA 和指标下八种基线中的最优结果，竖向线段连接同一 DMA 的两个绝对指标；当该基线优于 STaR-GNN 时，空心圆及连线以橙色表示。MAPE 和 NSE 采用聚焦纵轴以增强局部差异的可读性。MAE、MAPE 和 RMSE 越低越好，NSE 越高越好。
 
-当预测时域延长至 168 h 后，Fig. 4 中的橙色柱由一个 DMA 扩展至 DMA A、E 和 G，并出现在 DMA I 的 NSE 上，显示局部竞争关系随预测时域延长而分化。尽管如此，STaR-GNN 在 DMA B、C、D、F、H 和 J 上仍保持四项指标最优，并在 DMA I 的三项误差指标上领先。DMA D 的成对柱仍较为接近，而 DMA J 的差异更为明显，说明长时域并未引起各分区性能的同步变化，而是改变了不同 DMA 从模型结构中获得的相对收益。这一空间异质性进一步引出对模型组件及其长提前期贡献的分析。
+当预测时域延长至 168 h 后，Fig. 4 中的橙色标记由一个 DMA 扩展至 DMA A、E 和 G，并出现在 DMA I 的 NSE 上，显示局部竞争关系随预测时域延长而分化。尽管如此，STaR-GNN 在 DMA B、C、D、F、H 和 J 上仍保持四项指标最优，并在 DMA I 的三项误差指标上领先。DMA D 的配对点仍较为接近，而 DMA J 的间距更为明显，说明长时域并未引起各分区性能的同步变化，而是改变了不同 DMA 从模型结构中获得的相对收益。这一空间异质性进一步引出对模型组件及其长提前期贡献的分析。
 
 ![STaR-GNN 与最优基线在不同 DMA 上的 168 h 预测性能](figures/submission/main_fig4_dma_absolute_168h.png)
 
-**Fig. 4. STaR-GNN 与最优基线在不同 DMA 上的 168 h 预测性能。** 子图分别表示 (a) MAE、(b) MAPE、(c) RMSE 和 (d) NSE。蓝色柱表示 STaR-GNN，灰色柱表示相同 DMA 和指标下八种基线中的最优结果；当该基线优于 STaR-GNN 时以橙色表示。MAE、MAPE 和 RMSE 越低越好，NSE 越高越好。
+**Fig. 4. STaR-GNN 与最优基线在不同 DMA 上的 168 h 预测性能。** 子图分别表示 (a) MAE、(b) MAPE、(c) RMSE 和 (d) NSE。蓝色方点表示 STaR-GNN，灰色空心圆表示相同 DMA 和指标下八种基线中的最优结果，竖向线段连接同一 DMA 的两个绝对指标；当该基线优于 STaR-GNN 时，空心圆及连线以橙色表示。MAPE 和 NSE 采用聚焦纵轴以增强局部差异的可读性。MAE、MAPE 和 RMSE 越低越好，NSE 越高越好。
 
 ## 3.2 模型组件的贡献及其提前期依赖性
 

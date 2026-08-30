@@ -86,11 +86,11 @@ Panel a 为 STaR-GNN 相对六个时序模型与 DCRNN/STGCN 的 MAE、MAPE、RM
 
 ### Main Figure 3
 
-2 × 2 分面分别呈现 MAE、MAPE、RMSE 和 NSE。每个 DMA 的成对柱直接比较 STaR-GNN 与该位置上的最优基线 24 h 绝对值；局部最优基线占优时，灰色柱改为橙色。
+2 × 2 分面分别呈现 MAE、MAPE、RMSE 和 NSE。每个 DMA 使用蓝色方点和灰色空心圆直接比较 STaR-GNN 与该位置上的最优基线 24 h 绝对值，并以竖向线段连接；局部最优基线占优时，空心圆及连线改为橙色。MAPE 和 NSE 使用明确标示的聚焦纵轴。
 
 ### Main Figure 4
 
-沿用 Main Fig. 3 的 2 × 2 分面、成对柱和颜色编码，但单独呈现 168 h 结果。四项指标均使用自身纵轴，不与 24 h 共用尺度。
+沿用 Main Fig. 3 的 2 × 2 分面、配对点和颜色编码，但单独呈现 168 h 结果。相同指标与 24 h 图共用纵轴范围，以支持跨预测时域的直接比较。
 
 ### Main Figure 5
 
