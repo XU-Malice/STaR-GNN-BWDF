@@ -488,9 +488,7 @@ z
     <text style="font-weight: 700; font-size: 9.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="146.758304" y="37.5" transform="rotate(-0 146.758304 37.5)">MAE</text>
    </g>
    <g id="text_21">
-    <g clip-path="url(#pc706136883)">
-     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(51.787628 157.319016) rotate(-90)">GRU</text>
-    </g>
+    <text style="font-size: 5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #555555" x="56.623454" y="134.184195" transform="rotate(-0 56.623454 134.184195)">GRU</text>
    </g>
   </g>
   <g id="axes_2">
@@ -993,9 +991,7 @@ z
     <text style="font-weight: 700; font-size: 9.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="409.257446" y="37.5" transform="rotate(-0 409.257446 37.5)">MAPE</text>
    </g>
    <g id="text_44">
-    <g clip-path="url(#p5746c9f90d)">
-     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(314.28677 82.214685) rotate(-90)">GRU</text>
-    </g>
+    <text style="font-size: 5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #555555" x="319.122597" y="56.815092" transform="rotate(-0 319.122597 56.815092)">GRU</text>
    </g>
   </g>
   <g id="axes_3">
@@ -1471,9 +1467,7 @@ z
     <text style="font-weight: 700; font-size: 9.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="146.758304" y="229.4925" transform="rotate(-0 146.758304 229.4925)">RMSE</text>
    </g>
    <g id="text_66">
-    <g clip-path="url(#p935eb9c53d)">
-     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(51.787628 375.443997) rotate(-90)">MSCMNet-W</text>
-    </g>
+    <text style="font-size: 5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #555555" x="56.623454" y="314.224069" transform="rotate(-0 56.623454 314.224069)">MSCMNet-W</text>
    </g>
   </g>
   <g id="axes_4">
@@ -1922,9 +1916,7 @@ z
     <text style="font-weight: 700; font-size: 9.5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle" x="409.257446" y="229.4925" transform="rotate(-0 409.257446 229.4925)">NSE</text>
    </g>
    <g id="text_87">
-    <g clip-path="url(#p576b605001)">
-     <text style="font-weight: 600; font-size: 5.7px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; fill: #ffffff" transform="translate(314.28677 321.973433) rotate(-90)">MSCMNet-W</text>
-    </g>
+    <text style="font-size: 5px; font-family: 'Arial', 'Helvetica', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #555555" x="319.122597" y="276.881242" transform="rotate(-0 319.122597 276.881242)">MSCMNet-W</text>
    </g>
   </g>
   <g id="legend_1">

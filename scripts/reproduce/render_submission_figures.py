@@ -1048,25 +1048,24 @@ def _main_figure_dma_absolute_performance(
             zorder=3,
         )
 
-        for x_pos, value, better, name in zip(
-            x - width / 2,
+        for group_x, value, star_value, better, name in zip(
+            x,
             competitor_values,
+            star_values,
             star_better,
             competitor_names,
         ):
             if better:
                 continue
             ax.text(
-                x_pos,
-                value - 0.018 * upper,
+                group_x + (0.14 if group_x == 0 else 0.0),
+                max(value, star_value) + 0.016 * upper,
                 name,
                 ha="center",
-                va="top",
-                rotation=90,
-                fontsize=5.7,
-                fontweight="semibold",
-                color="white",
-                clip_on=True,
+                va="bottom",
+                fontsize=5.0,
+                color="#555555",
+                clip_on=False,
                 zorder=4,
             )
 

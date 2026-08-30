@@ -69,7 +69,7 @@ Main inference：STaR-GNN 的改善在时序模型和图模型两类对比方法
 
 **Results-level question：**日前预测的系统级优势落到各 DMA 后，在哪里保持、接近或反转？
 
-四个 panel 分别给出 MAE、MAPE、RMSE 和 NSE 的绝对值。每个 DMA–指标组合独立选择最强非 STaR-GNN 方法，并与 STaR-GNN 采用成对柱比较；蓝色柱表示 STaR-GNN，灰色柱表示局部最优对比模型，后者占优时改为橙色，并在柱内直接标注模型名称。柱状图从零起始，主、次网格用于辅助读取相近数值。
+四个 panel 分别给出 MAE、MAPE、RMSE 和 NSE 的绝对值。每个 DMA–指标组合独立选择最强非 STaR-GNN 方法，并与 STaR-GNN 采用成对柱比较；蓝色柱表示 STaR-GNN，灰色柱表示局部最优对比模型，后者占优时改为橙色，并在柱顶简要标注模型名称。柱状图从零起始，主、次网格用于辅助读取相近数值。
 
 Main inference：24 h 的四个例外集中于 DMA A。STaR-GNN 在其余九个 DMA 上均保持四指标领先，但不同 DMA 的成对柱高差异显示领先幅度并不均衡。
 
