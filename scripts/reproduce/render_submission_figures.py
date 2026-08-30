@@ -30,6 +30,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.patches import Rectangle
+from matplotlib.ticker import FormatStrFormatter, MultipleLocator
 
 from manuscript_plot_style import (
     HERO_BLUE,
@@ -982,6 +983,12 @@ def _main_figure_dma_absolute_performance(
         "RMSE": "RMSE",
         "NSE": "NSE",
     }
+    metric_scales = {
+        "MAE": {"major": 0.5, "minor": 0.25, "format": "%.1f"},
+        "MAPE": {"major": 2.0, "minor": 1.0, "format": "%.0f"},
+        "RMSE": {"major": 0.5, "minor": 0.25, "format": "%.1f"},
+        "NSE": {"major": 0.2, "minor": 0.1, "format": "%.1f"},
+    }
     x = np.arange(len(DMAS), dtype=float)
     width = 0.34
     panel = iter("abcd")
@@ -1011,10 +1018,14 @@ def _main_figure_dma_absolute_performance(
         metric_max = float(
             block[["star_value", "competitor_value"]].to_numpy(float).max()
         )
+        scale = metric_scales[metric]
         upper = (
-            max(1.02, metric_max * 1.15)
+            1.05
             if metric == "NSE"
-            else metric_max * 1.19
+            else math.ceil(
+                metric_max * 1.08 / float(scale["major"])
+            )
+            * float(scale["major"])
         )
 
         ax.bar(
@@ -1039,8 +1050,33 @@ def _main_figure_dma_absolute_performance(
         ax.set_xticks(x, DMAS)
         ax.set_xlim(-0.62, len(DMAS) - 0.38)
         ax.set_ylim(0.0, upper)
-        ax.locator_params(axis="y", nbins=4)
-        ax.grid(axis="y", color="#E2E2E2", linewidth=0.55)
+        ax.yaxis.set_major_locator(
+            MultipleLocator(float(scale["major"]))
+        )
+        ax.yaxis.set_minor_locator(
+            MultipleLocator(float(scale["minor"]))
+        )
+        ax.yaxis.set_major_formatter(
+            FormatStrFormatter(str(scale["format"]))
+        )
+        ax.grid(
+            axis="y",
+            which="major",
+            color="#DEDEDE",
+            linewidth=0.52,
+        )
+        ax.grid(
+            axis="y",
+            which="minor",
+            color="#F0F0F0",
+            linewidth=0.32,
+        )
+        ax.tick_params(
+            axis="y",
+            which="minor",
+            length=2.0,
+            color="#A8A8A8",
+        )
         ax.set_axisbelow(True)
         ax.spines[["top", "right"]].set_visible(False)
         ax.set_xlabel("DMA")
