@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import sys
 
@@ -67,6 +68,23 @@ def test_submission_contract_is_documented():
     assert "Main Figure 7 — Week-ahead demand dynamics" in paper_readme
     assert "Supplementary Table S2 — DMA-level local margins" in paper_readme
     assert "Supplementary Table S3 — Forecast-origin robustness" in paper_readme
+    assert "Supplementary Figure S1 — Data cleaning" in paper_readme
+    assert "Supplementary Figure S2 — Weekly demand patterns" in paper_readme
+    assert "Supplementary Figure S3 — Forecast-origin MAE distributions" in paper_readme
+
+
+def test_supplementary_figure_audit_uses_predefined_evidence_rules():
+    audit = json.loads(
+        (
+            ROOT
+            / "paper/tables/manuscript/submission/supplementary_figure_audit.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert audit["supp_figS1"]["missing_example"]["dma"] == "DMA F"
+    assert audit["supp_figS1"]["outlier_example"]["dma"] == "DMA C"
+    assert audit["supp_figS1"]["raw_values_redistributed"] is False
+    assert audit["supp_figS2"]["selected_dmas"] == ["DMA C", "DMA H", "DMA E"]
+    assert audit["supp_figS3"]["origins_per_model_task"] == 46
 
 
 def test_dma_level_comparison_covers_all_models_metrics_and_horizons():

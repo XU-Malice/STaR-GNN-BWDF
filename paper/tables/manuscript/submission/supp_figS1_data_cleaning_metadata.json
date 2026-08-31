@@ -1,0 +1,23 @@
+{
+  "selection_rule": {
+    "missing_dma": "highest raw missing-data rate across the ten DMAs",
+    "missing_window": "168 h window with the most missing values among windows retaining at least 84 observed hours",
+    "outlier_dma": "highest IQR-identified outlier count across the ten DMAs",
+    "outlier_window": "168 h window with the most identified outliers"
+  },
+  "missing_example": {
+    "dma": "DMA F",
+    "missing_rate_full_period": 0.0998110831234257,
+    "window_start": "2021-02-11T15:00:00+01:00",
+    "window_end": "2021-02-18T14:00:00+01:00",
+    "window_missing_count": 84
+  },
+  "outlier_example": {
+    "dma": "DMA C",
+    "outlier_count_full_period": 625,
+    "window_start": "2021-06-22T19:00:00+02:00",
+    "window_end": "2021-06-29T18:00:00+02:00",
+    "window_outlier_count": 51
+  },
+  "raw_values_redistributed": false
+}

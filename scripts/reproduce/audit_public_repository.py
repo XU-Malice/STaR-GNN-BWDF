@@ -4,7 +4,7 @@
 The audit distinguishes frozen scientific artifacts from submission-facing
 presentation artifacts. Legacy diagnostic figures may remain tracked, but the
 canonical manuscript contract is 2 main tables + 7 main result figures,
-and Supplementary Tables S1–S3.
+Supplementary Tables S1–S3, and Supplementary Figures S1–S3.
 """
 
 from __future__ import annotations
@@ -67,6 +67,7 @@ REQUIRED_PUBLIC_FILES = {
     "environment.yml",
     "paper/README.md",
     "paper/captions/SUBMISSION_RESULT_FIGURE_CAPTIONS.md",
+    "paper/captions/SUBMISSION_SUPPLEMENTARY_FIGURE_CAPTIONS.md",
     "pyproject.toml",
     "requirements-lock.txt",
     "scripts/reproduce/finalize_public_release.sh",
@@ -74,6 +75,7 @@ REQUIRED_PUBLIC_FILES = {
     "scripts/reproduce/package_frozen_release.py",
     "scripts/reproduce/regenerate_source_checksums.py",
     "scripts/reproduce/render_submission_figures.py",
+    "scripts/reproduce/render_supplementary_figures.py",
     "scripts/reproduce/render_submission_tables.py",
     "scripts/reproduce/train_from_scratch.sh",
     "scripts/reproduce/verify_pretrained.sh",
@@ -284,6 +286,18 @@ def _audit_paper(root: Path) -> list[str]:
                 errors.append(f"缺少主图：{path.relative_to(root)}")
             elif path.stat().st_size == 0:
                 errors.append(f"主图为空：{path.relative_to(root)}")
+    required_supplementary = (
+        "supp_figS1_data_cleaning",
+        "supp_figS2_weekly_demand_patterns",
+        "supp_figS3_origin_mae_ecdf",
+    )
+    for stem in required_supplementary:
+        for ext in ("pdf", "svg", "png"):
+            path = root / f"paper/figures/submission/{stem}.{ext}"
+            if not path.is_file():
+                errors.append(f"缺少补充图：{path.relative_to(root)}")
+            elif path.stat().st_size == 0:
+                errors.append(f"补充图为空：{path.relative_to(root)}")
     required_audits = (
         "paper/tables/manuscript/submission/main_fig2_dma_ranks.csv",
         "paper/tables/manuscript/submission/main_fig2_dma_pairwise_improvement.csv",
@@ -295,6 +309,11 @@ def _audit_paper(root: Path) -> list[str]:
         "paper/tables/manuscript/submission/main_fig7_representative_trajectory.csv",
         "paper/tables/manuscript/submission/main_fig7_representative_selection.json",
         "paper/tables/manuscript/submission/submission_figure_audit.json",
+        "paper/tables/manuscript/submission/supp_figS1_data_cleaning_metadata.json",
+        "paper/tables/manuscript/submission/supp_figS2_weekly_demand_patterns.csv",
+        "paper/tables/manuscript/submission/supp_figS2_weekly_demand_patterns_metadata.json",
+        "paper/tables/manuscript/submission/supp_figS3_origin_mae_ecdf.csv",
+        "paper/tables/manuscript/submission/supplementary_figure_audit.json",
     )
     for relative in required_audits:
         if not (root / relative).is_file():
@@ -362,6 +381,25 @@ def _audit_paper(root: Path) -> list[str]:
             for row in origin_rows
         ):
             errors.append("Main Fig. 6 high-variability stratum is not 12 origins")
+
+    supplementary_audit_path = root / (
+        "paper/tables/manuscript/submission/supplementary_figure_audit.json"
+    )
+    if supplementary_audit_path.is_file():
+        supplementary = json.loads(
+            supplementary_audit_path.read_text(encoding="utf-8")
+        )
+        cleaning = supplementary.get("supp_figS1", {})
+        if cleaning.get("missing_example", {}).get("dma") != "DMA F":
+            errors.append("Supplementary Fig. S1 missing-data DMA drift")
+        if cleaning.get("outlier_example", {}).get("dma") != "DMA C":
+            errors.append("Supplementary Fig. S1 outlier DMA drift")
+        weekly = supplementary.get("supp_figS2", {})
+        if weekly.get("selected_dmas") != ["DMA C", "DMA H", "DMA E"]:
+            errors.append("Supplementary Fig. S2 representative DMA drift")
+        ecdf = supplementary.get("supp_figS3", {})
+        if int(ecdf.get("origins_per_model_task", -1)) != 46:
+            errors.append("Supplementary Fig. S3 is not common-46")
 
     return errors
 
@@ -443,7 +481,7 @@ def main() -> None:
         "submission_contract": {
             "main_tables": 2,
             "main_result_figures": 7,
-            "supplementary_figures": 0,
+            "supplementary_figures": 3,
             "supplementary_tables": 3,
         },
         "frozen_checkpoint_count": 10 if args.require_frozen else None,
@@ -465,7 +503,10 @@ def main() -> None:
     if args.require_frozen:
         print("唯一 checkpoint：10/10；DCRNN/Base无重复")
     if args.require_paper_artifacts:
-        print("Submission Table 1--2 / Main Fig. 1--7 / Tables S1--S3：PASS")
+        print(
+            "Submission Table 1--2 / Main Fig. 1--7 / "
+            "Tables S1--S3 / Supplementary Figs. S1--S3：PASS"
+        )
 
 
 if __name__ == "__main__":

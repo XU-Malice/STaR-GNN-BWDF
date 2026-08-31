@@ -106,6 +106,8 @@ Main Fig. 7                  Population-to-instance week-ahead dynamics
 
 Supplementary Table S1 给出全部九种模型的 DMA A--J 详细四指标；Supplementary Table S2 给出 Figs. 3–4 中逐 DMA 局部最强竞争者及精确差异；Supplementary Table S3 给出 Fig. 6 的逐起点稳健性统计。
 
+Supplementary Fig. S1 展示缺失值与异常值处理的代表性时间窗；Fig. S2 展示低、中、高需水规模 DMA 的周期需求模式；Fig. S3 展示两个预测时域下 46 个共同起点的 MAE 经验累积分布。
+
 最终设计见 [`docs/EXPERIMENT_DESIGN_FINAL_CN.md`](docs/EXPERIMENT_DESIGN_FINAL_CN.md)。
 
 ## 5. Submission artifact paths
@@ -126,6 +128,9 @@ paper/figures/submission/
   main_fig5_ablation_leadtime.{pdf,svg,png}
   main_fig6_origin_robustness.{pdf,svg,png}
   main_fig7_week_ahead_dynamics.{pdf,svg,png}
+  supp_figS1_data_cleaning.{pdf,svg,png}
+  supp_figS2_weekly_demand_patterns.{pdf,svg,png}
+  supp_figS3_origin_mae_ecdf.{pdf,svg,png}
 ```
 
 图中 STaR-GNN 使用深蓝 `#0F4D92` 作为唯一 hero color；DCRNN/STGCN 使用灰度 baseline，SAS-Norm/FA-DPR 使用低饱和 variant colors。统一样式由 `scripts/reproduce/manuscript_plot_style.py` 管理。
@@ -167,7 +172,12 @@ python scripts/reproduce/render_submission_figures.py \
   --block-length 7 \
   --bootstrap-iterations 50000 \
   --bootstrap-seed 20260821
+
+PYTHONPATH=scripts/reproduce python \
+  scripts/reproduce/render_supplementary_figures.py
 ```
+
+也可使用 `--wf4bwdf-repo repos/wf4bwdf` 显式指定 `data/README.md` 中固定 commit 的本地 checkout。
 
 最终图同时输出 PDF、editable SVG 和 300 dpi PNG。详细教程见 [`docs/PLOTTING_CN.md`](docs/PLOTTING_CN.md)。
 

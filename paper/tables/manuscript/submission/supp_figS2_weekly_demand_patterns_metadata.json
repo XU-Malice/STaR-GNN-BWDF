@@ -1,0 +1,9 @@
+{
+  "selection_rule": "DMAs with the lowest, closest-to-median, and highest mean training-period demand",
+  "selected_dmas": [
+    "DMA C",
+    "DMA H",
+    "DMA E"
+  ],
+  "training_end": "2022-12-15T23:00:00"
+}

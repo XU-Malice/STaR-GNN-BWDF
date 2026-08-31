@@ -74,6 +74,16 @@ Main figures:
 
 每张图同时输出 PDF、editable SVG 和 300 dpi PNG。
 
+补充图由处理数据、公开 BWDF 数据源和已冻结逐起点表生成：
+
+```bash
+PYTHONPATH=scripts/reproduce python \
+  scripts/reproduce/render_supplementary_figures.py \
+  --wf4bwdf-repo repos/wf4bwdf
+```
+
+其中 `repos/wf4bwdf` 必须固定到 `data/README.md` 记录的 commit。脚本输出 Supplementary Figs. S1--S3 及相应审计 CSV/JSON；Fig. S1 不另行保存或提交原始需水片段。
+
 ## 4. 图件逻辑
 
 ### Main Figure 1
@@ -105,6 +115,18 @@ Panels a–c 展示同协议 DCRNN/STGCN/STaR-GNN 的 46-origin 四指标 paired
 ### Main Figure 7
 
 采用 scale-to-instance 结构：全部测试窗口 × 7 days 的日内 aggregate-demand error profile、预先规定 median-total-MAE rule 的 representative 168 h trajectory，以及同一窗口的 hourly absolute error。
+
+### Supplementary Figure S1
+
+以客观数据质量规则选择 DMA F 和 DMA C，分别展示缺失值插值及异常观测替换前后的 168 h 曲线。清洗前后对应面板保持相同纵轴；原始缺失值不得画为零值。
+
+### Supplementary Figure S2
+
+按训练期平均需水选择低、中、高需求代表 DMA C、H、E，展示小时周中位曲线与四分位范围。该图用于说明共享日周期和跨 DMA 周末差异，不承担模型性能比较。
+
+### Supplementary Figure S3
+
+分别在 24 h 和 168 h 下绘制 DCRNN、STGCN、STaR-GNN 的 46 起点 MAE 经验累积分布。曲线只作全体预测起点的分布性描述，配对推断仍由 Main Fig. 6 的 moving-block bootstrap 承担。
 
 ## 5. 统一视觉系统
 

@@ -32,6 +32,8 @@ Fig. 2 所示的广泛改善并不意味着 STaR-GNN 在每个 DMA 上均达到�
 
 ## 3.2 模型组件的贡献及其提前期依赖性
 
+[Supplementary Fig. S2](figures/submission/supp_figS2_weekly_demand_patterns.png) 显示，低、中、高需水水平的代表性 DMA 均具有稳定重复的日内周期，但周末需求水平和局部峰形随分区而变化。这种共享周期与分区异质性并存的结构，为区分跨日需求状态与日内变化形态提供了数据基础。
+
 [Table 2](tables/submission/table2_factorial_ablation.md) 同时给出了各消融变体的绝对性能及其相对于 DCRNN 的改善，从而在四项指标上区分 SAS-Norm 与 FA-DPR 的作用。24 h 任务中，两个组件单独使用时均改善了全部指标。SAS-Norm 对 MAE 的降低更明显，FA-DPR 对 MAPE 和 RMSE 的贡献相对更强，完整模型则在四项指标上取得最大总体增益。这表明两个组件分别作用于不同误差特征，其组合效果并非来自对单一指标的定向优化。
 
 在 168 h 任务中，SAS-Norm 对三项误差均产生明确改善，误差降幅超过 27%，NSE 同时提高 0.034。FA-DPR 单独使用时主要改善 MAE 和 RMSE，MAPE 反而略有增加，说明历史日检索本身不足以稳定控制周尺度误差。完整模型保持了 SAS-Norm 的 MAE 水平，并进一步获得更优的 MAPE、RMSE 和 NSE。因而，SAS-Norm 构成周尺度性能的主要基础，FA-DPR 的价值更多体现在与日状态建模协同时对局部周期误差的补充修正。
@@ -49,6 +51,8 @@ Fig. 2 所示的广泛改善并不意味着 STaR-GNN 在每个 DMA 上均达到�
 Fig. 6 从 46 个共同预测起点考察配对改善。24 h 任务中，相对于 DCRNN 和 STGCN 的 MAE 散点几乎全部位于零线右侧，平均降幅分别为 19.3% 和 22.6%，置信区间也与零线保持明显距离。MAPE、RMSE 和 NSE 的分布更宽，说明日前任务中的 MAE 优势最为稳定，而其他指标仍会受到局部峰值和总量偏差的影响。预测时域延长至 168 h 后，相对于 DCRNN 的四项分布整体右移，仅有极少数点落在不利方向。相对于 STGCN 的平均效应同样保持为正，但散点和置信区间更宽，表明两个图模型之间仍存在随预测窗口变化的竞争关系。
 
 高波动起点进一步揭示了这一差异。Fig. 6d 中，相对于 DCRNN 的单元保持较深颜色，说明 STaR-GNN 在需求快速变化时仍能维持较广的优势。相对于 STGCN 时，周尺度 MAE 的颜色明显变浅，其余指标的优势覆盖也有所收窄。由此可见，STaR-GNN 的改进并非由少数易预测窗口形成，但突发需求变化仍会削弱其相对于较强图对比模型的领先程度。这一结果把总体稳健性限定为多数预测窗口中的稳定改善，而不是所有困难情形下的无条件获胜。
+
+[Supplementary Fig. S3](figures/submission/supp_figS3_origin_mae_ecdf.png) 从累积分布角度给出一致证据：在 24 h 和 168 h 任务中，STaR-GNN 的逐起点 MAE 曲线均整体位于 DCRNN 和 STGCN 左侧，表明改善覆盖误差分布主体，而非仅由少数低误差窗口形成。
 
 ![STaR-GNN 在不同预测起点和高波动需求窗口中的稳健性](figures/submission/main_fig6_origin_robustness.png)
 

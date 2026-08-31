@@ -24,7 +24,8 @@ Git 仓库包含：
 - **Main Figs. 2–4**：DMA breadth and horizon-specific local absolute performance；
 - **Main Fig. 5**：factorial ablation + lead-time stability；
 - **Main Fig. 6**：forecast-origin + difficult-window robustness；
-- **Main Fig. 7**：population-to-instance week-ahead dynamics。
+- **Main Fig. 7**：population-to-instance week-ahead dynamics；
+- **Supplementary Figs. S1–S3**：data cleaning examples / weekly demand patterns / common-46 origin MAE distributions。
 
 STGCN 是独立 graph baseline，不进入 factorial ablation。Manuscript MAE = DMA A--J MAE 之和；internal aggregate-demand MAE 单独保留。Manuscript factorial cell audit = 30/32；legacy aggregate-demand hierarchy = 31/32，仅内部诊断。
 
@@ -65,7 +66,7 @@ bash scripts/reproduce/finalize_public_release.sh \
 3. 重生成并验证 source SHA；
 4. 校验 10 组冻结 checkpoint、协议和 internal aggregate diagnostics；
 5. 重新执行 10 组 common-46 推理；
-6. 重建 full-precision source tables、submission display tables、Main Fig. 1--7 和独立审计 CSV/JSON；
+6. 重建 full-precision source tables、submission display tables、Main Fig. 1--7、Supplementary Figs. S1--S3 和独立审计 CSV/JSON；
 7. 审计公开仓库结构、四模型消融、submission artifacts 与大文件边界；
 8. 生成 Release asset（除非使用 `--skip-package`）。
 
@@ -77,6 +78,7 @@ Main Table 2 factorial ablation: 4 models / no STGCN / 30/32 PASS
 Supplementary Table S1 DMA metrics: PASS
 Supplementary Tables S2--S3: PASS
 Main Fig. 1--7: PASS
+Supplementary Figs. S1--S3: PASS
 7-origin moving-block bootstrap: PASS
 ```
 
@@ -105,7 +107,12 @@ python scripts/reproduce/render_submission_figures.py \
   --block-length 7 \
   --bootstrap-iterations 50000 \
   --bootstrap-seed 20260821
+
+PYTHONPATH=scripts/reproduce python \
+  scripts/reproduce/render_supplementary_figures.py
 ```
+
+若不使用环境中固定版本的 `wf4bwdf`，可通过 `--wf4bwdf-repo repos/wf4bwdf` 显式指定与 `data/README.md` 一致的本地 checkout。
 
 ## 6. 修改后最低限度本地检查
 
@@ -115,6 +122,7 @@ python -m py_compile \
   scripts/reproduce/manuscript_plot_style.py \
   scripts/reproduce/render_submission_tables.py \
   scripts/reproduce/render_submission_figures.py \
+  scripts/reproduce/render_supplementary_figures.py \
   scripts/reproduce/audit_public_repository.py \
   scripts/reproduce/regenerate_source_checksums.py
 
@@ -148,12 +156,13 @@ git diff -- SOURCE_CHECKSUMS.sha256
 
 不要使用 `git add .` 或 `git add -A`。只暂存本次确认的源文件、submission 表图、审计工件和重新生成的 SOURCE_CHECKSUMS。
 
-最终主图必须满足：
+最终图件必须满足：
 
-- Main Fig. 1：严格四模型 factorial ablation，无 STGCN；absolute day-wise MAE + lead-time degradation；
-- Main Fig. 2a：46 origins 的 paired differences，而非只比较边际 ECDF；
-- Main Fig. 2b：40-cell sequential-blue DMA improvement heatmap，全部 positive；
-- Main Fig. 3：population diurnal profile + deterministic representative trajectory + local error；
+- Main Figs. 1–4：总体四指标、跨 DMA 覆盖和两个预测时域的局部绝对性能；
+- Main Fig. 5：四模型 factorial ablation 与逐日提前期稳定性，无 STGCN；
+- Main Fig. 6：46 个共同起点的 paired effects 与高波动窗口；
+- Main Fig. 7：population diurnal profile + deterministic representative trajectory + local error；
+- Supplementary Figs. S1–S3：分别承担数据清洗、周期需求结构和起点 MAE 分布，不重复主图；
 - STaR-GNN 全文固定 deep-blue hero visual role；
 - PDF/SVG 文字可编辑，PNG 300 dpi 仅作预览。
 

@@ -108,6 +108,9 @@ Supplementary material:
 - **Table S1**: detailed four-metric DMA A--J results for all nine models;
 - **Table S2**: locally strongest competitor identities and signed margins;
 - **Table S3**: forecast-origin and high-variability-window robustness statistics.
+- **Figure S1**: representative missing-value and outlier-treatment windows;
+- **Figure S2**: weekly demand patterns for low-, medium-, and high-demand DMAs;
+- **Figure S3**: empirical MAE distributions over 46 common forecast origins at both horizons.
 
 See [`docs/EXPERIMENT_DESIGN_FINAL_CN.md`](docs/EXPERIMENT_DESIGN_FINAL_CN.md) for the complete claim-driven design.
 
@@ -129,6 +132,9 @@ paper/figures/submission/
   main_fig5_ablation_leadtime.{pdf,svg,png}
   main_fig6_origin_robustness.{pdf,svg,png}
   main_fig7_week_ahead_dynamics.{pdf,svg,png}
+  supp_figS1_data_cleaning.{pdf,svg,png}
+  supp_figS2_weekly_demand_patterns.{pdf,svg,png}
+  supp_figS3_origin_mae_ecdf.{pdf,svg,png}
 ```
 
 STaR-GNN is the visual hero method (`#0F4D92` deep blue); DCRNN/STGCN use gray baselines, while SAS-Norm and FA-DPR use restrained variant colors. The shared style is centralized in `scripts/reproduce/manuscript_plot_style.py`.
@@ -171,7 +177,12 @@ python scripts/reproduce/render_submission_figures.py \
   --block-length 7 \
   --bootstrap-iterations 50000 \
   --bootstrap-seed 20260821
+
+PYTHONPATH=scripts/reproduce python \
+  scripts/reproduce/render_supplementary_figures.py
 ```
+
+Pass `--wf4bwdf-repo repos/wf4bwdf` to use an explicit local checkout pinned to the commit documented in `data/README.md`.
 
 Final figures are exported as vector PDF, editable SVG, and 300 dpi PNG previews.
 

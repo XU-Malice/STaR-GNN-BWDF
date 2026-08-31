@@ -87,6 +87,8 @@ bash scripts/data/run_pipeline.sh
 - scaler 只在训练样本拟合；
 - Test target 不用于训练或参数选择。
 
+数据清洗的投稿示例由 `render_supplementary_figures.py` 按固定规则生成：DMA F 代表最高缺失率，DMA C 代表最高异常值数量。对应的 Supplementary Fig. S1 只保存图件和选择元数据，不在仓库中重复发布原始需水片段。
+
 主要输出：
 
 ```text

@@ -198,6 +198,46 @@ figures/submission/main_fig7_week_ahead_dynamics.png
 
 ---
 
+# Supplementary figures
+
+## Supplementary Figure S1 — Data cleaning
+
+```text
+figures/submission/supp_figS1_data_cleaning.pdf
+figures/submission/supp_figS1_data_cleaning.svg
+figures/submission/supp_figS1_data_cleaning.png
+```
+
+按完整数据质量统计选择 DMA F（最高缺失率）和 DMA C（最高异常值数量），分别展示清洗前后的 168 h 需求曲线。选择规则和窗口元数据记录于 `supp_figS1_data_cleaning_metadata.json`，不提交原始需水片段。
+
+## Supplementary Figure S2 — Weekly demand patterns
+
+```text
+figures/submission/supp_figS2_weekly_demand_patterns.pdf
+figures/submission/supp_figS2_weekly_demand_patterns.svg
+figures/submission/supp_figS2_weekly_demand_patterns.png
+```
+
+展示训练期低、中、高平均需水代表 DMA C、H、E 的小时周中位数和四分位范围，用于说明日周期的共享性及周末模式的分区差异。
+
+## Supplementary Figure S3 — Forecast-origin MAE distributions
+
+```text
+figures/submission/supp_figS3_origin_mae_ecdf.pdf
+figures/submission/supp_figS3_origin_mae_ecdf.svg
+figures/submission/supp_figS3_origin_mae_ecdf.png
+```
+
+分别给出 24 h 和 168 h 下 DCRNN、STGCN、STaR-GNN 在 46 个共同预测起点上的 MAE 经验累积分布，作为 Main Fig. 6 配对稳健性分析的分布性补充。
+
+完整英文图注见：
+
+```text
+captions/SUBMISSION_SUPPLEMENTARY_FIGURE_CAPTIONS.md
+```
+
+---
+
 # Submission figure audit data
 
 ```text
@@ -217,6 +257,11 @@ main_fig7_diurnal_aggregate_error.csv
 main_fig7_representative_trajectory.csv
 main_fig7_representative_selection.json
 submission_figure_audit.json
+supp_figS1_data_cleaning_metadata.json
+supp_figS2_weekly_demand_patterns.csv
+supp_figS2_weekly_demand_patterns_metadata.json
+supp_figS3_origin_mae_ecdf.csv
+supplementary_figure_audit.json
 ```
 
 这些文件是图中数值的独立可复算来源。

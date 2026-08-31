@@ -9,7 +9,7 @@
 #   3. 封存并验证当前 public-source SHA；
 #   4. 校验 10 个冻结 checkpoint、协议与内部 aggregate 诊断；
 #   5. 重新执行 10 组 common-46 推理；
-#   6. 重建源表、submission tables、Main Fig. 1--7；
+#   6. 重建源表、submission tables、Main Fig. 1--7 和 Supplementary Figs. S1--S3；
 #   7. 审计 GitHub 发布边界；
 #   8. 可选生成 GitHub Release checkpoint asset。
 #
@@ -145,6 +145,9 @@ python scripts/reproduce/render_submission_figures.py \
     --bootstrap-iterations 50000 \
     --bootstrap-seed 20260821
 
+PYTHONPATH=scripts/reproduce python \
+    scripts/reproduce/render_supplementary_figures.py
+
 python scripts/reproduce/audit_release_inventory.py \
     --require-paper-artifacts \
     --require-reevaluation "${REEVALUATION_DIR}"
@@ -177,6 +180,7 @@ Main Table 1 overall：PASS
 Main Table 2 factorial ablation：4 models / no STGCN / 30/32 PASS
 Supplementary Tables S1--S3：PASS
 Main Fig. 1--7：PASS
+Supplementary Figs. S1--S3：PASS
 7-origin moving-block bootstrap：PASS
 公开文档与发布边界：PASS
 GitHub Release checkpoint资产：${ASSET_STATUS}
