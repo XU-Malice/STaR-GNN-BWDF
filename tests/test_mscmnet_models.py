@@ -8,6 +8,7 @@ import pytest
 torch = pytest.importorskip("torch")
 
 from dma_wdf.models.mscmnet import (  # noqa: E402
+    ConvAttentionBlock,
     ForecastBranchConfig,
     GRUForecast,
     LSTMForecast,
@@ -30,6 +31,7 @@ def _small_msnet(*, input_features: int) -> MSNet:
     ]
     return MSNet(
         configs,
+        channel_sizes=(4,),
         cnn_layers=1,
         attention_layers=1,
         kernel_size=3,
@@ -52,6 +54,25 @@ def test_msnet_joint_output_shape() -> None:
     model = _small_msnet(input_features=10)
     output = model(_histories(input_features=10))
     assert output.shape == (2, 24, 10)
+
+
+def test_paper_cam_interleaves_and_compresses_channels() -> None:
+    cam = ConvAttentionBlock(
+        input_features=10,
+        channel_sizes=(16, 16, 1),
+        cnn_layers=3,
+        attention_layers=3,
+        kernel_size=3,
+        attention_heads=1,
+    )
+    output = cam(torch.randn(2, 168, 10))
+    assert output.shape == (2, 168, 1)
+    assert [layer.in_channels for layer in cam.convolutions] == [10, 16, 16]
+    assert [layer.out_channels for layer in cam.convolutions] == [16, 16, 1]
+    assert not any(isinstance(layer, torch.nn.LayerNorm) for layer in cam.modules())
+    assert not any(
+        isinstance(layer, torch.nn.MultiheadAttention) for layer in cam.modules()
+    )
 
 
 def test_mscmnet_m_exposes_trunk_and_fc1_outputs() -> None:
@@ -90,6 +111,9 @@ def test_fc2_variants_predict_normalized_daily_shares(
         fc1_nodes=12,
         fc1_dropout=0.0,
         fc2_input_features=fc2_features,
+        fc2_cam_channel_sizes=(4,),
+        fc2_cam_kernel_size=3,
+        fc2_cam_dropout=0.0,
         fc2_hidden_size=8,
         fc2_lstm_layers=1,
         fc2_nodes=12,
@@ -106,6 +130,7 @@ def test_fc2_variants_predict_normalized_daily_shares(
     torch.testing.assert_close(
         output.predicted_daily_share.sum(dim=1), torch.ones(2)
     )
+    assert output.predicted_daily_share.grad_fn is not None
 
 
 def test_branch_rejects_wrong_paper_history_shape() -> None:

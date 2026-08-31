@@ -41,6 +41,18 @@ def test_standardizer_is_fitted_without_test_values() -> None:
     assert float(scaler.mean[0]) == pytest.approx(2.0)
 
 
+def test_minmax_scaler_is_fitted_without_test_values() -> None:
+    module = _load_training_script()
+    train = np.asarray([[[1.0], [3.0]]], dtype=np.float32)
+    test = np.asarray([[[10_000.0]]], dtype=np.float32)
+    scaler = module.MinMaxScaler.fit_features(train)
+    assert float(scaler.minimum[0]) == pytest.approx(1.0)
+    assert float(scaler.value_range[0]) == pytest.approx(2.0)
+    transformed = scaler.transform(test)
+    assert float(transformed[0, 0, 0]) > 1.0
+    assert float(scaler.minimum[0]) == pytest.approx(1.0)
+
+
 def test_metric_table_uses_supplementary_total_mae_convention() -> None:
     module = _load_training_script()
     truth_24 = np.zeros((1, 24, 10), dtype=np.float32)

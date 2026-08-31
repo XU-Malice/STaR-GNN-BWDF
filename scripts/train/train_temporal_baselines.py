@@ -120,10 +120,86 @@ class Standardizer:
 
     def state_dict(self) -> dict[str, Any]:
         return {
+            "normalization": "zscore",
             "mean": self.mean.copy(),
             "std": self.std.copy(),
             "fitted_from": self.fitted_from,
         }
+
+
+@dataclass(frozen=True)
+class MinMaxScaler:
+    """NumPy [0,1] parameters fitted on training arrays only."""
+
+    minimum: np.ndarray
+    value_range: np.ndarray
+    fitted_from: str = "train_only"
+
+    @classmethod
+    def fit_features(cls, values: np.ndarray) -> "MinMaxScaler":
+        if values.ndim < 2:
+            raise ValueError("Feature arrays must have at least two dimensions.")
+        if values.shape[-1] == 0:
+            return cls(
+                minimum=np.empty((0,), dtype=np.float32),
+                value_range=np.empty((0,), dtype=np.float32),
+            )
+        flattened = values.reshape(-1, values.shape[-1]).astype(np.float64)
+        minimum = flattened.min(axis=0).astype(np.float32)
+        maximum = flattened.max(axis=0).astype(np.float32)
+        value_range = maximum - minimum
+        value_range[~np.isfinite(value_range) | (value_range <= 1.0e-6)] = 1.0
+        return cls(minimum=minimum, value_range=value_range)
+
+    @classmethod
+    def fit_scalar(cls, *values: np.ndarray) -> "MinMaxScaler":
+        flattened = np.concatenate(
+            [np.asarray(value, dtype=np.float64).reshape(-1) for value in values]
+        )
+        minimum = float(flattened.min())
+        value_range = float(flattened.max() - minimum)
+        if not np.isfinite(value_range) or value_range <= 1.0e-6:
+            value_range = 1.0
+        return cls(
+            minimum=np.asarray([minimum], dtype=np.float32),
+            value_range=np.asarray([value_range], dtype=np.float32),
+        )
+
+    def transform(self, values: np.ndarray) -> np.ndarray:
+        return ((values - self.minimum) / self.value_range).astype(np.float32)
+
+    def inverse(self, values: np.ndarray) -> np.ndarray:
+        return (values * self.value_range + self.minimum).astype(np.float32)
+
+    def state_dict(self) -> dict[str, Any]:
+        return {
+            "normalization": "minmax",
+            "minimum": self.minimum.copy(),
+            "value_range": self.value_range.copy(),
+            "fitted_from": self.fitted_from,
+        }
+
+
+TrainOnlyScaler = Standardizer | MinMaxScaler
+
+
+def _normalization_name(value: str) -> str:
+    name = str(value).lower()
+    if name not in {"zscore", "minmax"}:
+        raise ValueError("normalization must be 'zscore' or 'minmax'.")
+    return name
+
+
+def _fit_features(values: np.ndarray, normalization: str) -> TrainOnlyScaler:
+    if _normalization_name(normalization) == "minmax":
+        return MinMaxScaler.fit_features(values)
+    return Standardizer.fit_features(values)
+
+
+def _fit_scalar(normalization: str, *values: np.ndarray) -> TrainOnlyScaler:
+    if _normalization_name(normalization) == "minmax":
+        return MinMaxScaler.fit_scalar(*values)
+    return Standardizer.fit_scalar(*values)
 
 
 def canonical_model_name(value: str) -> str:
@@ -339,21 +415,23 @@ def predict_independent_168h(
 
 def _scaled_arrays(
     samples: JointTemporalSamples,
+    *,
+    normalization: str,
 ) -> tuple[
     tuple[np.ndarray, ...],
     tuple[np.ndarray, ...],
-    tuple[Standardizer, ...],
+    tuple[TrainOnlyScaler, ...],
     np.ndarray,
-    Standardizer,
+    TrainOnlyScaler,
     np.ndarray,
     np.ndarray,
-    Standardizer,
+    TrainOnlyScaler,
     np.ndarray | None,
     np.ndarray | None,
-    Standardizer | None,
+    TrainOnlyScaler | None,
 ]:
     branch_scalers = tuple(
-        Standardizer.fit_features(array) for array in samples.train_branches
+        _fit_features(array, normalization) for array in samples.train_branches
     )
     train_branches = tuple(
         scaler.transform(array)
@@ -363,18 +441,18 @@ def _scaled_arrays(
         scaler.transform(array)
         for scaler, array in zip(branch_scalers, samples.test_branches)
     )
-    target_scaler = Standardizer.fit_features(samples.y_train_24h)
+    target_scaler = _fit_features(samples.y_train_24h, normalization)
     target_train = target_scaler.transform(samples.y_train_24h)
-    future_scaler = Standardizer.fit_features(samples.future_train)
+    future_scaler = _fit_features(samples.future_train, normalization)
     future_train = future_scaler.transform(samples.future_train)
     future_test = future_scaler.transform(samples.future_test)
-    fc2_scaler: Standardizer | None = None
+    fc2_scaler: TrainOnlyScaler | None = None
     fc2_train: np.ndarray | None = None
     fc2_test: np.ndarray | None = None
     if samples.fc2_train is not None:
         if samples.fc2_test is None:
             raise ValueError("FC2 test history is missing.")
-        fc2_scaler = Standardizer.fit_features(samples.fc2_train)
+        fc2_scaler = _fit_features(samples.fc2_train, normalization)
         fc2_train = fc2_scaler.transform(samples.fc2_train)
         fc2_test = fc2_scaler.transform(samples.fc2_test)
     return (
@@ -520,13 +598,13 @@ def predict_joint_168h(
     model: nn.Module,
     family: str,
     branches: Sequence[np.ndarray],
-    branch_scalers: Sequence[Standardizer],
+    branch_scalers: Sequence[TrainOnlyScaler],
     branch_feature_columns: Sequence[Sequence[str]],
-    target_scaler: Standardizer,
-    future_scaler: Standardizer,
+    target_scaler: TrainOnlyScaler,
+    future_scaler: TrainOnlyScaler,
     future_columns: Sequence[str],
     fc2_history_raw: np.ndarray | None,
-    fc2_scaler: Standardizer | None,
+    fc2_scaler: TrainOnlyScaler | None,
     include_fc2_temperature: bool,
     starts: Sequence[pd.Timestamp],
     weather: pd.DataFrame,
@@ -739,8 +817,10 @@ def train_independent_family(
             protocol["expected_test_sequences"]
         ):
             raise ValueError("Independent baseline did not build common-46 test data.")
-        scaler = Standardizer.fit_scalar(
-            samples["x_train"], samples["y_train_24h"]
+        scaler = _fit_scalar(
+            training_config.get("normalization", "zscore"),
+            samples["x_train"],
+            samples["y_train_24h"],
         )
         x_train = scaler.transform(samples["x_train"])
         y_train = scaler.transform(samples["y_train_24h"])
@@ -913,7 +993,10 @@ def train_joint_family(
         fc2_train,
         fc2_test,
         fc2_scaler,
-    ) = _scaled_arrays(samples)
+    ) = _scaled_arrays(
+        samples,
+        normalization=training_config.get("normalization", "zscore"),
+    )
     share_weight = (
         0.0
         if fc2_config is None
@@ -1160,6 +1243,26 @@ def main() -> None:
     )
     parser.add_argument("--device", default="auto")
     parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument(
+        "--normalization",
+        choices=["zscore", "minmax"],
+        default=None,
+        help=(
+            "Override the train-only scaler. The paper does not disclose this "
+            "choice, so zscore/minmax comparisons must use separate output roots."
+        ),
+    )
+    parser.add_argument(
+        "--cam-channel-sizes",
+        type=int,
+        nargs=3,
+        metavar=("C1", "C2", "C3"),
+        default=None,
+        help=(
+            "Override the three unpublished CAM convolution widths. C3 must "
+            "remain 1 to match Table 3."
+        ),
+    )
     parser.add_argument("--max-epochs", type=int, default=None)
     parser.add_argument("--max-train-batches", type=int, default=None)
     parser.add_argument("--minimum-free-gib", type=float, default=8.0)
@@ -1169,6 +1272,12 @@ def main() -> None:
     args = parser.parse_args()
 
     config = read_yaml(args.config.resolve())
+    if args.normalization is not None:
+        config["training"]["normalization"] = args.normalization
+    if args.cam_channel_sizes is not None:
+        if args.cam_channel_sizes[-1] != 1:
+            raise ValueError("Table 3 requires the final CAM channel size to be 1.")
+        config["cam"]["channel_sizes"] = list(args.cam_channel_sizes)
     requested = canonical_model_name(args.model)
     selected = list(CANONICAL_MODELS) if requested == "all" else [requested]
     seed = (

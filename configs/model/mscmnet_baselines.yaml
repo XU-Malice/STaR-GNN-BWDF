@@ -22,16 +22,21 @@ protocol:
 cam:
   convolution: conv1d
   cnn_layers: 3
+  channel_sizes: [16, 16, 1]
   kernel_size: 3
   pooling: false
   attention_layers: 3
   attention_heads: 1
   dropout: 0.0
   implementation_note: >
-    The article fixes 1D convolution, three CNN/attention layers and a
-    kernel size of 3, but does not publish all framework-level choices.
-    Same-length padding, ReLU, residual attention and LayerNorm are explicit
-    reproducibility choices in this repository.
+    Figure 7 alternates Conv1D and Attention three times. Table 3 gives CAM
+    input/output tensor shapes and fixes one output channel before LSTM, but
+    does not disclose the two intermediate convolution widths. The 16/16/1
+    widths are an explicit diagnostic reconstruction informed by the earlier
+    BWDF audit, not a published parameter. Equations 4-7 define single-head
+    scaled dot-product Q/K/V attention; no residual path or LayerNorm is
+    described. Same-length padding remains a framework-level reconstruction
+    choice because the article states that CAM preserves input dimensions.
 
 models:
   gru:
@@ -173,6 +178,7 @@ models:
 training:
   seed: 20240604
   batch_size: 8
+  normalization: zscore
   loss: mse
   optimizer: adam
   standardize_from_train_only: true

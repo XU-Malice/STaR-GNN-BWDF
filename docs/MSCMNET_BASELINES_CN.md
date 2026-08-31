@@ -53,6 +53,30 @@ neural network architecture*（DOI: `10.1016/j.wroa.2024.100269`）。
 | MSCMNet_WM/MW | MSCMNet_M + 历史 DMA 日需求份额及日最高/最低温度的 FC2 |
 | MSCMNet_W | 去除气象；保留时间特征 FC1 与仅需求份额 FC2 |
 
+## 2026-08-31 正文与补充材料复核
+
+新上传的 `(9).docx` 与先前 `(8).docx` 的 SHA256 均为
+`8163f939c1b7dd14376027110b6f61c9c7b12b186637c292a4c87f4aa2ee88ee`，
+内容完全相同。补充材料提供 S1 指标、S2 搜索空间、S3 最优参数以及 S4
+校正前后曲线；网络数据流仍需以正文 Fig. 7、Table 3 和 Eq. (2)–(7) 为准。
+
+| 项目 | 论文证据 | 旧实现 | 本次修正 |
+|---|---|---|---|
+| CAM 顺序 | Fig. 7：Conv1D 与 Attention 交替 3 次 | 3 个 Conv 后接 3 个 Attention | 按图交替 |
+| Attention | Eq. (4)–(7)：单头 Q/K/V 加权 | MultiheadAttention + residual + LayerNorm | 单头 scaled dot-product，无残差/LayerNorm |
+| CAM 输出 | Table 3：进入 LSTM 前为 1 channel | 每层均等于 DMA LSTM hidden size | 最后一层固定为 1 channel |
+| CAM 中间宽度 | 未公开 | 绑定 LSTM hidden size | 显式参数，默认诊断值 `16,16` |
+| FC2 前端 | Fig. 7：CAM-LSTM 权重预测模块 | 直接 LSTM | 增加同序 CAM |
+| FC1/FC2 | Table 3：nodes/dropout/LSTM hidden | 已匹配 | 保持不变 |
+| 归一化 | 仅说明输入归一化，算法未公开 | train-only Z-score | 保留 Z-score，并加入独立 MinMax 诊断 |
+| batch/loss/seed | 未公开 | 8/MSE/20240604 | 继续明确标为复现假设 |
+
+此前固定 epoch 的正式运行已经证明程序链完整，但没有数值复现 S1：GRU/LSTM
+只达到部分一致，MSNet 及三种 MSCMNet 的 total MAE 相对论文高约
+34%–75%，且模型排序与论文相反。新结构首先只重跑 MSNet，用它隔离 CAM 与
+归一化影响；如果 MSNet 的四项 total 指标和 DMA 误差分布明显靠近 S1，再把
+同一设置扩展到 M、WM/MW 和 W。这样可以避免在主干仍错误时盲目重复四个大模型。
+
 正式协议强制：
 
 - 插值在 train/Test 分区内独立完成；
@@ -66,12 +90,26 @@ neural network architecture*（DOI: `10.1016/j.wroa.2024.100269`）。
 
 ## 论文未公开的实现细节
 
-论文没有公开作者训练代码，也没有完整说明 CNN channel 数、padding、
-Attention 的框架细节、batch size、loss 与随机种子。因此，本仓库将以下
-选择显式写入配置和 checkpoint，不能宣称与作者私有代码逐行相同：
+再次逐页核对论文 Fig. 7、Table 3 与补充材料后，以下内容不再属于假设：
 
-- same-length 1D convolution、ReLU、residual self-attention 与 LayerNorm；
+- CAM 按 `Conv1D → Attention` 交替三次，而不是先连续卷积再连续注意力；
+- Table 3 给出 forecast branch 的 CAM 输入/输出张量形状，并明确 CAM 输出
+  为 1 channel 后进入 LSTM；两层中间卷积宽度没有公开；
+- Eq. (4)–(7) 描述单头 Q/K/V scaled dot-product attention，正文没有给出
+  residual attention、multi-head 或 LayerNorm；
+- FC2 的日需求份额/温度序列同样经过 CAM-LSTM，而不是直接进入 LSTM；
+- Table 3 给出的 FC1/FC2 节点数、dropout、LSTM 层数和 hidden size 已逐项
+  写入配置。
+
+论文没有公开作者训练代码，也没有完整说明 padding、batch size、loss、
+归一化算法与随机种子。因此，本仓库仍将以下选择显式写入配置和
+checkpoint，不能宣称与作者私有代码逐行相同：
+
+- same-length padding、ReLU，以及未公开的两层中间卷积宽度；默认
+  `16 → 16 → 1` 来自此前 BWDF 诊断中较接近论文的候选，并非论文参数；
 - Adam、MSE、batch size 8、seed `20240604`；
+- 默认 train-only Z-score；另提供 train-only MinMax 诊断开关，因为论文只说
+  输入归一化而未披露具体算法，二者必须写入不同输出目录比较；
 - FC1/FC2 按论文文字采用直接全连接校正；
 - 默认不加入论文未报告的辅助 total/share loss。
 
@@ -110,6 +148,21 @@ nvidia-smi -i 6
 ```bash
 MODEL=mscmnet_w bash scripts/train/run_temporal_baselines_gpu6.sh
 ```
+
+建议先用修正后的主干对 MSNet 做最小归一化诊断，而不是立即重跑六模型：
+
+```bash
+CUDA_VISIBLE_DEVICES=6 python scripts/train/train_temporal_baselines.py \
+  --model msnet --device cuda:0 --normalization zscore \
+  --output-root results/temporal_baselines_cam_table3_zscore
+
+CUDA_VISIBLE_DEVICES=6 python scripts/train/train_temporal_baselines.py \
+  --model msnet --device cuda:0 --normalization minmax \
+  --output-root results/temporal_baselines_cam_table3_minmax
+```
+
+两次运行共用论文固定 99 epoch、common-46 和同一评估口径；只比较论文未公开的
+归一化选择。选定更接近 S1 且 DMA 级误差结构合理的设置后，再运行三种校正模型。
 
 正式输出位于 `results/temporal_baselines/<model>/seed_20240604/`，包含：
 

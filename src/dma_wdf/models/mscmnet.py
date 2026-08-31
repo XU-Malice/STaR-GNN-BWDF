@@ -13,10 +13,11 @@ multi-scale correction module neural network architecture":
 
 The article specifies the data flow and the Hyperopt-selected recurrent and
 fully-connected dimensions, but does not publish every low-level framework
-choice.  The implementation therefore keeps those choices explicit: CAM is
-three same-length Conv1d/ReLU blocks followed by three self-attention blocks,
-and FC1/FC2 are direct (not residual) corrections.  No target or future demand
-is accepted by a forward method.
+choice.  Figure 7 does, however, fix the CAM ordering: Conv1d and Attention
+alternate three times.  Table 3 fixes a one-channel CAM output before LSTM but
+does not disclose the two intermediate convolution widths.  FC1/FC2 are direct
+(not residual) corrections.  No target or future demand is accepted by a
+forward method.
 """
 
 from __future__ import annotations
@@ -142,14 +143,42 @@ class LSTMForecast(StackedRecurrentForecaster):
         super().__init__(cell_type="LSTM", hidden_sizes=hidden_sizes, horizon=horizon)
 
 
+class ScaledDotProductSelfAttention(nn.Module):
+    """Single-head Q/K/V attention matching equations (4)--(7)."""
+
+    def __init__(self, features: int, dropout: float = 0.0) -> None:
+        super().__init__()
+        self.features = _positive_int("features", features)
+        self.query = nn.Linear(self.features, self.features, bias=False)
+        self.key = nn.Linear(self.features, self.features, bias=False)
+        self.value = nn.Linear(self.features, self.features, bias=False)
+        self.dropout = nn.Dropout(_probability("dropout", dropout))
+        self.scale = float(self.features) ** -0.5
+
+    def forward(self, sequence: torch.Tensor) -> torch.Tensor:
+        if sequence.ndim != 3 or sequence.shape[-1] != self.features:
+            raise ValueError(
+                "attention input must have shape (B,T,"
+                f"{self.features}), got {tuple(sequence.shape)}."
+            )
+        query = self.query(sequence)
+        key = self.key(sequence)
+        value = self.value(sequence)
+        weights = torch.softmax(
+            torch.matmul(query, key.transpose(-2, -1)) * self.scale,
+            dim=-1,
+        )
+        return torch.matmul(self.dropout(weights), value)
+
+
 class ConvAttentionBlock(nn.Module):
-    """Same-length temporal 1D CNN followed by self-attention."""
+    """Paper CAM: three alternating Conv1d/ReLU and Attention stages."""
 
     def __init__(
         self,
         *,
         input_features: int,
-        hidden_size: int,
+        channel_sizes: Sequence[int] = (16, 16, 1),
         cnn_layers: int = 3,
         attention_layers: int = 3,
         kernel_size: int = 3,
@@ -158,49 +187,49 @@ class ConvAttentionBlock(nn.Module):
     ) -> None:
         super().__init__()
         input_features = _positive_int("input_features", input_features)
-        hidden_size = _positive_int("hidden_size", hidden_size)
         cnn_layers = _positive_int("cnn_layers", cnn_layers)
         attention_layers = _positive_int("attention_layers", attention_layers)
         kernel_size = _positive_int("kernel_size", kernel_size)
         attention_heads = _positive_int("attention_heads", attention_heads)
         dropout = _probability("dropout", dropout)
+        channels = tuple(
+            _positive_int("channel_size", value) for value in channel_sizes
+        )
+        if len(channels) != cnn_layers:
+            raise ValueError(
+                "channel_sizes must provide one output size per CNN layer."
+            )
+        if attention_layers != cnn_layers:
+            raise ValueError(
+                "Figure 7 requires one Attention stage after every Conv1d stage."
+            )
         if kernel_size % 2 == 0:
             raise ValueError("kernel_size must be odd to preserve sequence length.")
-        if hidden_size % attention_heads != 0:
-            raise ValueError("hidden_size must be divisible by attention_heads.")
-
-        convolutions: list[nn.Module] = []
-        in_channels = input_features
-        for _ in range(cnn_layers):
-            convolutions.extend(
-                [
-                    nn.Conv1d(
-                        in_channels,
-                        hidden_size,
-                        kernel_size=kernel_size,
-                        padding=kernel_size // 2,
-                    ),
-                    nn.ReLU(),
-                ]
+        if attention_heads != 1:
+            raise ValueError(
+                "The paper defines single scaled dot-product attention, not "
+                "multi-head attention."
             )
-            if dropout > 0.0:
-                convolutions.append(nn.Dropout(dropout))
-            in_channels = hidden_size
-        self.convolutions = nn.Sequential(*convolutions)
-        self.attention = nn.ModuleList(
-            [
-                nn.MultiheadAttention(
-                    embed_dim=hidden_size,
-                    num_heads=attention_heads,
-                    dropout=dropout,
-                    batch_first=True,
+
+        self.output_features = channels[-1]
+        self.convolutions = nn.ModuleList()
+        self.attention = nn.ModuleList()
+        in_channels = input_features
+        for out_channels in channels:
+            self.convolutions.append(
+                nn.Conv1d(
+                    in_channels,
+                    out_channels,
+                    kernel_size=kernel_size,
+                    padding=kernel_size // 2,
                 )
-                for _ in range(attention_layers)
-            ]
-        )
-        self.norms = nn.ModuleList(
-            [nn.LayerNorm(hidden_size) for _ in range(attention_layers)]
-        )
+            )
+            self.attention.append(
+                ScaledDotProductSelfAttention(out_channels, dropout=dropout)
+            )
+            in_channels = out_channels
+        self.activation = nn.ReLU()
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, sequence: torch.Tensor) -> torch.Tensor:
         if sequence.ndim != 3:
@@ -208,10 +237,11 @@ class ConvAttentionBlock(nn.Module):
                 "CAM input must have shape (B,T,F), got "
                 f"{tuple(sequence.shape)}."
             )
-        encoded = self.convolutions(sequence.transpose(1, 2)).transpose(1, 2)
-        for attention, norm in zip(self.attention, self.norms):
-            attended, _ = attention(encoded, encoded, encoded, need_weights=False)
-            encoded = norm(encoded + attended)
+        encoded = sequence
+        for convolution, attention in zip(self.convolutions, self.attention):
+            encoded = convolution(encoded.transpose(1, 2)).transpose(1, 2)
+            encoded = self.dropout(self.activation(encoded))
+            encoded = attention(encoded)
         return encoded
 
 
@@ -222,6 +252,7 @@ class CAMLSTMForecastBranch(nn.Module):
         self,
         config: ForecastBranchConfig,
         *,
+        channel_sizes: Sequence[int] = (16, 16, 1),
         cnn_layers: int = 3,
         attention_layers: int = 3,
         kernel_size: int = 3,
@@ -235,7 +266,7 @@ class CAMLSTMForecastBranch(nn.Module):
         dropout = _probability("dropout", dropout)
         self.cam = ConvAttentionBlock(
             input_features=config.input_features,
-            hidden_size=config.hidden_size,
+            channel_sizes=channel_sizes,
             cnn_layers=cnn_layers,
             attention_layers=attention_layers,
             kernel_size=kernel_size,
@@ -243,7 +274,7 @@ class CAMLSTMForecastBranch(nn.Module):
             dropout=dropout,
         )
         self.lstm = nn.LSTM(
-            input_size=config.hidden_size,
+            input_size=self.cam.output_features,
             hidden_size=config.hidden_size,
             num_layers=config.lstm_layers,
             dropout=dropout if config.lstm_layers > 1 else 0.0,
@@ -275,6 +306,7 @@ class MSNet(nn.Module):
         self,
         branch_configs: Sequence[ForecastBranchConfig],
         *,
+        channel_sizes: Sequence[int] = (16, 16, 1),
         cnn_layers: int = 3,
         attention_layers: int = 3,
         kernel_size: int = 3,
@@ -294,6 +326,7 @@ class MSNet(nn.Module):
             [
                 CAMLSTMForecastBranch(
                     config,
+                    channel_sizes=channel_sizes,
                     cnn_layers=cnn_layers,
                     attention_layers=attention_layers,
                     kernel_size=kernel_size,
@@ -353,12 +386,15 @@ class FullyConnectedCorrection(nn.Module):
 
 
 class DailyShareForecaster(nn.Module):
-    """FC2 LSTM that predicts the next-day share of every DMA."""
+    """FC2 CAM-LSTM that predicts the next-day share of every DMA."""
 
     def __init__(
         self,
         *,
         input_features: int,
+        cam_channel_sizes: Sequence[int],
+        cam_kernel_size: int,
+        cam_dropout: float,
         hidden_size: int,
         lstm_layers: int,
         fully_connected_nodes: int,
@@ -375,8 +411,17 @@ class DailyShareForecaster(nn.Module):
         dropout = _probability("dropout", dropout)
         self.input_features = input_features
         self.num_dmas = _positive_int("num_dmas", num_dmas)
+        self.cam = ConvAttentionBlock(
+            input_features=input_features,
+            channel_sizes=cam_channel_sizes,
+            cnn_layers=len(tuple(cam_channel_sizes)),
+            attention_layers=len(tuple(cam_channel_sizes)),
+            kernel_size=cam_kernel_size,
+            attention_heads=1,
+            dropout=cam_dropout,
+        )
         self.lstm = nn.LSTM(
-            input_size=input_features,
+            input_size=self.cam.output_features,
             hidden_size=hidden_size,
             num_layers=lstm_layers,
             dropout=dropout if lstm_layers > 1 else 0.0,
@@ -395,7 +440,8 @@ class DailyShareForecaster(nn.Module):
                 "FC2 history must have shape (B,D,"
                 f"{self.input_features}), got {tuple(history.shape)}."
             )
-        _, (hidden, _) = self.lstm(history)
+        encoded = self.cam(history)
+        _, (hidden, _) = self.lstm(encoded)
         return torch.softmax(self.output(hidden[-1]), dim=-1)
 
 
@@ -462,6 +508,9 @@ class MSCMNetWM(MSCMNetM):
         fc1_nodes: int,
         fc1_dropout: float,
         fc2_input_features: int,
+        fc2_cam_channel_sizes: Sequence[int],
+        fc2_cam_kernel_size: int,
+        fc2_cam_dropout: float,
         fc2_hidden_size: int,
         fc2_lstm_layers: int,
         fc2_nodes: int,
@@ -475,6 +524,9 @@ class MSCMNetWM(MSCMNetM):
         )
         self.share_forecaster = DailyShareForecaster(
             input_features=fc2_input_features,
+            cam_channel_sizes=fc2_cam_channel_sizes,
+            cam_kernel_size=fc2_cam_kernel_size,
+            cam_dropout=fc2_cam_dropout,
             hidden_size=fc2_hidden_size,
             lstm_layers=fc2_lstm_layers,
             fully_connected_nodes=fc2_nodes,
@@ -552,6 +604,7 @@ def build_msnet_from_config(
         raise ValueError("The paper CAM requires temporal Conv1d.")
     return MSNet(
         branches,
+        channel_sizes=tuple(cam_config.get("channel_sizes", (16, 16, 1))),
         cnn_layers=int(cam_config.get("cnn_layers", 3)),
         attention_layers=int(cam_config.get("attention_layers", 3)),
         kernel_size=int(cam_config.get("kernel_size", 3)),
@@ -591,6 +644,11 @@ def build_joint_model_from_config(
     full = {
         **common,
         "fc2_input_features": int(fc2["input_size"]),
+        "fc2_cam_channel_sizes": tuple(
+            fc2.get("cam_channel_sizes", cam_config.get("channel_sizes", (16, 16, 1)))
+        ),
+        "fc2_cam_kernel_size": int(cam_config.get("kernel_size", 3)),
+        "fc2_cam_dropout": float(cam_config.get("dropout", 0.0)),
         "fc2_hidden_size": int(fc2["hidden_size"]),
         "fc2_lstm_layers": int(fc2["lstm_layers"]),
         "fc2_nodes": int(fc2["nodes"]),
@@ -616,6 +674,7 @@ __all__ = [
     "MSNet",
     "PAPER_DAY_HOURS",
     "PAPER_NUM_DMAS",
+    "ScaledDotProductSelfAttention",
     "StackedRecurrentForecaster",
     "build_joint_model_from_config",
     "build_msnet_from_config",
