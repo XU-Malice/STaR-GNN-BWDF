@@ -137,6 +137,12 @@ def build_demand_only_samples(
         "x_test_eval": np.stack(x_test).astype(np.float32),
         "y_test_eval_24h": np.stack(y_test_24h).astype(np.float32),
         "y_test_eval_168h": np.stack(y_test_168h).astype(np.float32),
+        "train_forecast_start": np.asarray(
+            [timestamp.isoformat() for timestamp in train_starts]
+        ),
+        "test_forecast_start": np.asarray(
+            [timestamp.isoformat() for timestamp in eval_index["forecast_start"]]
+        ),
     }
 
 
