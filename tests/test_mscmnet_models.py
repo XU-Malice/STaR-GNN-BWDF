@@ -75,6 +75,52 @@ def test_paper_cam_interleaves_and_compresses_channels() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("attention_update", "expected_multiplier"),
+    [
+        ("replace", 0.0),
+        ("residual", 1.0),
+        ("final_residual", 1.0),
+        ("skip_final", 1.0),
+    ],
+)
+def test_cam_attention_update_diagnostics(
+    attention_update: str,
+    expected_multiplier: float,
+) -> None:
+    class ZeroAttention(torch.nn.Module):
+        def forward(self, sequence: torch.Tensor) -> torch.Tensor:
+            return torch.zeros_like(sequence)
+
+    cam = ConvAttentionBlock(
+        input_features=1,
+        channel_sizes=(1,),
+        cnn_layers=1,
+        attention_layers=1,
+        kernel_size=3,
+        attention_heads=1,
+        attention_update=attention_update,
+    )
+    with torch.no_grad():
+        cam.convolutions[0].weight.zero_()
+        cam.convolutions[0].weight[0, 0, 1] = 1.0
+        cam.convolutions[0].bias.zero_()
+    cam.attention[0] = ZeroAttention()
+    sequence = torch.tensor([[[1.0], [2.0], [4.0]]])
+    torch.testing.assert_close(cam(sequence), sequence * expected_multiplier)
+
+
+def test_cam_rejects_unknown_attention_update() -> None:
+    with pytest.raises(ValueError, match="attention_update"):
+        ConvAttentionBlock(
+            input_features=1,
+            channel_sizes=(1,),
+            cnn_layers=1,
+            attention_layers=1,
+            attention_update="unknown",
+        )
+
+
 def test_mscmnet_m_exposes_trunk_and_fc1_outputs() -> None:
     model = MSCMNetM(
         _small_msnet(input_features=10),

@@ -175,3 +175,46 @@ CUDA_VISIBLE_DEVICES=6 python scripts/train/train_temporal_baselines.py \
 
 `metrics.csv` 中的 `paper_value` 只用于并排核查，绝不参与训练、epoch
 选择或模型选择。
+
+## 2026-09-01 正式矩阵验收与下一轮诊断
+
+`que_reproduction_matrix_20260831` 的 18/18 个任务均完成协议校验。物理 GPU 6
+峰值显存 1613 MiB、最低剩余显存 22479 MiB、最高温度 60°C，不存在 OOM 或
+热失速证据。Z-score 在六个模型上均优于 MinMax；`1,1,1`、`8,8,1`、
+`16,16,1`、`32,32,1` 四种 MSNet CAM 宽度的预测几乎完全相同，因此归一化
+和中间宽度都不是当前 MSNet 失败的主要原因。
+
+Z-score 的 total 指标显示：GRU/LSTM 训练链有效但只部分接近 S1；MSNet 的
+24 h MAE/RMSE/NSE 为 `42.124/38.348/0.072`，相对论文
+`15.537/9.526/0.929` 明显失败。MSNet 每个 DMA 的预测在时间轴上的平均标准差
+仅约 `0.298`，说明模型主要学到了静态 DMA 轮廓。最大 24 h MAE 偏差来自
+DMA E（本地 `12.169`，论文 `1.867`）。三种校正模型能部分绕过退化主干，
+但 total MAE 仍比论文高约 44%–49%，局部最大偏差转移至 DMA I。
+
+最可疑的机制是末级 `1 channel` scaled-dot-product attention：它用所有时间
+点的值加权替换每个局部时间表示，而当前结构没有论文未说明的 residual path。
+为避免把猜测伪装成论文实现，`replace` 保持正式默认；CLI 新增三个带 provenance
+的诊断值：
+
+- `final_residual`：仅末级注意力采用残差更新；
+- `skip_final`：跳过末级一通道注意力；
+- `residual`：三个注意力阶段都采用残差更新。
+
+三组均只运行 Z-score MSNet 和论文固定 99 epoch，不再重复已被淘汰的 MinMax
+与 CAM 宽度扫描。服务器一键后台命令：
+
+```bash
+cd ~/projects/STaR-GNN-BWDF || exit 1
+conda activate bwdf311
+python -m pip install -e ".[dev,model]"
+mkdir -p logs
+nohup bash scripts/train/run_que_attention_diagnostics_gpu6.sh \
+  > logs/que_attention_diagnostics_launcher.log 2>&1 &
+echo $! > logs/que_attention_diagnostics_launcher.pid
+```
+
+预计显存仍低于 2 GiB；按正式矩阵实测速度，三组通常约 40–50 分钟。脚本会自动
+续跑、逐组校验、统计时间变化幅度，并生成
+`~/projects/que_attention_diagnostics_20260901.tar.gz`。只有候选同时恢复时间变化、
+显著改善 RMSE/NSE 且 DMA 误差结构靠近 S1，才继续扩展到 M/WM/W；不能仅按
+total MAE 选择候选。

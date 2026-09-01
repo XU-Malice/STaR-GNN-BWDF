@@ -47,6 +47,15 @@ def _probability(name: str, value: float) -> float:
     return value
 
 
+def _attention_update(value: str) -> str:
+    value = str(value).lower()
+    valid = {"replace", "residual", "final_residual", "skip_final"}
+    if value not in valid:
+        choices = ", ".join(sorted(valid))
+        raise ValueError(f"attention_update must be one of {choices}, got {value!r}.")
+    return value
+
+
 @dataclass(frozen=True)
 class ForecastBranchConfig:
     """Paper-selected settings for one DMA forecast branch."""
@@ -184,6 +193,7 @@ class ConvAttentionBlock(nn.Module):
         kernel_size: int = 3,
         attention_heads: int = 1,
         dropout: float = 0.0,
+        attention_update: str = "replace",
     ) -> None:
         super().__init__()
         input_features = _positive_int("input_features", input_features)
@@ -192,6 +202,7 @@ class ConvAttentionBlock(nn.Module):
         kernel_size = _positive_int("kernel_size", kernel_size)
         attention_heads = _positive_int("attention_heads", attention_heads)
         dropout = _probability("dropout", dropout)
+        self.attention_update = _attention_update(attention_update)
         channels = tuple(
             _positive_int("channel_size", value) for value in channel_sizes
         )
@@ -238,10 +249,21 @@ class ConvAttentionBlock(nn.Module):
                 f"{tuple(sequence.shape)}."
             )
         encoded = sequence
-        for convolution, attention in zip(self.convolutions, self.attention):
+        final_index = len(self.convolutions) - 1
+        for index, (convolution, attention) in enumerate(
+            zip(self.convolutions, self.attention)
+        ):
             encoded = convolution(encoded.transpose(1, 2)).transpose(1, 2)
             encoded = self.dropout(self.activation(encoded))
-            encoded = attention(encoded)
+            if self.attention_update == "skip_final" and index == final_index:
+                continue
+            attended = attention(encoded)
+            if self.attention_update == "residual" or (
+                self.attention_update == "final_residual" and index == final_index
+            ):
+                encoded = encoded + attended
+            else:
+                encoded = attended
         return encoded
 
 
@@ -258,6 +280,7 @@ class CAMLSTMForecastBranch(nn.Module):
         kernel_size: int = 3,
         attention_heads: int = 1,
         dropout: float = 0.0,
+        attention_update: str = "replace",
         horizon: int = PAPER_DAY_HOURS,
     ) -> None:
         super().__init__()
@@ -272,6 +295,7 @@ class CAMLSTMForecastBranch(nn.Module):
             kernel_size=kernel_size,
             attention_heads=attention_heads,
             dropout=dropout,
+            attention_update=attention_update,
         )
         self.lstm = nn.LSTM(
             input_size=self.cam.output_features,
@@ -312,6 +336,7 @@ class MSNet(nn.Module):
         kernel_size: int = 3,
         attention_heads: int = 1,
         dropout: float = 0.0,
+        attention_update: str = "replace",
         horizon: int = PAPER_DAY_HOURS,
     ) -> None:
         super().__init__()
@@ -332,6 +357,7 @@ class MSNet(nn.Module):
                     kernel_size=kernel_size,
                     attention_heads=attention_heads,
                     dropout=dropout,
+                    attention_update=attention_update,
                     horizon=self.horizon,
                 )
                 for config in configs
@@ -610,6 +636,7 @@ def build_msnet_from_config(
         kernel_size=int(cam_config.get("kernel_size", 3)),
         attention_heads=int(cam_config.get("attention_heads", 1)),
         dropout=float(cam_config.get("dropout", 0.0)),
+        attention_update=str(cam_config.get("attention_update", "replace")),
     )
 
 

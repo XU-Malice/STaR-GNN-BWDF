@@ -1263,6 +1263,16 @@ def main() -> None:
             "remain 1 to match Table 3."
         ),
     )
+    parser.add_argument(
+        "--cam-attention-update",
+        choices=["replace", "residual", "final_residual", "skip_final"],
+        default=None,
+        help=(
+            "Diagnostic CAM attention update. 'replace' is the literal paper "
+            "reconstruction; the other modes test whether attention "
+            "over-smoothing causes the observed one-channel collapse."
+        ),
+    )
     parser.add_argument("--max-epochs", type=int, default=None)
     parser.add_argument("--max-train-batches", type=int, default=None)
     parser.add_argument("--minimum-free-gib", type=float, default=8.0)
@@ -1278,6 +1288,8 @@ def main() -> None:
         if args.cam_channel_sizes[-1] != 1:
             raise ValueError("Table 3 requires the final CAM channel size to be 1.")
         config["cam"]["channel_sizes"] = list(args.cam_channel_sizes)
+    if args.cam_attention_update is not None:
+        config["cam"]["attention_update"] = args.cam_attention_update
     requested = canonical_model_name(args.model)
     selected = list(CANONICAL_MODELS) if requested == "all" else [requested]
     seed = (

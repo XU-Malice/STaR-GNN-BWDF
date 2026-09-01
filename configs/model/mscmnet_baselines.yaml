@@ -27,6 +27,7 @@ cam:
   pooling: false
   attention_layers: 3
   attention_heads: 1
+  attention_update: replace
   dropout: 0.0
   implementation_note: >
     Figure 7 alternates Conv1D and Attention three times. Table 3 gives CAM
@@ -35,8 +36,12 @@ cam:
     widths are an explicit diagnostic reconstruction informed by the earlier
     BWDF audit, not a published parameter. Equations 4-7 define single-head
     scaled dot-product Q/K/V attention; no residual path or LayerNorm is
-    described. Same-length padding remains a framework-level reconstruction
-    choice because the article states that CAM preserves input dimensions.
+    described, so `replace` remains the formal default. The CLI exposes three
+    explicitly diagnostic alternatives (residual, final_residual, skip_final)
+    because the formal matrix showed severe temporal over-smoothing at the
+    final one-channel attention stage. Same-length padding remains a
+    framework-level reconstruction choice because the article states that CAM
+    preserves input dimensions.
 
 models:
   gru:
