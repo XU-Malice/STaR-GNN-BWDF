@@ -218,3 +218,44 @@ echo $! > logs/que_attention_diagnostics_launcher.pid
 `~/projects/que_attention_diagnostics_20260901.tar.gz`。只有候选同时恢复时间变化、
 显著改善 RMSE/NSE 且 DMA 误差结构靠近 S1，才继续扩展到 M/WM/W；不能仅按
 total MAE 选择候选。
+
+### 注意力诊断结论与优化器语义审计
+
+`que_attention_diagnostics_20260901` 的三组任务均通过，但
+`final_residual`、`skip_final` 和 `residual` 的预测最大差异仅为
+`3.8e-6`，24 h total MAE 均约 `42.124`，DMA 时间标准差均约
+`0.298`。配置、checkpoint 哈希和实际参数存在差异，因此不是 CLI 未生效或
+导入错误包。
+
+checkpoint 参数审计表明，论文 S3-3 报告的 MSNet `weight_decay=0.1` 在当前
+PyTorch coupled-L2 `Adam` 中使所有参与前向的参数发生塌缩：卷积参数总范数约
+`6.2e-4`、注意力约 `5.7e-4`、LSTM 约 `7.7e-2`、联合输出权重约
+`3.2e-3`；相比之下联合输出 bias 范数为 `0.876`。`skip_final` 中被跳过且
+没有梯度的末级 attention 保留初始化权重，而其余参与计算的权重仍被衰减，进一步
+证明当前静态预测来自“高 coupled weight decay + 近似 bias-only 输出”，不能再
+归因于单独的末级 attention。
+
+补充材料只给出 `Weight_decay=0.1`，没有公开 Adam 的框架实现、coupled/decoupled
+语义、参数分组及 bias 是否正则化。下一轮因此保持论文数值可追踪，同时一次性比较：
+
+- literal `replace` + Adam：weight decay `0`、`1e-4`、`1e-2`；
+- literal `replace` + AdamW：论文数值 `0.1`；
+- `residual` 和 `skip_final` + Adam：weight decay `0`。
+
+运行：
+
+```bash
+cd ~/projects/STaR-GNN-BWDF || exit 1
+git pull --ff-only
+conda activate bwdf311
+python -m pip install -e ".[dev,model]"
+mkdir -p logs
+nohup bash scripts/train/run_que_optimizer_diagnostics_gpu6.sh \
+  > logs/que_optimizer_diagnostics_launcher.log 2>&1 &
+echo $! > logs/que_optimizer_diagnostics_launcher.pid
+```
+
+该矩阵共六组正式 99 epoch MSNet，预计约 80–90 分钟。结果摘要同时记录四项
+指标、时间标准差和各参数组范数；只有先恢复非零网络权重和时间动态后，才重新判断
+attention 结构。所有 override 都写入 resolved config、status 和 checkpoint，
+不会覆盖论文 S3-3 原值或被误标为已复现结果。

@@ -53,6 +53,23 @@ def test_minmax_scaler_is_fitted_without_test_values() -> None:
     assert float(scaler.minimum[0]) == pytest.approx(1.0)
 
 
+@pytest.mark.parametrize(
+    ("name", "expected_class"),
+    [("adam", torch.optim.Adam), ("adamw", torch.optim.AdamW)],
+)
+def test_optimizer_semantics_are_explicit(name, expected_class) -> None:
+    module = _load_training_script()
+    parameter = torch.nn.Parameter(torch.ones(1))
+    optimizer = module._build_optimizer(
+        [parameter],
+        optimizer_name=name,
+        learning_rate=0.001,
+        weight_decay=0.1,
+    )
+    assert isinstance(optimizer, expected_class)
+    assert optimizer.param_groups[0]["weight_decay"] == pytest.approx(0.1)
+
+
 def test_metric_table_uses_supplementary_total_mae_convention() -> None:
     module = _load_training_script()
     truth_24 = np.zeros((1, 24, 10), dtype=np.float32)

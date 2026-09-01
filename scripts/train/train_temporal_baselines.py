@@ -202,6 +202,27 @@ def _fit_scalar(normalization: str, *values: np.ndarray) -> TrainOnlyScaler:
     return Standardizer.fit_scalar(*values)
 
 
+def _build_optimizer(
+    parameters,
+    *,
+    optimizer_name: str,
+    learning_rate: float,
+    weight_decay: float,
+) -> torch.optim.Optimizer:
+    """Build an explicit optimizer so Adam/AdamW semantics stay auditable."""
+    name = str(optimizer_name).lower()
+    classes = {"adam": torch.optim.Adam, "adamw": torch.optim.AdamW}
+    if name not in classes:
+        raise ValueError("optimizer must be 'adam' or 'adamw'.")
+    if float(weight_decay) < 0.0:
+        raise ValueError("weight_decay must be non-negative.")
+    return classes[name](
+        parameters,
+        lr=float(learning_rate),
+        weight_decay=float(weight_decay),
+    )
+
+
 def canonical_model_name(value: str) -> str:
     name = str(value).lower()
     name = ALIASES.get(name, name)
@@ -843,9 +864,10 @@ def train_independent_family(
             model = LSTMForecast(hidden_sizes)
         model.to(device)
         parameter_counts[str(letter)] = _parameter_count(model)
-        optimizer = torch.optim.Adam(
+        optimizer = _build_optimizer(
             model.parameters(),
-            lr=float(model_config["learning_rates"][index]),
+            optimizer_name=training_config.get("optimizer", "adam"),
+            learning_rate=float(model_config["learning_rates"][index]),
             weight_decay=float(model_config["weight_decays"][index]),
         )
         epochs = (
@@ -1020,10 +1042,17 @@ def train_joint_family(
     model = build_joint_model_from_config(
         canonical, model_config, cam_config
     ).to(device)
-    optimizer = torch.optim.Adam(
+    optimizer_name = str(training_config.get("optimizer", "adam")).lower()
+    effective_weight_decay = float(
+        training_config.get(
+            "joint_weight_decay_override", model_config["weight_decay"]
+        )
+    )
+    optimizer = _build_optimizer(
         model.parameters(),
-        lr=float(model_config["learning_rate"]),
-        weight_decay=float(model_config["weight_decay"]),
+        optimizer_name=optimizer_name,
+        learning_rate=float(model_config["learning_rate"]),
+        weight_decay=effective_weight_decay,
     )
     epochs = (
         int(max_epochs_override)
@@ -1101,6 +1130,8 @@ def train_joint_family(
             "model": canonical,
             "fixed_epoch": epochs,
             "seed": int(seed),
+            "optimizer": optimizer_name,
+            "effective_weight_decay": effective_weight_decay,
             "model_config": model_config,
             "cam_config": cam_config,
             "branch_scalers": [value.state_dict() for value in branch_scalers],
@@ -1118,6 +1149,8 @@ def train_joint_family(
         "test_sequences": int(samples.y_test_24h.shape[0]),
         "prediction_24h_shape": list(prediction_24.shape),
         "prediction_168h_shape": list(prediction_168.shape),
+        "optimizer": optimizer_name,
+        "effective_weight_decay": effective_weight_decay,
         "fc2_share_supervision_weight": share_weight,
     }
 
@@ -1273,6 +1306,24 @@ def main() -> None:
             "over-smoothing causes the observed one-channel collapse."
         ),
     )
+    parser.add_argument(
+        "--optimizer",
+        choices=["adam", "adamw"],
+        default=None,
+        help=(
+            "Override optimizer semantics. Adam uses coupled L2 weight decay; "
+            "AdamW uses decoupled weight decay."
+        ),
+    )
+    parser.add_argument(
+        "--joint-weight-decay",
+        type=float,
+        default=None,
+        help=(
+            "Diagnostic override for MSNet/MSCMNet weight decay. The paper "
+            "value remains recorded in the model config."
+        ),
+    )
     parser.add_argument("--max-epochs", type=int, default=None)
     parser.add_argument("--max-train-batches", type=int, default=None)
     parser.add_argument("--minimum-free-gib", type=float, default=8.0)
@@ -1290,6 +1341,14 @@ def main() -> None:
         config["cam"]["channel_sizes"] = list(args.cam_channel_sizes)
     if args.cam_attention_update is not None:
         config["cam"]["attention_update"] = args.cam_attention_update
+    if args.optimizer is not None:
+        config["training"]["optimizer"] = args.optimizer
+    if args.joint_weight_decay is not None:
+        if args.joint_weight_decay < 0.0:
+            raise ValueError("--joint-weight-decay must be non-negative.")
+        config["training"]["joint_weight_decay_override"] = float(
+            args.joint_weight_decay
+        )
     requested = canonical_model_name(args.model)
     selected = list(CANONICAL_MODELS) if requested == "all" else [requested]
     seed = (
