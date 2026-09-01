@@ -16,6 +16,7 @@ from dma_wdf.models.mscmnet import (  # noqa: E402
     MSCMNetW,
     MSCMNetWM,
     MSNet,
+    ScaledDotProductSelfAttention,
 )
 
 
@@ -118,6 +119,87 @@ def test_cam_rejects_unknown_attention_update() -> None:
             cnn_layers=1,
             attention_layers=1,
             attention_update="unknown",
+        )
+
+
+def test_attention_score_scaling_is_explicit() -> None:
+    sequence = torch.tensor([[[1.0, 0.0], [0.0, 2.0]]])
+    scaled = ScaledDotProductSelfAttention(2, scaling="sqrt_dim")
+    unscaled = ScaledDotProductSelfAttention(2, scaling="none")
+    with torch.no_grad():
+        identity = torch.eye(2)
+        for module in (scaled, unscaled):
+            module.query.weight.copy_(identity)
+            module.key.weight.copy_(identity)
+            module.value.weight.copy_(identity)
+    assert scaled.scale == pytest.approx(2.0 ** -0.5)
+    assert unscaled.scale == pytest.approx(1.0)
+    assert not torch.allclose(scaled(sequence), unscaled(sequence))
+
+
+@pytest.mark.parametrize(
+    ("temporal_layout", "expected_steps", "expected_features"),
+    [
+        ("full_history_flat", 168, 1),
+        ("per_day_flat", 168, 1),
+        ("per_day_vectors", 7, 24),
+    ],
+)
+def test_cam_lstm_temporal_layouts(
+    temporal_layout: str,
+    expected_steps: int,
+    expected_features: int,
+) -> None:
+    config = ForecastBranchConfig(
+        input_features=2,
+        input_weeks=1,
+        lstm_layers=1,
+        hidden_size=4,
+    )
+    model = MSNet(
+        [config for _ in range(10)],
+        channel_sizes=(1,),
+        cnn_layers=1,
+        attention_layers=1,
+        temporal_layout=temporal_layout,
+    )
+    captured: list[tuple[int, ...]] = []
+
+    def record_shape(_module, args) -> None:
+        captured.append(tuple(args[0].shape))
+
+    hook = model.branches[0].lstm.register_forward_pre_hook(record_shape)
+    try:
+        output = model([torch.randn(2, 7, 24, 2) for _ in range(10)])
+    finally:
+        hook.remove()
+    assert output.shape == (2, 24, 10)
+    assert captured == [(2, expected_steps, expected_features)]
+    assert model.branches[0].lstm.input_size == expected_features
+
+
+@pytest.mark.parametrize("setting", ["bad_scaling", "bad_layout"])
+def test_cam_diagnostic_choices_reject_unknown_values(setting: str) -> None:
+    kwargs = (
+        {"attention_scaling": "unknown"}
+        if setting == "bad_scaling"
+        else {"temporal_layout": "unknown"}
+    )
+    with pytest.raises(ValueError, match="attention_scaling|temporal_layout"):
+        MSNet(
+            [
+                ForecastBranchConfig(
+                    input_features=1,
+                    input_weeks=1,
+                    lstm_layers=1,
+                    hidden_size=2,
+                )
+                for _ in range(10)
+            ],
+            channel_sizes=(1,),
+            cnn_layers=1,
+            attention_layers=1,
+            **kwargs,
         )
 
 

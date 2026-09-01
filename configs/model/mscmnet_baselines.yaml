@@ -28,6 +28,8 @@ cam:
   attention_layers: 3
   attention_heads: 1
   attention_update: replace
+  attention_scaling: sqrt_dim
+  temporal_layout: full_history_flat
   dropout: 0.0
   implementation_note: >
     Figure 7 alternates Conv1D and Attention three times. Table 3 gives CAM
@@ -35,11 +37,12 @@ cam:
     does not disclose the two intermediate convolution widths. The 16/16/1
     widths are an explicit diagnostic reconstruction informed by the earlier
     BWDF audit, not a published parameter. Equations 4-7 define single-head
-    scaled dot-product Q/K/V attention; no residual path or LayerNorm is
-    described, so `replace` remains the formal default. The CLI exposes three
-    explicitly diagnostic alternatives (residual, final_residual, skip_final)
-    because the formal matrix showed severe temporal over-smoothing at the
-    final one-channel attention stage. Same-length padding remains a
+    Q/K/V attention, but the score denominator and exact interpretation of the
+    d_i x 24 time axes are not recoverable from the article. `sqrt_dim` and
+    `full_history_flat` preserve the initial reconstruction defaults while the
+    CLI exposes paper-compatible diagnostics. No residual path or LayerNorm is
+    described, so `replace` remains the formal structural default. The other
+    attention-update modes are diagnostic only. Same-length padding remains a
     framework-level reconstruction choice because the article states that CAM
     preserves input dimensions.
 

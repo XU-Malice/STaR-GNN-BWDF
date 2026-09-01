@@ -56,6 +56,24 @@ def _attention_update(value: str) -> str:
     return value
 
 
+def _attention_scaling(value: str) -> str:
+    value = str(value).lower()
+    valid = {"sqrt_dim", "none"}
+    if value not in valid:
+        choices = ", ".join(sorted(valid))
+        raise ValueError(f"attention_scaling must be one of {choices}, got {value!r}.")
+    return value
+
+
+def _temporal_layout(value: str) -> str:
+    value = str(value).lower()
+    valid = {"full_history_flat", "per_day_flat", "per_day_vectors"}
+    if value not in valid:
+        choices = ", ".join(sorted(valid))
+        raise ValueError(f"temporal_layout must be one of {choices}, got {value!r}.")
+    return value
+
+
 @dataclass(frozen=True)
 class ForecastBranchConfig:
     """Paper-selected settings for one DMA forecast branch."""
@@ -153,16 +171,24 @@ class LSTMForecast(StackedRecurrentForecaster):
 
 
 class ScaledDotProductSelfAttention(nn.Module):
-    """Single-head Q/K/V attention matching equations (4)--(7)."""
+    """Single-head Q/K/V attention with an auditable score scaling choice."""
 
-    def __init__(self, features: int, dropout: float = 0.0) -> None:
+    def __init__(
+        self,
+        features: int,
+        dropout: float = 0.0,
+        scaling: str = "sqrt_dim",
+    ) -> None:
         super().__init__()
         self.features = _positive_int("features", features)
+        self.scaling = _attention_scaling(scaling)
         self.query = nn.Linear(self.features, self.features, bias=False)
         self.key = nn.Linear(self.features, self.features, bias=False)
         self.value = nn.Linear(self.features, self.features, bias=False)
         self.dropout = nn.Dropout(_probability("dropout", dropout))
-        self.scale = float(self.features) ** -0.5
+        self.scale = (
+            float(self.features) ** -0.5 if self.scaling == "sqrt_dim" else 1.0
+        )
 
     def forward(self, sequence: torch.Tensor) -> torch.Tensor:
         if sequence.ndim != 3 or sequence.shape[-1] != self.features:
@@ -194,6 +220,7 @@ class ConvAttentionBlock(nn.Module):
         attention_heads: int = 1,
         dropout: float = 0.0,
         attention_update: str = "replace",
+        attention_scaling: str = "sqrt_dim",
     ) -> None:
         super().__init__()
         input_features = _positive_int("input_features", input_features)
@@ -203,6 +230,7 @@ class ConvAttentionBlock(nn.Module):
         attention_heads = _positive_int("attention_heads", attention_heads)
         dropout = _probability("dropout", dropout)
         self.attention_update = _attention_update(attention_update)
+        self.attention_scaling = _attention_scaling(attention_scaling)
         channels = tuple(
             _positive_int("channel_size", value) for value in channel_sizes
         )
@@ -236,7 +264,11 @@ class ConvAttentionBlock(nn.Module):
                 )
             )
             self.attention.append(
-                ScaledDotProductSelfAttention(out_channels, dropout=dropout)
+                ScaledDotProductSelfAttention(
+                    out_channels,
+                    dropout=dropout,
+                    scaling=self.attention_scaling,
+                )
             )
             in_channels = out_channels
         self.activation = nn.ReLU()
@@ -281,11 +313,14 @@ class CAMLSTMForecastBranch(nn.Module):
         attention_heads: int = 1,
         dropout: float = 0.0,
         attention_update: str = "replace",
+        attention_scaling: str = "sqrt_dim",
+        temporal_layout: str = "full_history_flat",
         horizon: int = PAPER_DAY_HOURS,
     ) -> None:
         super().__init__()
         self.config = config
         self.horizon = _positive_int("horizon", horizon)
+        self.temporal_layout = _temporal_layout(temporal_layout)
         dropout = _probability("dropout", dropout)
         self.cam = ConvAttentionBlock(
             input_features=config.input_features,
@@ -296,9 +331,13 @@ class CAMLSTMForecastBranch(nn.Module):
             attention_heads=attention_heads,
             dropout=dropout,
             attention_update=attention_update,
+            attention_scaling=attention_scaling,
         )
+        lstm_input_size = self.cam.output_features
+        if self.temporal_layout == "per_day_vectors":
+            lstm_input_size *= PAPER_DAY_HOURS
         self.lstm = nn.LSTM(
-            input_size=self.cam.output_features,
+            input_size=lstm_input_size,
             hidden_size=config.hidden_size,
             num_layers=config.lstm_layers,
             dropout=dropout if config.lstm_layers > 1 else 0.0,
@@ -313,12 +352,33 @@ class CAMLSTMForecastBranch(nn.Module):
                 f"branch history must have shape (B,{expected[0]},"
                 f"{expected[1]},{expected[2]}), got {tuple(history.shape)}."
             )
-        sequence = history.reshape(
-            history.shape[0],
-            self.config.history_days * PAPER_DAY_HOURS,
-            self.config.input_features,
-        )
-        encoded = self.cam(sequence)
+        batch_size = history.shape[0]
+        if self.temporal_layout == "full_history_flat":
+            sequence = history.reshape(
+                batch_size,
+                self.config.history_days * PAPER_DAY_HOURS,
+                self.config.input_features,
+            )
+            encoded = self.cam(sequence)
+        else:
+            daily = history.reshape(
+                batch_size * self.config.history_days,
+                PAPER_DAY_HOURS,
+                self.config.input_features,
+            )
+            daily = self.cam(daily)
+            if self.temporal_layout == "per_day_flat":
+                encoded = daily.reshape(
+                    batch_size,
+                    self.config.history_days * PAPER_DAY_HOURS,
+                    self.cam.output_features,
+                )
+            else:
+                encoded = daily.reshape(
+                    batch_size,
+                    self.config.history_days,
+                    PAPER_DAY_HOURS * self.cam.output_features,
+                )
         recurrent, _ = self.lstm(encoded)
         return self.output(recurrent[:, -1, :])
 
@@ -337,6 +397,8 @@ class MSNet(nn.Module):
         attention_heads: int = 1,
         dropout: float = 0.0,
         attention_update: str = "replace",
+        attention_scaling: str = "sqrt_dim",
+        temporal_layout: str = "full_history_flat",
         horizon: int = PAPER_DAY_HOURS,
     ) -> None:
         super().__init__()
@@ -358,6 +420,8 @@ class MSNet(nn.Module):
                     attention_heads=attention_heads,
                     dropout=dropout,
                     attention_update=attention_update,
+                    attention_scaling=attention_scaling,
+                    temporal_layout=temporal_layout,
                     horizon=self.horizon,
                 )
                 for config in configs
@@ -637,6 +701,10 @@ def build_msnet_from_config(
         attention_heads=int(cam_config.get("attention_heads", 1)),
         dropout=float(cam_config.get("dropout", 0.0)),
         attention_update=str(cam_config.get("attention_update", "replace")),
+        attention_scaling=str(cam_config.get("attention_scaling", "sqrt_dim")),
+        temporal_layout=str(
+            cam_config.get("temporal_layout", "full_history_flat")
+        ),
     )
 
 

@@ -95,8 +95,8 @@ neural network architecture*（DOI: `10.1016/j.wroa.2024.100269`）。
 - CAM 按 `Conv1D → Attention` 交替三次，而不是先连续卷积再连续注意力；
 - Table 3 给出 forecast branch 的 CAM 输入/输出张量形状，并明确 CAM 输出
   为 1 channel 后进入 LSTM；两层中间卷积宽度没有公开；
-- Eq. (4)–(7) 描述单头 Q/K/V scaled dot-product attention，正文没有给出
-  residual attention、multi-head 或 LayerNorm；
+- Eq. (4)–(7) 描述单头 Q/K/V attention；正文没有明确 QK 分数缩放分母，
+  也没有给出 residual attention、multi-head 或 LayerNorm；
 - FC2 的日需求份额/温度序列同样经过 CAM-LSTM，而不是直接进入 LSTM；
 - Table 3 给出的 FC1/FC2 节点数、dropout、LSTM 层数和 hidden size 已逐项
   写入配置。
@@ -115,6 +115,35 @@ checkpoint，不能宣称与作者私有代码逐行相同：
 
 这是一套可审计的论文结构重建；是否数值复现 S1 必须由服务器正式运行
 结果判定，不能用“局部指标优于论文”替代协议一致性。
+
+## 优化器与 CAM 时间轴诊断
+
+正式 99 epoch 优化器矩阵表明，当前重建使用 PyTorch `Adam` 的 coupled
+weight decay 时，即使 decay 只有 `0.0001`，CAM 卷积和注意力权重也会被压到
+接近零，预测退化为不随输入起点变化的固定 24 小时模板。`AdamW(0.1)` 能保留
+论文的 `Conv1D → Attention` 三次交替结构及非零输入敏感性，因此后续结构兼容
+诊断固定使用 `replace + AdamW(0.1)`。`skip_final` 虽然总指标更接近补充材料，
+但它删除 Figure 7 的末级 Attention，只能作为机理诊断，不能标记为论文实现。
+
+论文的 CAM 输入写为 `d_i × 24 × 10`，但没有交代这两个时间轴在 CNN、Attention
+和 LSTM 之间如何展平，也没有公开 QK 分数是否除以特征维平方根或训练 batch
+size。以下脚本穷举仍与图 7 相容的 12 组选择：
+
+- `full_history_flat`：将全部历史小时展平后执行 CAM 和 LSTM；
+- `per_day_flat`：每天独立执行 24 小时 CAM，再展平给逐小时 LSTM；
+- `per_day_vectors`：每天独立执行 CAM，并将一天 24 个输出作为一个 LSTM
+  时间步；
+- attention scaling 为 `sqrt_dim` 或 `none`，batch size 为 8 或 16。
+
+```bash
+nohup bash scripts/train/run_que_cam_layout_diagnostics_gpu6.sh \
+  > logs/que_cam_layout_diagnostics_launcher.log 2>&1 &
+tail -f logs/que_cam_layout_diagnostics_launcher.log
+```
+
+脚本支持断点续跑，会验证 46 个共同起点、24 h/168 h 张量、正式 epoch、优化器
+和 resolved config；最终摘要还记录跨预测起点标准差、相邻起点变化和 168 h
+逐日变化，避免把固定日模板误判成有效时间动态。
 
 ## GPU6 运行
 

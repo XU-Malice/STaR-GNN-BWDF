@@ -1307,6 +1307,25 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--cam-attention-scaling",
+        choices=["sqrt_dim", "none"],
+        default=None,
+        help=(
+            "Diagnostic QK score scaling. The article defines Q/K/V attention "
+            "but does not disclose this low-level denominator."
+        ),
+    )
+    parser.add_argument(
+        "--cam-temporal-layout",
+        choices=["full_history_flat", "per_day_flat", "per_day_vectors"],
+        default=None,
+        help=(
+            "Diagnostic interpretation of the paper's d_i x 24 CAM input: "
+            "flatten all hours, apply CAM within each day then flatten, or "
+            "send one 24-hour CAM vector per day to LSTM."
+        ),
+    )
+    parser.add_argument(
         "--optimizer",
         choices=["adam", "adamw"],
         default=None,
@@ -1323,6 +1342,12 @@ def main() -> None:
             "Diagnostic override for MSNet/MSCMNet weight decay. The paper "
             "value remains recorded in the model config."
         ),
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=None,
+        help="Override the unpublished training batch size for diagnostics.",
     )
     parser.add_argument("--max-epochs", type=int, default=None)
     parser.add_argument("--max-train-batches", type=int, default=None)
@@ -1341,6 +1366,10 @@ def main() -> None:
         config["cam"]["channel_sizes"] = list(args.cam_channel_sizes)
     if args.cam_attention_update is not None:
         config["cam"]["attention_update"] = args.cam_attention_update
+    if args.cam_attention_scaling is not None:
+        config["cam"]["attention_scaling"] = args.cam_attention_scaling
+    if args.cam_temporal_layout is not None:
+        config["cam"]["temporal_layout"] = args.cam_temporal_layout
     if args.optimizer is not None:
         config["training"]["optimizer"] = args.optimizer
     if args.joint_weight_decay is not None:
@@ -1349,6 +1378,10 @@ def main() -> None:
         config["training"]["joint_weight_decay_override"] = float(
             args.joint_weight_decay
         )
+    if args.batch_size is not None:
+        if args.batch_size <= 0:
+            raise ValueError("--batch-size must be positive.")
+        config["training"]["batch_size"] = int(args.batch_size)
     requested = canonical_model_name(args.model)
     selected = list(CANONICAL_MODELS) if requested == "all" else [requested]
     seed = (
