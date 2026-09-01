@@ -16,6 +16,10 @@ STATUS_TSV="${LOG_ROOT}/diagnostic_status.tsv"
 
 mkdir -p "${RESULT_ROOT}" "${LOG_ROOT}"
 cd "${PROJECT_ROOT}"
+# This environment also has ~/projects/DMA-WDF installed as an editable
+# package with the same top-level name. Match the training script's import
+# precedence and fail if the current repository is not the resolved source.
+export PYTHONPATH="${PROJECT_ROOT}/src${PYTHONPATH:+:${PYTHONPATH}}"
 exec 9>"${LOG_ROOT}/run.lock"
 if command -v flock >/dev/null 2>&1 && ! flock -n 9; then
     echo "错误：同一诊断目录已有任务在运行。" >&2
@@ -34,16 +38,27 @@ if [[ ! "${GPU_FREE_MIB}" =~ ^[0-9]+$ ]] || (( GPU_FREE_MIB < MINIMUM_FREE_MIB )
     exit 1
 fi
 
-{
+if ! {
     date --iso-8601=seconds
     git rev-parse HEAD
     git status --short
     python --version
-    python - <<'PY'
+    PROJECT_ROOT_PY="${PROJECT_ROOT}" python - <<'PY'
 import inspect
+import os
+from pathlib import Path
+
 import torch
 import dma_wdf
 from dma_wdf.models.mscmnet import ConvAttentionBlock
+expected_root = (Path(os.environ["PROJECT_ROOT_PY"]) / "src").resolve()
+dma_source = Path(dma_wdf.__file__).resolve()
+model_source = Path(inspect.getsourcefile(ConvAttentionBlock)).resolve()
+for source in (dma_source, model_source):
+    if not source.is_relative_to(expected_root):
+        raise SystemExit(
+            f"Wrong dma_wdf source: {source}; expected a file below {expected_root}"
+        )
 print({
     "torch": torch.__version__,
     "cuda_available": torch.cuda.is_available(),
@@ -55,7 +70,11 @@ if not torch.cuda.is_available():
     raise SystemExit("CUDA is unavailable")
 PY
     nvidia-smi --id="${GPU_ID}"
-} >"${LOG_ROOT}/environment_and_git.txt" 2>&1
+} >"${LOG_ROOT}/environment_and_git.txt" 2>&1; then
+    echo "错误：环境与源码导入预检失败。" >&2
+    sed -n '1,240p' "${LOG_ROOT}/environment_and_git.txt" >&2
+    exit 1
+fi
 
 nvidia-smi --id="${GPU_ID}" \
     --query-gpu=timestamp,index,temperature.gpu,power.draw,memory.used,memory.free,utilization.gpu \
