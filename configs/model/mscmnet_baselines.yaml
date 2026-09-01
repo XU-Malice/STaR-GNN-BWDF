@@ -29,7 +29,7 @@ cam:
   attention_heads: 1
   attention_update: replace
   attention_scaling: sqrt_dim
-  temporal_layout: full_history_flat
+  temporal_layout: per_day_vectors
   dropout: 0.0
   implementation_note: >
     Figure 7 alternates Conv1D and Attention three times. Table 3 gives CAM
@@ -39,12 +39,15 @@ cam:
     BWDF audit, not a published parameter. Equations 4-7 define single-head
     Q/K/V attention, but the score denominator and exact interpretation of the
     d_i x 24 time axes are not recoverable from the article. `sqrt_dim` and
-    `full_history_flat` preserve the initial reconstruction defaults while the
-    CLI exposes paper-compatible diagnostics. No residual path or LayerNorm is
-    described, so `replace` remains the formal structural default. The other
-    attention-update modes are diagnostic only. Same-length padding remains a
-    framework-level reconstruction choice because the article states that CAM
-    preserves input dimensions.
+    server-side 12-case diagnostics selected `per_day_vectors` with
+    `sqrt_dim` scaling and batch size 8: it best reproduced the per-DMA tables
+    while retaining substantially more origin-to-origin variation than the
+    numerically closest aggregate-only alternative. No residual path or
+    LayerNorm is described, so `replace` remains the formal structural default.
+    The other layouts, scaling choices and attention-update modes remain
+    diagnostic only. Same-length padding remains a framework-level
+    reconstruction choice because the article states that CAM preserves input
+    dimensions.
 
 models:
   gru:
@@ -188,7 +191,7 @@ training:
   batch_size: 8
   normalization: zscore
   loss: mse
-  optimizer: adam
+  optimizer: adamw
   standardize_from_train_only: true
   checkpoint_policy: final_fixed_paper_epoch
   evaluation_checkpoint: same_checkpoint_for_all_metrics_and_horizons

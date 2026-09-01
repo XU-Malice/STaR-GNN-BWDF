@@ -129,11 +129,18 @@ weight decay 时，即使 decay 只有 `0.0001`，CAM 卷积和注意力权重�
 和 LSTM 之间如何展平，也没有公开 QK 分数是否除以特征维平方根或训练 batch
 size。以下脚本穷举仍与图 7 相容的 12 组选择：
 
-- `full_history_flat`：将全部历史小时展平后执行 CAM 和 LSTM；
+- `full_history_flat`：将全部历史小时展平后执行 CAM 和 LSTM（仅诊断）；
 - `per_day_flat`：每天独立执行 24 小时 CAM，再展平给逐小时 LSTM；
 - `per_day_vectors`：每天独立执行 CAM，并将一天 24 个输出作为一个 LSTM
   时间步；
 - attention scaling 为 `sqrt_dim` 或 `none`，batch size 为 8 或 16。
+
+2026-09-01 的 12 组正式诊断固定了 `replace + AdamW`。其中
+`full_history_flat + none + 8` 最接近论文的八个汇总数，但预测日变化仅为
+真值的约 44%，存在明显过度平滑。`per_day_vectors + sqrt_dim + 8` 的逐 DMA
+指标平均相关性约为 0.96，并且更符合补充材料给出的 CAM 张量形状，因此被选为
+后续四个联合模型的证据优先设置。该选择仍属于重建推断，不表示作者未公开的
+实现细节已被唯一确定。
 
 ```bash
 nohup bash scripts/train/run_que_cam_layout_diagnostics_gpu6.sh \
@@ -144,6 +151,14 @@ tail -f logs/que_cam_layout_diagnostics_launcher.log
 脚本支持断点续跑，会验证 46 个共同起点、24 h/168 h 张量、正式 epoch、优化器
 和 resolved config；最终摘要还记录跨预测起点标准差、相邻起点变化和 168 h
 逐日变化，避免把固定日模板误判成有效时间动态。
+
+固定上述选择后，可一次后台运行 MSNet、MSCMNet_M、MSCMNet_WM 和 MSCMNet_W：
+
+```bash
+nohup bash scripts/train/run_que_selected_joint_baselines_gpu6.sh \
+  > logs/que_selected_joint_baselines_launcher.log 2>&1 &
+tail -f logs/que_selected_joint_baselines_launcher.log
+```
 
 ## GPU6 运行
 
