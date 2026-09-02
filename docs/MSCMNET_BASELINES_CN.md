@@ -303,3 +303,27 @@ echo $! > logs/que_optimizer_diagnostics_launcher.pid
 指标、时间标准差和各参数组范数；只有先恢复非零网络权重和时间动态后，才重新判断
 attention 结构。所有 override 都写入 resolved config、status 和 checkpoint，
 不会覆盖论文 S3-3 原值或被误标为已复现结果。
+
+### 四联合模型结果与校正标定诊断
+
+`que_selected_joint_baselines_20260901` 的四个任务全部通过协议校验。MSNet 和
+MSCMNet_WM 的总体结果已接近补充材料；WM 的八个总指标相对误差为
+`0.2%–6.5%`。但是 MSCMNet_M 和 MSCMNet_W 的 total RMSE 分别约为
+`16.2` 和 `16.6–17.5`，未复现论文约 `8` 的结果，而且本地模型排序与论文中
+MSCMNet_W 最优的结论相反。
+
+独立复算排除了指标聚合错误。M/W 的总需求平均偏差约为 `-13` 至 `-15 L/s`，
+该常量偏差解释了约 `63%–73%` 的总需求均方误差；仅作诊断性的 oracle 去偏后，
+RMSE 可降至约 `9–10`。因此下一步优先检查低 epoch 模型的 batch 更新数、FC1/FC2
+直接输出与残差组合，以及 FC2 日需求份额是否需要显式监督，而不继续扫描 CAM
+宽度或归一化。
+
+```bash
+nohup bash scripts/train/run_que_correction_calibration_diagnostics_gpu6.sh \
+  > logs/que_correction_calibration_diagnostics_launcher.log 2>&1 &
+tail -f logs/que_correction_calibration_diagnostics_launcher.log
+```
+
+该脚本包括 9 个可断点续跑的诊断任务：M/W 的 batch `1/4`，直接/零初始化残差
+校正，以及 W/WM 的 FC2 share loss `0/0.1`。`direct` 仍是正式默认；残差和辅助
+损失均明确标记为论文未公开实现细节的机理诊断。

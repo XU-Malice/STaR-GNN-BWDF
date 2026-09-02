@@ -15,9 +15,11 @@ The article specifies the data flow and the Hyperopt-selected recurrent and
 fully-connected dimensions, but does not publish every low-level framework
 choice.  Figure 7 does, however, fix the CAM ordering: Conv1d and Attention
 alternate three times.  Table 3 fixes a one-channel CAM output before LSTM but
-does not disclose the two intermediate convolution widths.  FC1/FC2 are direct
-(not residual) corrections.  No target or future demand is accepted by a
-forward method.
+does not disclose the two intermediate convolution widths.  The formal
+reconstruction treats FC1/FC2 as direct corrections; an explicitly labelled
+residual mode is retained only for diagnostics because the article does not
+publish the low-level composition operator.  No target or future demand is
+accepted by a forward method.
 """
 
 from __future__ import annotations
@@ -71,6 +73,15 @@ def _temporal_layout(value: str) -> str:
     if value not in valid:
         choices = ", ".join(sorted(valid))
         raise ValueError(f"temporal_layout must be one of {choices}, got {value!r}.")
+    return value
+
+
+def _correction_mode(value: str) -> str:
+    value = str(value).lower()
+    valid = {"direct", "residual"}
+    if value not in valid:
+        choices = ", ".join(sorted(valid))
+        raise ValueError(f"correction_mode must be one of {choices}, got {value!r}.")
     return value
 
 
@@ -545,10 +556,13 @@ class MSCMNetM(nn.Module):
         future_features: int,
         fc1_nodes: int,
         fc1_dropout: float,
+        correction_mode: str = "direct",
+        zero_init_correction: bool = False,
     ) -> None:
         super().__init__()
         self.msnet = msnet
         self.future_features = _positive_int("future_features", future_features)
+        self.correction_mode = _correction_mode(correction_mode)
         output_size = msnet.horizon * msnet.num_dmas
         self.fc1 = FullyConnectedCorrection(
             input_size=output_size + msnet.horizon * self.future_features,
@@ -556,6 +570,10 @@ class MSCMNetM(nn.Module):
             output_size=output_size,
             dropout=fc1_dropout,
         )
+        if bool(zero_init_correction):
+            output = self.fc1.network[-1]
+            nn.init.zeros_(output.weight)
+            nn.init.zeros_(output.bias)
 
     def _validate_future(self, future: torch.Tensor) -> None:
         expected = (self.msnet.horizon, self.future_features)
@@ -580,6 +598,8 @@ class MSCMNetM(nn.Module):
             dim=1,
         )
         corrected = self.fc1(correction_features).reshape_as(msnet_prediction)
+        if self.correction_mode == "residual":
+            corrected = msnet_prediction + corrected
         return MSCMNetOutput(
             prediction=corrected,
             msnet_prediction=msnet_prediction,
@@ -605,12 +625,16 @@ class MSCMNetWM(MSCMNetM):
         fc2_lstm_layers: int,
         fc2_nodes: int,
         fc2_dropout: float,
+        correction_mode: str = "direct",
+        zero_init_correction: bool = False,
     ) -> None:
         super().__init__(
             msnet,
             future_features=future_features,
             fc1_nodes=fc1_nodes,
             fc1_dropout=fc1_dropout,
+            correction_mode=correction_mode,
+            zero_init_correction=zero_init_correction,
         )
         self.share_forecaster = DailyShareForecaster(
             input_features=fc2_input_features,
@@ -630,6 +654,10 @@ class MSCMNetWM(MSCMNetM):
             output_size=output_size,
             dropout=fc2_dropout,
         )
+        if bool(zero_init_correction):
+            output = self.fc2.network[-1]
+            nn.init.zeros_(output.weight)
+            nn.init.zeros_(output.bias)
 
     def forward(
         self,
@@ -647,6 +675,8 @@ class MSCMNetWM(MSCMNetM):
             dim=1,
         )
         corrected = self.fc2(correction_features).reshape_as(fc1_output.prediction)
+        if self.correction_mode == "residual":
+            corrected = fc1_output.prediction + corrected
         return MSCMNetOutput(
             prediction=corrected,
             msnet_prediction=fc1_output.msnet_prediction,
@@ -728,6 +758,10 @@ def build_joint_model_from_config(
         "future_features": len(tuple(fc1["future_features"])),
         "fc1_nodes": int(fc1["nodes"]),
         "fc1_dropout": float(fc1["dropout"]),
+        "correction_mode": str(model_config.get("correction_mode", "direct")),
+        "zero_init_correction": bool(
+            model_config.get("zero_init_correction", False)
+        ),
     }
     if canonical == "mscmnet_m":
         return MSCMNetM(**common)

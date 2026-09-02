@@ -1152,6 +1152,10 @@ def train_joint_family(
         "optimizer": optimizer_name,
         "effective_weight_decay": effective_weight_decay,
         "fc2_share_supervision_weight": share_weight,
+        "correction_mode": str(model_config.get("correction_mode", "direct")),
+        "zero_init_correction": bool(
+            model_config.get("zero_init_correction", False)
+        ),
     }
 
 
@@ -1349,6 +1353,32 @@ def main() -> None:
         default=None,
         help="Override the unpublished training batch size for diagnostics.",
     )
+    parser.add_argument(
+        "--correction-mode",
+        choices=["direct", "residual"],
+        default=None,
+        help=(
+            "Diagnostic FC1/FC2 composition. 'direct' is the formal literal "
+            "reconstruction; 'residual' adds each correction to its input."
+        ),
+    )
+    parser.add_argument(
+        "--zero-init-correction",
+        action="store_true",
+        help=(
+            "Zero-initialize the final FC1/FC2 layers. This is a diagnostic "
+            "stabilizer intended for residual correction only."
+        ),
+    )
+    parser.add_argument(
+        "--fc2-share-supervision-weight",
+        type=float,
+        default=None,
+        help=(
+            "Diagnostic MSE weight for the FC2 daily DMA-share target. The "
+            "paper does not disclose an auxiliary-loss coefficient."
+        ),
+    )
     parser.add_argument("--max-epochs", type=int, default=None)
     parser.add_argument("--max-train-batches", type=int, default=None)
     parser.add_argument("--minimum-free-gib", type=float, default=8.0)
@@ -1382,6 +1412,26 @@ def main() -> None:
         if args.batch_size <= 0:
             raise ValueError("--batch-size must be positive.")
         config["training"]["batch_size"] = int(args.batch_size)
+    correction_models = ("mscmnet_m", "mscmnet_wm", "mscmnet_w")
+    if args.correction_mode is not None:
+        for model_name in correction_models:
+            config["models"][model_name]["correction_mode"] = args.correction_mode
+    if args.zero_init_correction:
+        if args.correction_mode != "residual":
+            raise ValueError(
+                "--zero-init-correction requires --correction-mode residual."
+            )
+        for model_name in correction_models:
+            config["models"][model_name]["zero_init_correction"] = True
+    if args.fc2_share_supervision_weight is not None:
+        if args.fc2_share_supervision_weight < 0.0:
+            raise ValueError(
+                "--fc2-share-supervision-weight must be non-negative."
+            )
+        for model_name in ("mscmnet_wm", "mscmnet_w"):
+            config["models"][model_name]["fc2"]["share_supervision_weight"] = (
+                float(args.fc2_share_supervision_weight)
+            )
     requested = canonical_model_name(args.model)
     selected = list(CANONICAL_MODELS) if requested == "all" else [requested]
     seed = (

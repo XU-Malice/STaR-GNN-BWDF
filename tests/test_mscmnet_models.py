@@ -220,6 +220,39 @@ def test_mscmnet_m_exposes_trunk_and_fc1_outputs() -> None:
     assert output.predicted_daily_share is None
 
 
+@pytest.mark.parametrize("correction_mode", ["direct", "residual"])
+def test_zero_initialized_correction_composition(correction_mode: str) -> None:
+    model = MSCMNetM(
+        _small_msnet(input_features=10),
+        future_features=9,
+        fc1_nodes=24,
+        fc1_dropout=0.0,
+        correction_mode=correction_mode,
+        zero_init_correction=True,
+    )
+    output = model(
+        _histories(input_features=10),
+        torch.randn(2, 24, 9),
+    )
+    expected = (
+        torch.zeros_like(output.prediction)
+        if correction_mode == "direct"
+        else output.msnet_prediction
+    )
+    torch.testing.assert_close(output.prediction, expected)
+
+
+def test_unknown_correction_mode_is_rejected() -> None:
+    with pytest.raises(ValueError, match="correction_mode"):
+        MSCMNetM(
+            _small_msnet(input_features=10),
+            future_features=9,
+            fc1_nodes=24,
+            fc1_dropout=0.0,
+            correction_mode="unknown",
+        )
+
+
 @pytest.mark.parametrize(
     ("model_class", "branch_features", "future_features", "fc2_features"),
     [
