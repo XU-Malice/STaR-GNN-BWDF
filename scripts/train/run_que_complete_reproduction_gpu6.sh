@@ -171,7 +171,9 @@ run_case() {
     local case_name="$1" candidate="$2" phase="$3" model="$4" norm="$5" optimizer="$6"
     local decay="$7" batch="$8" loss="$9" stride="${10}" epochs="${11}" mode="${12}"
     local zero="${13}" share="${14}" seed="${15}"
-    local output_root="${RESULT_ROOT}/${case_name}" run="${output_root}/${model}/seed_${seed}"
+    local output_root run
+    output_root="${RESULT_ROOT}/${case_name}"
+    run="${output_root}/${model}/seed_${seed}"
     local log="${LOG_ROOT}/${case_name}.log"
     if is_complete "${run}" "${model}" "${seed}" "${stride}" "${loss}"; then
         echo "跳过已完成任务: ${case_name}"

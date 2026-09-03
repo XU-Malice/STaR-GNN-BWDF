@@ -51,3 +51,12 @@ def test_paper_metric_file_covers_all_six_models() -> None:
         assert expected.issubset(paper[task])
         for model in expected:
             assert set([*"ABCDEFGHIJ", "total"]).issubset(paper[task][model])
+
+
+def test_gpu_runner_does_not_expand_a_local_before_assignment() -> None:
+    runner = (
+        ROOT / "scripts/train/run_que_complete_reproduction_gpu6.sh"
+    ).read_text(encoding="utf-8")
+    assert 'local output_root="${RESULT_ROOT}' not in runner
+    assert 'output_root="${RESULT_ROOT}/${case_name}"' in runner
+    assert 'run="${output_root}/${model}/seed_${seed}"' in runner
