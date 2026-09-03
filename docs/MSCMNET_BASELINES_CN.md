@@ -327,3 +327,44 @@ tail -f logs/que_correction_calibration_diagnostics_launcher.log
 该脚本包括 9 个可断点续跑的诊断任务：M/W 的 batch `1/4`，直接/零初始化残差
 校正，以及 W/WM 的 FC2 share loss `0/0.1`。`direct` 仍是正式默认；残差和辅助
 损失均明确标记为论文未公开实现细节的机理诊断。
+
+### 2026-09-03 校正诊断结论与最终合并队列
+
+扩展后的 15 个校正任务全部通过 common-46、单 checkpoint、训练期 IQR 和预测
+形状校验。当前最有证据的三个候选为：
+
+- `MSCMNet_M`：batch 4、零初始化 residual，24 h/168 h MAE 为
+  `14.557/15.409`；
+- `MSCMNet_W`：batch 1、零初始化 residual、share loss 0，168 h 的 DMA
+  MAE/RMSE 模式与补充表相关系数约为 `0.995/0.992`，但仍有系统性低估；
+- `MSCMNet_WM`：batch 8、direct、share loss 0，仍是总体指标最接近的直译实现。
+
+论文正文的 Fig. 5 把四个联合模型的训练损失画到 100 epoch，而补充表给出
+MSNet/M/WM/W 的最佳 epoch `99/6/55/11`。原实现把最佳 epoch 当作总训练轮数；
+这两种解释不能由公开材料唯一决定。最终队列因此一次性完成：
+
+- 论文最佳 epoch 与完整 100 epoch 的 checkpoint 语义比较；
+- AdamW、无 coupled decay 的 Adam、direct/residual、低权重 share loss；
+- 最有证据的三个候选各 3 个随机种子；
+- MSNet、FC1、FC2 最终输出的阶段预测；
+- 只用 686 个训练样本拟合的 intercept/affine 校准诊断，绝不使用测试真值拟合。
+
+服务器只需启动一次：
+
+```bash
+cd ~/projects/STaR-GNN-BWDF || exit 1
+git fetch origin feat/mscmnet-baselines
+git merge --ff-only FETCH_HEAD
+conda activate bwdf311
+python -m pip install -e ".[dev,model]"
+mkdir -p logs
+nohup bash scripts/train/run_que_final_reproduction_gpu6.sh \
+  > logs/que_final_reproduction_launcher.log 2>&1 &
+echo $! | tee logs/que_final_reproduction_launcher.pid
+disown
+```
+
+21 个任务在一张 RTX 4090 上串行执行，预计约 2.5–3.5 小时；脚本可断点续跑，
+并生成 `~/projects/que_final_reproduction_20260903_compact.tar.gz`。紧凑包保留全部
+预测、阶段诊断、训练集校准参数、状态和日志，只排除服务器仍保留的 checkpoint。
+只有原始（未校准）结果可用于判断论文数值复现；训练集校准结果只用于定位系统偏差。

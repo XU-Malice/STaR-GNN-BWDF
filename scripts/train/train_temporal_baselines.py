@@ -524,15 +524,45 @@ def _joint_prediction(
     future: torch.Tensor,
     fc2_history: torch.Tensor | None,
 ) -> torch.Tensor:
+    return _joint_output(model, family, branches, future, fc2_history).prediction
+
+
+def _joint_output(
+    model: nn.Module,
+    family: str,
+    branches: Sequence[torch.Tensor],
+    future: torch.Tensor,
+    fc2_history: torch.Tensor | None,
+) -> MSCMNetOutput:
+    """Return final and intermediate outputs without changing model semantics."""
     if family == "msnet":
-        return model(branches)
+        prediction = model(branches)
+        return MSCMNetOutput(
+            prediction=prediction,
+            msnet_prediction=prediction,
+        )
     if family == "mscmnet_m":
-        output: MSCMNetOutput = model(branches, future)
-        return output.prediction
+        return model(branches, future)
     if fc2_history is None:
         raise ValueError("An FC2 model requires fc2_history.")
-    output = model(branches, future, fc2_history)
-    return output.prediction
+    return model(branches, future, fc2_history)
+
+
+_STAGE_FIELDS = (
+    "prediction",
+    "msnet_prediction",
+    "fc1_prediction",
+    "predicted_daily_share",
+)
+
+
+def _append_output_stages(
+    collected: dict[str, list[np.ndarray]], output: MSCMNetOutput
+) -> None:
+    for field in _STAGE_FIELDS:
+        value = getattr(output, field)
+        if value is not None:
+            collected.setdefault(field, []).append(value.detach().cpu().numpy())
 
 
 @torch.no_grad()
@@ -546,8 +576,31 @@ def predict_joint_24h(
     device: torch.device,
     batch_size: int,
 ) -> np.ndarray:
+    return predict_joint_24h_stages(
+        model=model,
+        family=family,
+        branches=branches,
+        future=future,
+        fc2_history=fc2_history,
+        device=device,
+        batch_size=batch_size,
+    )["prediction"]
+
+
+@torch.no_grad()
+def predict_joint_24h_stages(
+    *,
+    model: nn.Module,
+    family: str,
+    branches: Sequence[np.ndarray],
+    future: np.ndarray,
+    fc2_history: np.ndarray | None,
+    device: torch.device,
+    batch_size: int,
+) -> dict[str, np.ndarray]:
+    """Predict one day and retain each auditable correction stage."""
     model.eval()
-    outputs: list[np.ndarray] = []
+    outputs: dict[str, list[np.ndarray]] = {}
     count = len(branches[0])
     for start in range(0, count, int(batch_size)):
         end = start + int(batch_size)
@@ -565,12 +618,11 @@ def predict_joint_24h(
                 fc2_history[start:end], dtype=torch.float32, device=device
             )
         )
-        outputs.append(
-            _joint_prediction(
-                model, family, branch_tensors, future_tensor, fc2_tensor
-            ).cpu().numpy()
+        _append_output_stages(
+            outputs,
+            _joint_output(model, family, branch_tensors, future_tensor, fc2_tensor),
         )
-    return np.concatenate(outputs, axis=0)
+    return {key: np.concatenate(values, axis=0) for key, values in outputs.items()}
 
 
 def _raw_branch_day(
@@ -633,11 +685,52 @@ def predict_joint_168h(
     device: torch.device,
     steps: int = 7,
 ) -> np.ndarray:
+    return predict_joint_168h_stages(
+        model=model,
+        family=family,
+        branches=branches,
+        branch_scalers=branch_scalers,
+        branch_feature_columns=branch_feature_columns,
+        target_scaler=target_scaler,
+        future_scaler=future_scaler,
+        future_columns=future_columns,
+        fc2_history_raw=fc2_history_raw,
+        fc2_scaler=fc2_scaler,
+        include_fc2_temperature=include_fc2_temperature,
+        starts=starts,
+        weather=weather,
+        temporal=temporal,
+        device=device,
+        steps=steps,
+    )["prediction"]
+
+
+@torch.no_grad()
+def predict_joint_168h_stages(
+    *,
+    model: nn.Module,
+    family: str,
+    branches: Sequence[np.ndarray],
+    branch_scalers: Sequence[TrainOnlyScaler],
+    branch_feature_columns: Sequence[Sequence[str]],
+    target_scaler: TrainOnlyScaler,
+    future_scaler: TrainOnlyScaler,
+    future_columns: Sequence[str],
+    fc2_history_raw: np.ndarray | None,
+    fc2_scaler: TrainOnlyScaler | None,
+    include_fc2_temperature: bool,
+    starts: Sequence[pd.Timestamp],
+    weather: pd.DataFrame,
+    temporal: pd.DataFrame,
+    device: torch.device,
+    steps: int = 7,
+) -> dict[str, np.ndarray]:
     """Recursive daily rollout using predictions, never future target demand."""
     model.eval()
     history = [array.copy() for array in branches]
     fc2_raw = None if fc2_history_raw is None else fc2_history_raw.copy()
-    output_days: list[np.ndarray] = []
+    output_days: dict[str, list[np.ndarray]] = {}
+    share_days: list[np.ndarray] = []
     for step in range(int(steps)):
         branch_tensors = [
             torch.as_tensor(array, dtype=torch.float32, device=device)
@@ -664,11 +757,16 @@ def predict_joint_168h(
                 dtype=torch.float32,
                 device=device,
             )
-        prediction_normalized = _joint_prediction(
-            model, family, branch_tensors, future_tensor, fc2_tensor
-        )
-        prediction = target_scaler.inverse(prediction_normalized.cpu().numpy())
-        output_days.append(prediction)
+        output = _joint_output(model, family, branch_tensors, future_tensor, fc2_tensor)
+        prediction = target_scaler.inverse(output.prediction.cpu().numpy())
+        for field in ("prediction", "msnet_prediction", "fc1_prediction"):
+            value = getattr(output, field)
+            if value is not None:
+                output_days.setdefault(field, []).append(
+                    target_scaler.inverse(value.cpu().numpy())
+                )
+        if output.predicted_daily_share is not None:
+            share_days.append(output.predicted_daily_share.cpu().numpy())
 
         updated_histories: list[np.ndarray] = []
         for index, (branch, scaler, columns) in enumerate(
@@ -707,7 +805,13 @@ def predict_joint_168h(
             fc2_raw = np.concatenate(
                 [fc2_raw[:, 1:, :], next_row[:, None, :]], axis=1
             ).astype(np.float32)
-    return np.concatenate(output_days, axis=1)
+    stages = {
+        key: np.concatenate(values, axis=1)
+        for key, values in output_days.items()
+    }
+    if share_days:
+        stages["predicted_daily_share"] = np.stack(share_days, axis=1)
+    return stages
 
 
 def metric_table(
@@ -792,6 +896,25 @@ def _save_predictions(
         forecast_starts=np.asarray([str(value) for value in starts]),
         dma_letters=np.asarray(list(dma_letters)),
     )
+
+
+def _save_stage_predictions(
+    path: Path,
+    *,
+    stages_24h: dict[str, np.ndarray],
+    stages_168h: dict[str, np.ndarray],
+    starts: Sequence[pd.Timestamp],
+    dma_letters: Sequence[str],
+) -> None:
+    """Persist correction-stage forecasts with explicit horizon suffixes."""
+    arrays: dict[str, np.ndarray] = {
+        "forecast_starts": np.asarray([str(value) for value in starts]),
+        "dma_letters": np.asarray(list(dma_letters)),
+    }
+    for horizon, stages in (("24h", stages_24h), ("168h", stages_168h)):
+        for key, value in stages.items():
+            arrays[f"{key}_{horizon}"] = np.asarray(value, dtype=np.float32)
+    np.savez_compressed(path, **arrays)
 
 
 def train_independent_family(
@@ -1076,7 +1199,7 @@ def train_joint_family(
             f"model={canonical} epoch={epoch}/{epochs} train_loss={loss:.6f}",
             flush=True,
         )
-    prediction_24_norm = predict_joint_24h(
+    stages_24_norm = predict_joint_24h_stages(
         model=model,
         family=family,
         branches=test_branches,
@@ -1085,8 +1208,16 @@ def train_joint_family(
         device=device,
         batch_size=int(training_config["batch_size"]),
     )
-    prediction_24 = target_scaler.inverse(prediction_24_norm)
-    prediction_168 = predict_joint_168h(
+    stages_24 = {
+        key: (
+            value
+            if key == "predicted_daily_share"
+            else target_scaler.inverse(value)
+        )
+        for key, value in stages_24_norm.items()
+    }
+    prediction_24 = stages_24["prediction"]
+    stages_168 = predict_joint_168h_stages(
         model=model,
         family=family,
         branches=test_branches,
@@ -1104,6 +1235,7 @@ def train_joint_family(
         device=device,
         steps=7,
     )
+    prediction_168 = stages_168["prediction"]
     metrics = metric_table(
         model_display_name=str(model_config["display_name"]),
         y_true_24h=samples.y_test_24h,
@@ -1123,6 +1255,32 @@ def train_joint_family(
         starts=samples.test_forecast_starts,
         dma_letters=protocol["dma_letters"],
     )
+    _save_stage_predictions(
+        output_dir / "stage_predictions_common46.npz",
+        stages_24h=stages_24,
+        stages_168h=stages_168,
+        starts=samples.test_forecast_starts,
+        dma_letters=protocol["dma_letters"],
+    )
+    train_stages_norm = predict_joint_24h_stages(
+        model=model,
+        family=family,
+        branches=train_branches,
+        future=future_train,
+        fc2_history=fc2_train,
+        device=device,
+        batch_size=int(training_config["batch_size"]),
+    )
+    train_arrays: dict[str, np.ndarray] = {
+        "y_true_24h": samples.y_train_24h.astype(np.float32),
+    }
+    for key, value in train_stages_norm.items():
+        train_arrays[f"{key}_24h"] = (
+            value.astype(np.float32)
+            if key == "predicted_daily_share"
+            else target_scaler.inverse(value).astype(np.float32)
+        )
+    np.savez_compressed(output_dir / "train_fit_stages_24h.npz", **train_arrays)
     checkpoint = output_dir / f"checkpoint_{canonical}.pt"
     torch.save(
         {
@@ -1149,6 +1307,8 @@ def train_joint_family(
         "test_sequences": int(samples.y_test_24h.shape[0]),
         "prediction_24h_shape": list(prediction_24.shape),
         "prediction_168h_shape": list(prediction_168.shape),
+        "stage_predictions_saved": True,
+        "train_fit_stages_saved": True,
         "optimizer": optimizer_name,
         "effective_weight_decay": effective_weight_decay,
         "fc2_share_supervision_weight": share_weight,

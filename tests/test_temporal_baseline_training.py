@@ -100,3 +100,39 @@ def test_metric_table_uses_supplementary_total_mae_convention() -> None:
     assert total_mae == pytest.approx(10.0)
     assert total_rmse == pytest.approx(10.0)
     assert len(table) == 88
+
+
+def test_joint_stage_prediction_retains_intermediate_outputs() -> None:
+    module = _load_training_script()
+
+    class FakeCorrection(torch.nn.Module):
+        def forward(self, branches, future, fc2_history):
+            base = branches[0][..., :1].squeeze(1)
+            prediction = base.repeat(1, 1, 10)
+            return module.MSCMNetOutput(
+                prediction=prediction + 2.0,
+                msnet_prediction=prediction,
+                fc1_prediction=prediction + 1.0,
+                predicted_daily_share=torch.softmax(fc2_history[:, -1, :10], dim=1),
+            )
+
+    branches = [np.ones((3, 1, 24, 1), dtype=np.float32)]
+    stages = module.predict_joint_24h_stages(
+        model=FakeCorrection(),
+        family="mscmnet_w",
+        branches=branches,
+        future=np.zeros((3, 24, 1), dtype=np.float32),
+        fc2_history=np.zeros((3, 7, 10), dtype=np.float32),
+        device=torch.device("cpu"),
+        batch_size=2,
+    )
+    assert set(stages) == {
+        "prediction",
+        "msnet_prediction",
+        "fc1_prediction",
+        "predicted_daily_share",
+    }
+    assert stages["prediction"].shape == (3, 24, 10)
+    assert stages["predicted_daily_share"].shape == (3, 10)
+    assert np.allclose(stages["prediction"], 3.0)
+    assert np.allclose(stages["fc1_prediction"], 2.0)
