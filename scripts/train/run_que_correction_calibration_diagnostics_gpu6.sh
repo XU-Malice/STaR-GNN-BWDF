@@ -103,7 +103,7 @@ if not all(path.is_file() for path in required):
 status = json.loads(required[0].read_text(encoding="utf-8"))
 metrics = pd.read_csv(required[1])
 config = yaml.safe_load(required[3].read_text(encoding="utf-8"))
-model_config = config["models"][model]
+model_config = config["model"]
 expected_share = share if model in {"mscmnet_w", "mscmnet_wm"} else 0.0
 ok = (
     status.get("status") == "completed"
@@ -219,7 +219,7 @@ for case in sorted(path for path in root.iterdir() if path.is_dir()):
     metrics = pd.read_csv(required[0])
     arrays = np.load(required[1])
     config = yaml.safe_load(required[2].read_text(encoding="utf-8"))
-    mc = config["models"][model]
+    mc = config["model"]
     share = float(mc.get("fc2", {}).get("share_supervision_weight", 0.0))
     for task in ("24h", "168h"):
         total = metrics[(metrics["task"] == task) & (metrics["series"] == "total")]
