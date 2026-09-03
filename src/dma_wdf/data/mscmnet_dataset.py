@@ -227,8 +227,9 @@ def build_joint_temporal_samples(
     fc2_history_days: int | None = None,
     fc2_include_temperature: bool = False,
     max_history_weeks: int = 4,
-    expected_train_samples: int = 686,
+    expected_train_samples: int | None = 686,
     expected_test_sequences: int = 46,
+    train_stride_hours: int = 24,
 ) -> JointTemporalSamples:
     """Build common-origin arrays for MSNet and all MSCMNet variants."""
     dma_columns = tuple(str(value) for value in dma_columns)
@@ -243,6 +244,7 @@ def build_joint_temporal_samples(
         train_end=bounds["train_end"],
         input_weeks=int(max_history_weeks),
         target_hours=24,
+        stride_hours=int(train_stride_hours),
         tz=tz,
     )
     eval_index = make_eval_index(
@@ -254,7 +256,9 @@ def build_joint_temporal_samples(
         tz=tz,
     )
     test_starts = pd.DatetimeIndex(eval_index["forecast_start"])
-    if len(train_starts) != int(expected_train_samples):
+    if expected_train_samples is not None and len(train_starts) != int(
+        expected_train_samples
+    ):
         raise ValueError(
             f"Expected {expected_train_samples} joint train samples, "
             f"got {len(train_starts)}."
@@ -352,6 +356,7 @@ def build_independent_temporal_samples(
     bounds: dict[str, pd.Timestamp],
     dma_column: str,
     input_weeks: int,
+    train_stride_hours: int = 24,
 ) -> dict[str, np.ndarray]:
     """Build demand-only arrays for one independent GRU/LSTM model."""
     return build_demand_only_samples(
@@ -363,6 +368,7 @@ def build_independent_temporal_samples(
         test_start=bounds["test_start"],
         test_end=bounds["test_end"],
         tz=demand.index.tz,
+        train_stride_hours=int(train_stride_hours),
     )
 
 

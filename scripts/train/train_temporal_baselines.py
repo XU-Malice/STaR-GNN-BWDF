@@ -346,6 +346,7 @@ def _run_epoch(
     optimizer: torch.optim.Optimizer,
     device: torch.device,
     family: str,
+    loss_name: str,
     share_weight: float,
     max_train_batches: int | None,
 ) -> float:
@@ -380,7 +381,14 @@ def _run_epoch(
                 share_prediction = output.predicted_daily_share
             target = moved[cursor]
             cursor += 1
-        loss = F.mse_loss(prediction, target)
+        if loss_name == "mse":
+            loss = F.mse_loss(prediction, target)
+        elif loss_name == "mae":
+            loss = F.l1_loss(prediction, target)
+        elif loss_name == "huber":
+            loss = F.huber_loss(prediction, target)
+        else:
+            raise ValueError("loss must be 'mse', 'mae' or 'huber'.")
         if share_weight > 0.0:
             if share_prediction is None:
                 raise RuntimeError("Share supervision requires an FC2 model.")
@@ -930,6 +938,7 @@ def train_independent_family(
     seed: int,
     max_epochs_override: int | None,
     max_train_batches: int | None,
+    train_stride_hours: int,
     literature_config: dict[str, Any] | None,
 ) -> dict[str, Any]:
     dma_columns = list(protocol["dma_columns"])
@@ -942,6 +951,9 @@ def train_independent_family(
     checkpoint_files: list[str] = []
     loss_rows: list[dict[str, Any]] = []
     parameter_counts: dict[str, int] = {}
+    fixed_epochs_by_dma: dict[str, int] = {}
+    effective_weight_decays_by_dma: dict[str, float] = {}
+    optimizer_name = str(training_config.get("optimizer", "adam")).lower()
     sample_count: int | None = None
     test_starts: np.ndarray | None = None
 
@@ -956,6 +968,7 @@ def train_independent_family(
             bounds=bounds,
             dma_column=column,
             input_weeks=int(model_config["input_weeks"][index]),
+            train_stride_hours=int(train_stride_hours),
         )
         if samples["x_test_eval"].shape[0] != int(
             protocol["expected_test_sequences"]
@@ -989,14 +1002,26 @@ def train_independent_family(
         parameter_counts[str(letter)] = _parameter_count(model)
         optimizer = _build_optimizer(
             model.parameters(),
-            optimizer_name=training_config.get("optimizer", "adam"),
+            optimizer_name=optimizer_name,
             learning_rate=float(model_config["learning_rates"][index]),
-            weight_decay=float(model_config["weight_decays"][index]),
+            weight_decay=float(
+                training_config.get(
+                    "independent_weight_decay_override",
+                    model_config["weight_decays"][index],
+                )
+            ),
         )
         epochs = (
             int(max_epochs_override)
             if max_epochs_override is not None
             else int(model_config["best_epochs"][index])
+        )
+        fixed_epochs_by_dma[str(letter)] = epochs
+        effective_weight_decays_by_dma[str(letter)] = float(
+            training_config.get(
+                "independent_weight_decay_override",
+                model_config["weight_decays"][index],
+            )
         )
         for epoch in range(1, epochs + 1):
             loss = _run_epoch(
@@ -1005,6 +1030,7 @@ def train_independent_family(
                 optimizer=optimizer,
                 device=device,
                 family="independent_recurrent",
+                loss_name=str(training_config.get("loss", "mse")).lower(),
                 share_weight=0.0,
                 max_train_batches=max_train_batches,
             )
@@ -1037,6 +1063,13 @@ def train_independent_family(
                 "dma_column": column,
                 "model_seed": model_seed,
                 "fixed_epoch": epochs,
+                "optimizer": optimizer_name,
+                "effective_weight_decay": float(
+                    training_config.get(
+                        "independent_weight_decay_override",
+                        model_config["weight_decays"][index],
+                    )
+                ),
                 "hidden_sizes": hidden_sizes,
                 "input_weeks": int(model_config["input_weeks"][index]),
                 "scaler": scaler.state_dict(),
@@ -1082,6 +1115,11 @@ def train_independent_family(
     return {
         "checkpoint_files": checkpoint_files,
         "parameter_counts_by_dma": parameter_counts,
+        "fixed_epochs_by_dma": fixed_epochs_by_dma,
+        "optimizer": optimizer_name,
+        "effective_weight_decays_by_dma": effective_weight_decays_by_dma,
+        "loss": str(training_config.get("loss", "mse")).lower(),
+        "train_stride_hours": int(train_stride_hours),
         "last_dma_train_samples": sample_count,
         "prediction_24h_shape": list(y_pred_24.shape),
         "prediction_168h_shape": list(y_pred_168.shape),
@@ -1104,6 +1142,7 @@ def train_joint_family(
     seed: int,
     max_epochs_override: int | None,
     max_train_batches: int | None,
+    train_stride_hours: int,
     literature_config: dict[str, Any] | None,
 ) -> dict[str, Any]:
     family = str(model_config["family"])
@@ -1123,8 +1162,13 @@ def train_joint_family(
         fc2_history_days=fc2_days,
         fc2_include_temperature=include_temperature,
         max_history_weeks=int(protocol["max_history_weeks"]),
-        expected_train_samples=int(protocol["expected_train_samples_joint"]),
+        expected_train_samples=(
+            int(protocol["expected_train_samples_joint"])
+            if int(train_stride_hours) == 24
+            else None
+        ),
         expected_test_sequences=int(protocol["expected_test_sequences"]),
+        train_stride_hours=int(train_stride_hours),
     )
     (
         train_branches,
@@ -1190,6 +1234,7 @@ def train_joint_family(
             optimizer=optimizer,
             device=device,
             family=family,
+            loss_name=str(training_config.get("loss", "mse")).lower(),
             share_weight=share_weight,
             max_train_batches=max_train_batches,
         )
@@ -1290,6 +1335,8 @@ def train_joint_family(
             "seed": int(seed),
             "optimizer": optimizer_name,
             "effective_weight_decay": effective_weight_decay,
+            "loss": str(training_config.get("loss", "mse")).lower(),
+            "train_stride_hours": int(train_stride_hours),
             "model_config": model_config,
             "cam_config": cam_config,
             "branch_scalers": [value.state_dict() for value in branch_scalers],
@@ -1311,6 +1358,8 @@ def train_joint_family(
         "train_fit_stages_saved": True,
         "optimizer": optimizer_name,
         "effective_weight_decay": effective_weight_decay,
+        "loss": str(training_config.get("loss", "mse")).lower(),
+        "train_stride_hours": int(train_stride_hours),
         "fc2_share_supervision_weight": share_weight,
         "correction_mode": str(model_config.get("correction_mode", "direct")),
         "zero_init_correction": bool(
@@ -1332,6 +1381,7 @@ def run_one_model(
     overwrite: bool,
     max_epochs_override: int | None,
     max_train_batches: int | None,
+    train_stride_hours: int,
     literature_config: dict[str, Any] | None,
     preflight: dict[str, Any],
 ) -> dict[str, Any]:
@@ -1349,6 +1399,7 @@ def run_one_model(
                 "seed": seed,
                 "max_epochs_override": max_epochs_override,
                 "max_train_batches": max_train_batches,
+                "train_stride_hours": int(train_stride_hours),
             },
             sort_keys=False,
         ),
@@ -1367,6 +1418,7 @@ def run_one_model(
             seed=seed,
             max_epochs_override=max_epochs_override,
             max_train_batches=max_train_batches,
+            train_stride_hours=train_stride_hours,
             literature_config=literature_config,
         )
     else:
@@ -1385,6 +1437,7 @@ def run_one_model(
             seed=seed,
             max_epochs_override=max_epochs_override,
             max_train_batches=max_train_batches,
+            train_stride_hours=train_stride_hours,
             literature_config=literature_config,
         )
     status = {
@@ -1399,7 +1452,12 @@ def run_one_model(
         "data_audit": data_audit,
         "resource_preflight": preflight,
         "output_archived_before_run": None if archived is None else str(archived),
-        "formal_protocol": max_epochs_override is None and max_train_batches is None,
+        "formal_protocol": (
+            max_epochs_override is None
+            and max_train_batches is None
+            and int(train_stride_hours) == 24
+            and str(config["training"].get("loss", "mse")).lower() == "mse"
+        ),
         "single_frozen_checkpoint_for_24h_and_168h": True,
         **details,
     }
@@ -1508,6 +1566,15 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--recurrent-weight-decay",
+        type=float,
+        default=None,
+        help=(
+            "Diagnostic shared weight-decay override for all ten independent "
+            "GRU/LSTM models. By default each DMA uses Supplementary Table S3."
+        ),
+    )
+    parser.add_argument(
         "--batch-size",
         type=int,
         default=None,
@@ -1539,6 +1606,25 @@ def main() -> None:
             "paper does not disclose an auxiliary-loss coefficient."
         ),
     )
+    parser.add_argument(
+        "--loss",
+        choices=["mse", "mae", "huber"],
+        default=None,
+        help=(
+            "Override the training objective for a diagnostic. MSE is the "
+            "literal reconstruction used by the formal protocol."
+        ),
+    )
+    parser.add_argument(
+        "--train-stride-hours",
+        type=int,
+        default=24,
+        help=(
+            "Spacing between training forecast origins. The formal "
+            "reconstruction uses 24; shorter strides test an unpublished "
+            "paper ambiguity."
+        ),
+    )
     parser.add_argument("--max-epochs", type=int, default=None)
     parser.add_argument("--max-train-batches", type=int, default=None)
     parser.add_argument("--minimum-free-gib", type=float, default=8.0)
@@ -1562,11 +1648,21 @@ def main() -> None:
         config["cam"]["temporal_layout"] = args.cam_temporal_layout
     if args.optimizer is not None:
         config["training"]["optimizer"] = args.optimizer
+    if args.loss is not None:
+        config["training"]["loss"] = args.loss
+    if args.train_stride_hours <= 0:
+        raise ValueError("--train-stride-hours must be positive.")
     if args.joint_weight_decay is not None:
         if args.joint_weight_decay < 0.0:
             raise ValueError("--joint-weight-decay must be non-negative.")
         config["training"]["joint_weight_decay_override"] = float(
             args.joint_weight_decay
+        )
+    if args.recurrent_weight_decay is not None:
+        if args.recurrent_weight_decay < 0.0:
+            raise ValueError("--recurrent-weight-decay must be non-negative.")
+        config["training"]["independent_weight_decay_override"] = float(
+            args.recurrent_weight_decay
         )
     if args.batch_size is not None:
         if args.batch_size <= 0:
@@ -1636,6 +1732,7 @@ def main() -> None:
                 overwrite=bool(args.overwrite),
                 max_epochs_override=args.max_epochs,
                 max_train_batches=args.max_train_batches,
+                train_stride_hours=int(args.train_stride_hours),
                 literature_config=literature,
                 preflight=preflight,
             )

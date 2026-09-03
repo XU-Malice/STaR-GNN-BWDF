@@ -368,3 +368,27 @@ disown
 并生成 `~/projects/que_final_reproduction_20260903_compact.tar.gz`。紧凑包保留全部
 预测、阶段诊断、训练集校准参数、状态和日志，只排除服务器仍保留的 checkpoint。
 只有原始（未校准）结果可用于判断论文数值复现；训练集校准结果只用于定位系统偏差。
+
+### 六模型自适应完整复现队列
+
+最终完整队列不再只处理三个 MSCMNet 校正模型，而是同时覆盖 `GRU`、`LSTM`、
+`MSNet`、`MSCMNet_M`、`MSCMNet_WM` 和 `MSCMNet_W`。补充材料没有公开 batch
+size、训练窗口 stride、归一化方式、Adam 的 weight-decay 语义、损失函数，以及
+“best epoch”是否只是 checkpoint 选择点。脚本只围绕这些高影响歧义安排 63 个
+基础种子筛选任务，不重复已经排除的 CAM 宽度和 attention 残差大矩阵。
+
+筛选结束后，程序按两个预测长度的总体指标误差、十个 DMA 的 MAE/RMSE 相对误差
+和 DMA 排序相关性，为每个模型自动选择最接近论文表格的候选，并再运行四个种子；
+因此每个入选实现最终有五个种子。该排序明确标记为
+`paper_test_reverse_engineering_diagnostic`：它适合反推论文未公开实现细节，但不是
+无偏泛化性能选择，不能把调参后的测试结果表述为独立测试结论。
+
+```bash
+nohup bash scripts/train/run_que_complete_reproduction_gpu6.sh \
+  > logs/que_complete_reproduction_launcher.log 2>&1 &
+echo $! | tee logs/que_complete_reproduction_launcher.pid
+```
+
+队列支持逐任务断点续跑；结束时生成所有候选的论文差距、六个入选配置、五种子
+均值/标准差和不含 checkpoint/预测数组的紧凑结果包。默认使用物理 GPU 6，预计
+串行运行约 12–24 小时，实际耗时取决于 stride=6 的四倍训练样本诊断。
