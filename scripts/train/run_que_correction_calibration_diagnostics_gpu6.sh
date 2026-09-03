@@ -134,12 +134,18 @@ CASES=(
     wm_residual_zero_share01_b8
     w_direct_share01_b8
     wm_direct_share01_b8
+    m_residual_zero_b1
+    m_residual_zero_b4
+    w_residual_zero_b1
+    w_residual_zero_share01_b1
+    wm_residual_zero_b8
+    wm_direct_b8
 )
-MODELS=(mscmnet_m mscmnet_m mscmnet_w mscmnet_w mscmnet_m mscmnet_w mscmnet_wm mscmnet_w mscmnet_wm)
-BATCHES=(1 4 1 4 8 8 8 8 8)
-MODES=(direct direct direct direct residual residual residual direct direct)
-ZERO_INIT=(0 0 0 0 1 1 1 0 0)
-SHARE_WEIGHTS=(0 0 0 0 0 0.1 0.1 0.1 0.1)
+MODELS=(mscmnet_m mscmnet_m mscmnet_w mscmnet_w mscmnet_m mscmnet_w mscmnet_wm mscmnet_w mscmnet_wm mscmnet_m mscmnet_m mscmnet_w mscmnet_w mscmnet_wm mscmnet_wm)
+BATCHES=(1 4 1 4 8 8 8 8 8 1 4 1 1 8 8)
+MODES=(direct direct direct direct residual residual residual direct direct residual residual residual residual residual direct)
+ZERO_INIT=(0 0 0 0 1 1 1 0 0 1 1 1 1 1 0)
+SHARE_WEIGHTS=(0 0 0 0 0 0.1 0.1 0.1 0.1 0 0 0 0.1 0 0)
 
 for index in "${!CASES[@]}"; do
     case_name="${CASES[$index]}"
