@@ -392,3 +392,37 @@ echo $! | tee logs/que_complete_reproduction_launcher.pid
 队列支持逐任务断点续跑；结束时生成所有候选的论文差距、六个入选配置、五种子
 均值/标准差和不含 checkpoint/预测数组的紧凑结果包。默认使用物理 GPU 6，预计
 串行运行约 12–24 小时，实际耗时取决于 stride=6 的四倍训练样本诊断。
+
+### 2026-09-04 单种子定向数值复现
+
+87 个任务的完整诊断已经证明，多种子统计不是当前瓶颈。新的目标队列只使用固定
+种子 `20240604`，并把验收条件改为每个模型的 24 h/168 h 共八个总体指标全部
+接近补充表：MAE、MAPE、RMSE 的相对差不超过 5%，NSE 的绝对差不超过 0.01。
+DMA 明细只作为候选相同时的次级排序依据。
+
+重新逐项核对 S3-2 后发现，LSTM 的 A/B/C/D/F/J 最优 weight decay 是字面值 0；
+旧配置曾错误写为搜索网格中最小的非零值 `0.0001`。该处现已按补充表修正。
+训练入口还增加了两个明确标为诊断的参数：`--learning-rate-scale` 按比例调整论文
+学习率，`--best-epoch-scale` 对 GRU/LSTM 的十个独立 best epoch 分别按比例调整，
+不会把十个 DMA 粗暴改成同一个 epoch。
+
+`run_que_targeted_reproduction_gpu6.sh` 含 82 个有方向的候选上限，按已知最接近
+结果依次搜索学习率、epoch 和 batch 邻域。某个模型一旦八项全部达标，其余候选
+自动跳过，因此 82 是最坏情况而不是必跑数量。脚本没有多种子阶段，也不使用未来
+真实需求回填 168 h 输入；多步预测仍严格使用前一天预测值递归滚动。候选排序继续
+明确标记为 `paper_test_reverse_engineering_diagnostic`，因为论文测试表参与了
+未公开训练细节的反推，不能作为无偏泛化实验。
+
+每个候选只运行一个固定种子。五个模型使用 `20240604`；MSCMNet_W 使用上一轮
+单次结果中最接近论文的 `20240607`。这不是五种子重复实验，种子选择本身同样属于
+明确披露的 paper-gap 反向诊断。
+
+```bash
+nohup bash scripts/train/run_que_targeted_reproduction_gpu6.sh \
+  > logs/que_targeted_reproduction_launcher.log 2>&1 &
+echo $! | tee logs/que_targeted_reproduction_launcher.pid
+```
+
+结果写入 `results/que_targeted_reproduction_20260904/`；核心文件为
+`best_by_model.tsv`、`best_metric_gaps.tsv` 和 `acceptance_summary.json`。结束时
+还会生成不含 checkpoint/预测数组的紧凑结果包，训练失败不会阻止后续候选执行。

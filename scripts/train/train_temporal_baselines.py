@@ -1003,7 +1003,10 @@ def train_independent_family(
         optimizer = _build_optimizer(
             model.parameters(),
             optimizer_name=optimizer_name,
-            learning_rate=float(model_config["learning_rates"][index]),
+            learning_rate=(
+                float(model_config["learning_rates"][index])
+                * float(training_config.get("learning_rate_scale", 1.0))
+            ),
             weight_decay=float(
                 training_config.get(
                     "independent_weight_decay_override",
@@ -1011,10 +1014,17 @@ def train_independent_family(
                 )
             ),
         )
+        published_epochs = int(model_config["best_epochs"][index])
         epochs = (
             int(max_epochs_override)
             if max_epochs_override is not None
-            else int(model_config["best_epochs"][index])
+            else max(
+                1,
+                round(
+                    published_epochs
+                    * float(training_config.get("best_epoch_scale", 1.0))
+                ),
+            )
         )
         fixed_epochs_by_dma[str(letter)] = epochs
         effective_weight_decays_by_dma[str(letter)] = float(
@@ -1070,10 +1080,18 @@ def train_independent_family(
                         model_config["weight_decays"][index],
                     )
                 ),
+                "effective_learning_rate": (
+                    float(model_config["learning_rates"][index])
+                    * float(training_config.get("learning_rate_scale", 1.0))
+                ),
                 "hidden_sizes": hidden_sizes,
                 "input_weeks": int(model_config["input_weeks"][index]),
                 "scaler": scaler.state_dict(),
-                "checkpoint_policy": "final_fixed_paper_epoch",
+                "checkpoint_policy": (
+                    "final_fixed_paper_epoch"
+                    if float(training_config.get("best_epoch_scale", 1.0)) == 1.0
+                    else "final_scaled_paper_epoch_diagnostic"
+                ),
             },
             checkpoint,
         )
@@ -1118,6 +1136,17 @@ def train_independent_family(
         "fixed_epochs_by_dma": fixed_epochs_by_dma,
         "optimizer": optimizer_name,
         "effective_weight_decays_by_dma": effective_weight_decays_by_dma,
+        "effective_learning_rates_by_dma": {
+            str(letter): (
+                float(model_config["learning_rates"][index])
+                * float(training_config.get("learning_rate_scale", 1.0))
+            )
+            for index, letter in enumerate(dma_letters)
+        },
+        "learning_rate_scale": float(
+            training_config.get("learning_rate_scale", 1.0)
+        ),
+        "best_epoch_scale": float(training_config.get("best_epoch_scale", 1.0)),
         "loss": str(training_config.get("loss", "mse")).lower(),
         "train_stride_hours": int(train_stride_hours),
         "last_dma_train_samples": sample_count,
@@ -1218,13 +1247,23 @@ def train_joint_family(
     optimizer = _build_optimizer(
         model.parameters(),
         optimizer_name=optimizer_name,
-        learning_rate=float(model_config["learning_rate"]),
+        learning_rate=(
+            float(model_config["learning_rate"])
+            * float(training_config.get("learning_rate_scale", 1.0))
+        ),
         weight_decay=effective_weight_decay,
     )
+    published_epochs = int(model_config["best_epoch"])
     epochs = (
         int(max_epochs_override)
         if max_epochs_override is not None
-        else int(model_config["best_epoch"])
+        else max(
+            1,
+            round(
+                published_epochs
+                * float(training_config.get("best_epoch_scale", 1.0))
+            ),
+        )
     )
     losses: list[dict[str, Any]] = []
     for epoch in range(1, epochs + 1):
@@ -1335,6 +1374,10 @@ def train_joint_family(
             "seed": int(seed),
             "optimizer": optimizer_name,
             "effective_weight_decay": effective_weight_decay,
+            "effective_learning_rate": (
+                float(model_config["learning_rate"])
+                * float(training_config.get("learning_rate_scale", 1.0))
+            ),
             "loss": str(training_config.get("loss", "mse")).lower(),
             "train_stride_hours": int(train_stride_hours),
             "model_config": model_config,
@@ -1343,7 +1386,11 @@ def train_joint_family(
             "target_scaler": target_scaler.state_dict(),
             "future_scaler": future_scaler.state_dict(),
             "fc2_scaler": None if fc2_scaler is None else fc2_scaler.state_dict(),
-            "checkpoint_policy": "final_fixed_paper_epoch",
+            "checkpoint_policy": (
+                "final_fixed_paper_epoch"
+                if float(training_config.get("best_epoch_scale", 1.0)) == 1.0
+                else "final_scaled_paper_epoch_diagnostic"
+            ),
         },
         checkpoint,
     )
@@ -1358,6 +1405,14 @@ def train_joint_family(
         "train_fit_stages_saved": True,
         "optimizer": optimizer_name,
         "effective_weight_decay": effective_weight_decay,
+        "effective_learning_rate": (
+            float(model_config["learning_rate"])
+            * float(training_config.get("learning_rate_scale", 1.0))
+        ),
+        "learning_rate_scale": float(
+            training_config.get("learning_rate_scale", 1.0)
+        ),
+        "best_epoch_scale": float(training_config.get("best_epoch_scale", 1.0)),
         "loss": str(training_config.get("loss", "mse")).lower(),
         "train_stride_hours": int(train_stride_hours),
         "fc2_share_supervision_weight": share_weight,
@@ -1457,6 +1512,8 @@ def run_one_model(
             and max_train_batches is None
             and int(train_stride_hours) == 24
             and str(config["training"].get("loss", "mse")).lower() == "mse"
+            and float(config["training"].get("learning_rate_scale", 1.0)) == 1.0
+            and float(config["training"].get("best_epoch_scale", 1.0)) == 1.0
         ),
         "single_frozen_checkpoint_for_24h_and_168h": True,
         **details,
@@ -1616,6 +1673,25 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--learning-rate-scale",
+        type=float,
+        default=1.0,
+        help=(
+            "Multiply every published learning rate by this positive factor. "
+            "A value other than 1 is a paper-gap diagnostic."
+        ),
+    )
+    parser.add_argument(
+        "--best-epoch-scale",
+        type=float,
+        default=1.0,
+        help=(
+            "Multiply each model's published best epoch by this positive "
+            "factor. For GRU/LSTM the factor is applied independently to "
+            "each DMA, preserving Supplementary Table S3 proportions."
+        ),
+    )
+    parser.add_argument(
         "--train-stride-hours",
         type=int,
         default=24,
@@ -1634,6 +1710,16 @@ def main() -> None:
     args = parser.parse_args()
 
     config = read_yaml(args.config.resolve())
+    if args.learning_rate_scale <= 0.0:
+        raise ValueError("--learning-rate-scale must be positive.")
+    if args.best_epoch_scale <= 0.0:
+        raise ValueError("--best-epoch-scale must be positive.")
+    if args.max_epochs is not None and args.best_epoch_scale != 1.0:
+        raise ValueError(
+            "--max-epochs and --best-epoch-scale are mutually exclusive."
+        )
+    config["training"]["learning_rate_scale"] = float(args.learning_rate_scale)
+    config["training"]["best_epoch_scale"] = float(args.best_epoch_scale)
     if args.normalization is not None:
         config["training"]["normalization"] = args.normalization
     if args.cam_channel_sizes is not None:
