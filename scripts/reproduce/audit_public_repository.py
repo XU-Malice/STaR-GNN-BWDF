@@ -27,6 +27,7 @@ EXPECTED_DOCS = {
     "docs/FULL_PIPELINE_CN.md",
     "docs/MANUSCRIPT_FIGURES_CN.md",
     "docs/MANUSCRIPT_FIGURES_FINAL_CN.md",
+    "docs/MSCMNET_BASELINES_CN.md",
     "docs/METHOD_CN.md",
     "docs/PLOTTING_CN.md",
     "docs/RELEASE_CN.md",

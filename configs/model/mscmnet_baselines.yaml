@@ -1,0 +1,208 @@
+# Six temporal baselines from Que et al., Water Research X 25 (2024) 100269.
+#
+# MSCMNet_WM is the spelling used by supplementary S1.  The article method
+# section also calls the same weather + demand-weight model MSCMNet_MW.
+
+protocol:
+  day_hours: 24
+  multi_step_hours: 168
+  max_history_weeks: 4
+  expected_train_samples_joint: 686
+  expected_test_sequences: 46
+  dma_letters: [A, B, C, D, E, F, G, H, I, J]
+  dma_columns: [DMA 1, DMA 2, DMA 3, DMA 4, DMA 5,
+                DMA 6, DMA 7, DMA 8, DMA 9, DMA 10]
+  weather_columns: [rainfall_depth, air_temperature, air_humidity, windspeed]
+  temporal_columns: [hour, time_zone_standard, weekday, holiday, day_of_week]
+  preprocessing:
+    source: data/processed/data_build
+    iqr_threshold_source: train
+    interpolation: split_aware
+
+cam:
+  convolution: conv1d
+  cnn_layers: 3
+  channel_sizes: [16, 16, 1]
+  kernel_size: 3
+  pooling: false
+  attention_layers: 3
+  attention_heads: 1
+  attention_update: replace
+  attention_scaling: sqrt_dim
+  temporal_layout: per_day_vectors
+  dropout: 0.0
+  implementation_note: >
+    Figure 7 alternates Conv1D and Attention three times. Table 3 gives CAM
+    input/output tensor shapes and fixes one output channel before LSTM, but
+    does not disclose the two intermediate convolution widths. The 16/16/1
+    widths are an explicit diagnostic reconstruction informed by the earlier
+    BWDF audit, not a published parameter. Equations 4-7 define single-head
+    Q/K/V attention. Equation 5 gives an unscaled dot product, so `none` is
+    the equation-faithful score setting; `sqrt_dim` is retained here only for
+    compatibility with historical diagnostic runs. The exact interpretation
+    of the d_i x 24 time axes is not recoverable from the article. `sqrt_dim` and
+    server-side 12-case diagnostics selected `per_day_vectors` with
+    `sqrt_dim` scaling and batch size 8: it best reproduced the per-DMA tables
+    while retaining substantially more origin-to-origin variation than the
+    numerically closest aggregate-only alternative. No residual path or
+    LayerNorm is described, so `replace` remains the formal structural default.
+    The other layouts, scaling choices and attention-update modes remain
+    diagnostic only. Same-length padding remains a framework-level
+    reconstruction choice because the article states that CAM preserves input
+    dimensions.
+
+models:
+  gru:
+    display_name: GRU
+    family: independent_recurrent
+    cell_type: GRU
+    input_features: [own_dma_demand]
+    layers: [1, 2, 3, 2, 3, 2, 3, 1, 2, 1]
+    hidden_sizes:
+      - [32]
+      - [32, 32]
+      - [256, 256, 32]
+      - [32, 128]
+      - [256, 256, 256]
+      - [64, 32]
+      - [256, 256, 256]
+      - [256]
+      - [64, 256]
+      - [32]
+    input_weeks: [1, 3, 1, 1, 3, 1, 3, 4, 2, 4]
+    learning_rates: [0.001, 0.0001, 0.0001, 0.001, 0.001,
+                     0.001, 0.001, 0.001, 0.001, 0.001]
+    weight_decays: [0.001, 0.001, 0.0001, 0.0001, 0.0001,
+                    0.001, 0.01, 0.001, 0.0001, 0.001]
+    best_epochs: [25, 77, 37, 75, 12, 46, 41, 30, 71, 80]
+
+  lstm:
+    display_name: LSTM
+    family: independent_recurrent
+    cell_type: LSTM
+    input_features: [own_dma_demand]
+    layers: [3, 3, 2, 1, 3, 2, 2, 3, 1, 1]
+    hidden_sizes:
+      - [64, 64, 128]
+      - [128, 64, 256]
+      - [64, 128]
+      - [256]
+      - [128, 256, 256]
+      - [64, 128]
+      - [64, 256]
+      - [64, 64, 256]
+      - [256]
+      - [64]
+    input_weeks: [1, 2, 3, 2, 4, 1, 3, 3, 4, 1]
+    learning_rates: [0.0001, 0.0001, 0.001, 0.0001, 0.001,
+                     0.0001, 0.001, 0.001, 0.001, 0.0001]
+    # Supplementary Table S3-2, verified against DOCX XML AND rendered page 8.
+    # Commit 5b8100b incorrectly transcribed A/B/C/D/F/J as zero.
+    weight_decays: [0.0001, 0.0001, 0.0001, 0.0001, 0.01,
+                    0.0001, 0.001, 0.001, 0.0001, 0.0001]
+    best_epochs: [58, 39, 13, 17, 13, 60, 15, 55, 56, 60]
+
+  msnet:
+    display_name: MSNet
+    family: msnet
+    branch_features: [own_dma_demand, rainfall_depth, air_temperature,
+                      air_humidity, windspeed, hour, time_zone_standard,
+                      weekday, holiday, day_of_week]
+    lstm_layers: [1, 1, 2, 1, 1, 3, 3, 2, 1, 2]
+    hidden_sizes: [128, 128, 128, 128, 32, 64, 256, 128, 128, 64]
+    input_weeks: [4, 1, 2, 3, 4, 1, 3, 3, 4, 3]
+    learning_rate: 0.001
+    weight_decay: 0.1
+    best_epoch: 99
+
+  mscmnet_m:
+    display_name: MSCMNet_M
+    family: mscmnet_m
+    correction_mode: direct
+    zero_init_correction: false
+    branch_features: [own_dma_demand, rainfall_depth, air_temperature,
+                      air_humidity, windspeed, hour, time_zone_standard,
+                      weekday, holiday, day_of_week]
+    lstm_layers: [1, 1, 1, 1, 1, 3, 2, 2, 3, 1]
+    hidden_sizes: [64, 64, 64, 128, 256, 256, 64, 64, 256, 128]
+    input_weeks: [3, 1, 4, 2, 2, 4, 4, 3, 4, 1]
+    fc1:
+      future_features: [rainfall_depth, air_temperature, air_humidity,
+                        windspeed, hour, time_zone_standard, weekday,
+                        holiday, day_of_week]
+      nodes: 24
+      dropout: 0.45
+    learning_rate: 0.001
+    weight_decay: 0.01
+    best_epoch: 6
+
+  mscmnet_wm:
+    aliases: [mscmnet_mw]
+    display_name: MSCMNet_WM
+    family: mscmnet_wm
+    correction_mode: direct
+    zero_init_correction: false
+    branch_features: [own_dma_demand, rainfall_depth, air_temperature,
+                      air_humidity, windspeed, hour, time_zone_standard,
+                      weekday, holiday, day_of_week]
+    lstm_layers: [2, 1, 3, 3, 3, 2, 2, 1, 2, 1]
+    hidden_sizes: [32, 64, 32, 32, 128, 256, 256, 256, 64, 256]
+    input_weeks: [4, 1, 3, 4, 3, 2, 2, 4, 4, 2]
+    fc1:
+      future_features: [rainfall_depth, air_temperature, air_humidity,
+                        windspeed, hour, time_zone_standard, weekday,
+                        holiday, day_of_week]
+      nodes: 48
+      dropout: 0.5
+    fc2:
+      history_days: 7
+      input_features: [dma_daily_shares_10, air_temperature_max,
+                       air_temperature_min]
+      input_size: 12
+      lstm_layers: 1
+      hidden_size: 128
+      nodes: 48
+      dropout: 0.01
+      share_supervision_weight: 0.0
+    learning_rate: 0.001
+    weight_decay: 0.0001
+    best_epoch: 55
+
+  mscmnet_w:
+    display_name: MSCMNet_W
+    family: mscmnet_w
+    correction_mode: direct
+    zero_init_correction: false
+    branch_features: [own_dma_demand, hour, time_zone_standard,
+                      weekday, holiday, day_of_week]
+    lstm_layers: [2, 1, 1, 3, 3, 2, 3, 2, 3, 3]
+    hidden_sizes: [64, 128, 32, 64, 256, 32, 32, 128, 256, 32]
+    input_weeks: [2, 3, 1, 2, 3, 4, 2, 3, 1, 1]
+    fc1:
+      future_features: [hour, time_zone_standard, weekday, holiday,
+                        day_of_week]
+      nodes: 24
+      dropout: 0.1
+    fc2:
+      history_days: 7
+      input_features: [dma_daily_shares_10]
+      input_size: 10
+      lstm_layers: 1
+      hidden_size: 64
+      nodes: 120
+      dropout: 0.1
+      share_supervision_weight: 0.0
+    learning_rate: 0.001
+    weight_decay: 0.01
+    best_epoch: 11
+
+training:
+  seed: 20240604
+  batch_size: 8
+  normalization: zscore
+  loss: mse
+  optimizer: adamw
+  standardize_from_train_only: true
+  checkpoint_policy: final_fixed_paper_epoch
+  evaluation_checkpoint: same_checkpoint_for_all_metrics_and_horizons
+  deterministic_algorithms: true
