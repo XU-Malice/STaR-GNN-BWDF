@@ -269,6 +269,7 @@ def validate_case(run: Path, case: dict[str, Any], signature: str) -> tuple[bool
     """No execution flag alone makes a run reusable; inspect its actual files."""
     import numpy as np
     import yaml
+    from dma_wdf.data.reproduction_metrics import canonical_forecast_origins
 
     try:
         request = json.loads((run / "request_signature.json").read_text())
@@ -321,7 +322,14 @@ def validate_case(run: Path, case: dict[str, Any], signature: str) -> tuple[bool
             starts = arrays["forecast_starts"]
             if starts.shape != (46,) or len(set(starts.tolist())) != 46:
                 return False, "wrong_forecast_origins"
-            if starts.tolist() != request["evaluation"]["forecast_starts"]:
+            try:
+                same_origins = np.array_equal(
+                    canonical_forecast_origins(starts),
+                    canonical_forecast_origins(request["evaluation"]["forecast_starts"]),
+                )
+            except ValueError:
+                return False, "origins_do_not_match_audited_data"
+            if not same_origins:
                 return False, "origins_do_not_match_audited_data"
         with (run / "metrics.csv").open(newline="") as stream:
             rows = list(csv.DictReader(stream))

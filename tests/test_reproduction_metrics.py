@@ -11,6 +11,7 @@ import yaml
 from dma_wdf.data.reproduction_metrics import (
     METRIC_MODES,
     array_sha256,
+    canonical_forecast_origins,
     compute_reproduction_metrics,
     rmse_nse_feasibility,
     validate_prediction_bundle,
@@ -27,7 +28,7 @@ def bundle(n: int = 46) -> dict[str, np.ndarray]:
     rng = np.random.default_rng(21)
     truth = rng.normal(20, 2, (n, 168, 10)).astype(np.float32)
     prediction = truth+rng.normal(0, 1, truth.shape).astype(np.float32)
-    starts = (np.datetime64("2023-01-13")+np.arange(n)).astype(str)
+    starts = np.char.add((np.datetime64("2023-01-13")+np.arange(n)).astype(str), "T00:00:00+01:00")
     return {"y_true_24h": truth[:, :24].copy(), "y_pred_24h": prediction[:, :24].copy(),
             "y_true_168h": truth, "y_pred_168h": prediction, "forecast_starts": starts,
             "dma_letters": np.array(list("ABCDEFGHIJ"))}
@@ -56,6 +57,49 @@ def test_bundle_checks_finite_shapes_origins_and_first_day() -> None:
         validate_prediction_bundle({**arrays, "forecast_starts": arrays["forecast_starts"][::-1]})
     with pytest.raises(ValueError, match="shape"):
         validate_prediction_bundle({**arrays, "y_true_24h": arrays["y_true_24h"][0]})
+
+
+def test_origin_comparison_uses_instants_and_preserves_raw_provenance() -> None:
+    arrays = bundle(2)
+    iso = arrays["forecast_starts"]
+    spaces = np.char.replace(iso, "T", " ")
+    utc = np.asarray(["2023-01-12T23:00:00Z", "2023-01-13T23:00:00+00:00"])
+    results = [validate_prediction_bundle({**arrays, "forecast_starts": starts}, expected_sequences=2)
+               for starts in (iso, spaces, utc)]
+    assert len({result["origins_sha256"] for result in results}) == 1
+    assert len({result["array_hashes"]["forecast_starts"] for result in results}) == 3
+    for result, starts in zip(results, (iso, spaces, utc)):
+        assert result["forecast_starts"] == starts.tolist()
+        assert result["array_hashes"]["forecast_starts"] == array_sha256(starts)
+    assert np.array_equal(canonical_forecast_origins(iso), canonical_forecast_origins(utc))
+
+
+@pytest.mark.parametrize("starts,reason", [
+    (["2023-01-13"], "explicit timezone"),
+    (["2023-01-13T00:00:00"], "explicit timezone"),
+    (["NaT"], "Invalid"),
+    (["2023-01-13T00:00:00+01:00", "2023-01-12T23:00:00Z"], "unique instants"),
+    (["2023-01-13T00:00:00Z", "2023-01-13T00:30:00+01:00"], "increasing"),
+    (["2023-01-13T00:00:00.0000001Z"], "Sub-microsecond"),
+])
+def test_origin_comparison_rejects_invalid_or_ambiguous_instants(starts, reason) -> None:
+    with pytest.raises(ValueError, match=reason):
+        canonical_forecast_origins(starts)
+
+
+def test_saved_prediction_audit_groups_equivalent_recurrent_and_joint_origins(tmp_path: Path) -> None:
+    first = make_source(tmp_path, "recurrent_style")
+    second = make_source(tmp_path, "joint_style")
+    with np.load(second, allow_pickle=False) as saved:
+        arrays = {key: saved[key] for key in saved.files}
+    arrays["forecast_starts"] = np.char.replace(arrays["forecast_starts"], "T", " ")
+    np.savez_compressed(second, **arrays)
+    assert AUDIT.file_sha256(first) != AUDIT.file_sha256(second)
+    summary = AUDIT.audit_saved_predictions(results_roots=[tmp_path],
+        paper_config=ROOT/"configs/evaluation/mscmnet_paper_metrics.yaml", output_root=tmp_path/"audit")
+    assert summary["valid_sources"] == 2 and summary["invalid_sources"] == 0
+    assert summary["truth_groups_per_task"] == {"24h": 1, "168h": 1}
+    assert summary["truth_origin_group_mismatch"] is False
 
 
 def test_pooled_identity_and_separate_total_mae() -> None:

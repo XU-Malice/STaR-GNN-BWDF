@@ -9,7 +9,8 @@ across models, horizons, DMAs, or metrics to obtain a closer paper table.
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
+import re
 from typing import Any, Mapping, Sequence
 
 import numpy as np
@@ -28,6 +29,37 @@ def array_sha256(values: Any) -> str:
     digest.update(str(array.shape).encode())
     digest.update(np.ascontiguousarray(array).tobytes())
     return digest.hexdigest()
+
+
+def canonical_forecast_origins(values: Any) -> np.ndarray:
+    """Represent ordered, timezone-aware forecast instants consistently in UTC.
+
+    The builders write ISO timestamps with ``T`` while joint forecasts use a
+    space. Those representations, and equivalent timezone offsets, identify the
+    same instant. Keep raw strings in provenance; normalize only comparisons.
+    """
+    starts = np.asarray(values)
+    if starts.ndim != 1 or starts.dtype.kind not in "US":
+        raise ValueError("Forecast origins must be a one-dimensional string array.")
+    parsed = []
+    for value in starts.tolist():
+        try:
+            text = value.decode("ascii") if isinstance(value, bytes) else value
+            # datetime stores microseconds. Do not silently truncate a distinct
+            # sub-microsecond instant when validating provenance.
+            if any(any(digit != "0" for digit in part[6:]) for part in re.findall(r"[.,](\d{7,})", text)):
+                raise ValueError("Sub-microsecond forecast origins are unsupported.")
+            instant = datetime.fromisoformat(text.replace("Z", "+00:00"))
+            if instant.tzinfo is None or instant.utcoffset() is None:
+                raise ValueError("Forecast origins must include an explicit timezone.")
+            parsed.append(instant.astimezone(timezone.utc))
+        except (UnicodeDecodeError, TypeError, ValueError, OverflowError) as exc:
+            raise ValueError(f"Invalid timezone-aware ISO forecast origin {value!r}: {exc}") from exc
+    if len(set(parsed)) != len(parsed):
+        raise ValueError("Forecast origins must identify unique instants.")
+    if any(left >= right for left, right in zip(parsed, parsed[1:])):
+        raise ValueError("Forecast origins must be in strictly increasing time order.")
+    return np.asarray([value.isoformat(timespec="microseconds") for value in parsed], dtype="U32")
 
 
 def validate_prediction_bundle(
@@ -57,12 +89,7 @@ def validate_prediction_bundle(
     starts = np.asarray(arrays["forecast_starts"])
     if starts.shape != (expected_sequences,) or len(set(starts.tolist())) != expected_sequences:
         raise ValueError("Forecast origins must be one unique origin per sequence.")
-    try:
-        parsed_starts = [datetime.fromisoformat(str(value).replace("Z", "+00:00")) for value in starts]
-        if any(left >= right for left, right in zip(parsed_starts, parsed_starts[1:])):
-            raise ValueError("Forecast origins must be in strictly increasing time order.")
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"Forecast origins must be ordered ISO timestamps: {exc}") from exc
+    canonical_starts = canonical_forecast_origins(starts)
     for task, horizon in (("24h", 24), ("168h", 168)):
         expected = (expected_sequences, horizon, len(expected_dma_letters))
         for kind in ("true", "pred"):
@@ -82,7 +109,7 @@ def validate_prediction_bundle(
         "test_sequences": expected_sequences,
         "dma_letters": letters.tolist(),
         "forecast_starts": starts.tolist(),
-        "origins_sha256": array_sha256(starts),
+        "origins_sha256": array_sha256(canonical_starts),
         "array_hashes": {key: array_sha256(arrays[key]) for key in sorted(required)},
         "first_day_max_absolute_difference": float(np.max(np.abs(p24 - p168))),
         "first_day_consistent": first_day_consistent,

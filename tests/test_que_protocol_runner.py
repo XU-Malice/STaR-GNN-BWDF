@@ -15,6 +15,7 @@ import tarfile
 import time
 
 import numpy as np
+import pandas as pd
 import pytest
 import yaml
 
@@ -26,10 +27,14 @@ RUNNER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(RUNNER)
 
 
+def origin_fixture():
+    return pd.date_range("2023-01-13T00:00:00+01:00", periods=46, freq="D")
+
+
 def evaluation_fixture():
     arrays = np.ones((46, 168, 10), dtype=np.float32)
     return {
-        "forecast_starts": [str(x) for x in range(46)],
+        "forecast_starts": [str(x) for x in origin_fixture()],
         "truths": {f"{horizon}h": {"array_sha256": RUNNER.array_digest(arrays[:, :horizon])} for horizon in (24, 168)},
     }
 
@@ -54,7 +59,7 @@ def complete_run(tmp_path, model="msnet"):
         (run / name).write_bytes(b"fixture-checkpoint")
     RUNNER.atomic_json(run / "status.json", {"status": "completed", "model": model, "seed": case["seed"], "single_frozen_checkpoint_for_24h_and_168h": True, "checkpoint_files": checkpoints})
     arrays = np.ones((46, 168, 10), dtype=np.float32)
-    np.savez_compressed(run / "predictions_common46.npz", y_true_24h=arrays[:, :24], y_pred_24h=arrays[:, :24], y_true_168h=arrays, y_pred_168h=arrays, dma_letters=np.asarray(list("ABCDEFGHIJ")), forecast_starts=np.asarray([str(x) for x in range(46)]))
+    np.savez_compressed(run / "predictions_common46.npz", y_true_24h=arrays[:, :24], y_pred_24h=arrays[:, :24], y_true_168h=arrays, y_pred_168h=arrays, dma_letters=np.asarray(list("ABCDEFGHIJ")), forecast_starts=np.asarray([str(x) for x in origin_fixture()]))
     with (run / "metrics.csv").open("w", newline="") as stream:
         writer = csv.writer(stream)
         writer.writerow(["task", "series", "metric", "value"])
@@ -115,6 +120,47 @@ def test_commands_do_not_override_published_epochs_or_decay(tmp_path):
 def test_complete_case_validates_actual_artifacts(tmp_path, model):
     run, case = complete_run(tmp_path, model)
     assert RUNNER.validate_case(run, case, "sig") == (True, "validated_artifacts")
+
+
+@pytest.mark.parametrize("model", ("gru", "lstm"))
+def test_recurrent_builder_origins_match_audit_without_rewriting_evidence(tmp_path, model):
+    from dma_wdf.data.mscmnet_dataset import build_independent_temporal_samples
+
+    run, case = complete_run(tmp_path, model)
+    bounds = {
+        "train_start": pd.Timestamp("2021-01-01T00:00:00+01:00"),
+        "train_end": pd.Timestamp("2022-12-15T23:00:00+01:00"),
+        "test_start": pd.Timestamp("2022-12-16T00:00:00+01:00"),
+        "test_end": pd.Timestamp("2023-03-05T23:00:00+01:00"),
+    }
+    demand = pd.DataFrame(
+        {"DMA A": 1.0},
+        index=pd.date_range(bounds["train_start"], bounds["test_end"], freq="h"),
+    )
+    samples = build_independent_temporal_samples(
+        demand=demand, bounds=bounds, dma_column="DMA A", input_weeks=1,
+        train_stride_hours=24,
+    )
+    with np.load(run / "predictions_common46.npz") as source:
+        arrays = dict(source)
+    arrays["forecast_starts"] = samples["test_forecast_start"]
+    assert "T" in arrays["forecast_starts"][0]
+    assert " " in evaluation_fixture()["forecast_starts"][0]
+    np.savez_compressed(run / "predictions_common46.npz", **arrays)
+    before = (run / "predictions_common46.npz").read_bytes()
+    assert RUNNER.validate_case(run, case, "sig") == (True, "validated_artifacts")
+    assert (run / "predictions_common46.npz").read_bytes() == before
+
+
+def test_actual_one_hour_origin_shift_is_still_rejected(tmp_path):
+    run, case = complete_run(tmp_path)
+    with np.load(run / "predictions_common46.npz") as source:
+        arrays = dict(source)
+    arrays["forecast_starts"] = np.asarray([
+        value.isoformat() for value in origin_fixture() + pd.Timedelta(hours=1)
+    ])
+    np.savez_compressed(run / "predictions_common46.npz", **arrays)
+    assert RUNNER.validate_case(run, case, "sig")[1] == "origins_do_not_match_audited_data"
 
 
 def test_signature_mismatch_disallows_resume(tmp_path):
