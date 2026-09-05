@@ -17,6 +17,7 @@ from dma_wdf.models.mscmnet import (  # noqa: E402
     MSCMNetWM,
     MSNet,
     ScaledDotProductSelfAttention,
+    build_joint_model_from_config,
 )
 
 
@@ -135,6 +136,64 @@ def test_attention_score_scaling_is_explicit() -> None:
     assert scaled.scale == pytest.approx(2.0 ** -0.5)
     assert unscaled.scale == pytest.approx(1.0)
     assert not torch.allclose(scaled(sequence), unscaled(sequence))
+
+
+@pytest.mark.parametrize("model_name", ["mscmnet_wm", "mscmnet_w"])
+@pytest.mark.parametrize("attention_scaling", ["sqrt_dim", "none"])
+@pytest.mark.parametrize(
+    "attention_update", ["replace", "residual", "final_residual", "skip_final"]
+)
+def test_joint_builder_propagates_attention_settings_to_every_cam(
+    model_name: str,
+    attention_scaling: str,
+    attention_update: str,
+) -> None:
+    model_config = {
+        "branch_features": ["demand", "hour"],
+        "input_weeks": [1] * 10,
+        "lstm_layers": [1] * 10,
+        "hidden_sizes": [4] * 10,
+        "fc1": {"future_features": ["hour"], "nodes": 4, "dropout": 0.0},
+        "fc2": {
+            "input_size": 12 if model_name == "mscmnet_wm" else 10,
+            "hidden_size": 4,
+            "lstm_layers": 1,
+            "nodes": 4,
+            "dropout": 0.0,
+        },
+    }
+    cam_config = {
+        "channel_sizes": [4, 1],
+        "cnn_layers": 2,
+        "attention_layers": 2,
+        "attention_scaling": attention_scaling,
+        "attention_update": attention_update,
+        "temporal_layout": "per_day_vectors",
+    }
+    model = build_joint_model_from_config(model_name, model_config, cam_config)
+    cams = [
+        module for module in model.modules() if isinstance(module, ConvAttentionBlock)
+    ]
+    assert len(cams) == 11  # Ten DMA branches plus the daily-share branch.
+    for cam in cams:
+        assert cam.attention_scaling == attention_scaling
+        assert cam.attention_update == attention_update
+        for attention in cam.attention:
+            assert attention.scaling == attention_scaling
+            expected_scale = (
+                attention.features ** -0.5
+                if attention_scaling == "sqrt_dim"
+                else 1.0
+            )
+            assert attention.scale == pytest.approx(expected_scale)
+
+    # FC2 already has a daily time axis: do not apply the trunk's 24-hour reshape.
+    assert model.msnet.branches[0].lstm.input_size == 24
+    assert model.share_forecaster.lstm.input_size == 1
+    output = model.share_forecaster(
+        torch.randn(2, 7, model_config["fc2"]["input_size"])
+    )
+    assert output.shape == (2, 10)
 
 
 @pytest.mark.parametrize(

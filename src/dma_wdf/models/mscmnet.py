@@ -501,6 +501,8 @@ class DailyShareForecaster(nn.Module):
         fully_connected_nodes: int,
         dropout: float,
         num_dmas: int = PAPER_NUM_DMAS,
+        attention_update: str = "replace",
+        attention_scaling: str = "sqrt_dim",
     ) -> None:
         super().__init__()
         input_features = _positive_int("input_features", input_features)
@@ -520,6 +522,8 @@ class DailyShareForecaster(nn.Module):
             kernel_size=cam_kernel_size,
             attention_heads=1,
             dropout=cam_dropout,
+            attention_update=attention_update,
+            attention_scaling=attention_scaling,
         )
         self.lstm = nn.LSTM(
             input_size=self.cam.output_features,
@@ -627,6 +631,8 @@ class MSCMNetWM(MSCMNetM):
         fc2_dropout: float,
         correction_mode: str = "direct",
         zero_init_correction: bool = False,
+        fc2_cam_attention_update: str = "replace",
+        fc2_cam_attention_scaling: str = "sqrt_dim",
     ) -> None:
         super().__init__(
             msnet,
@@ -646,6 +652,8 @@ class MSCMNetWM(MSCMNetM):
             fully_connected_nodes=fc2_nodes,
             dropout=fc2_dropout,
             num_dmas=msnet.num_dmas,
+            attention_update=fc2_cam_attention_update,
+            attention_scaling=fc2_cam_attention_scaling,
         )
         output_size = msnet.horizon * msnet.num_dmas
         self.fc2 = FullyConnectedCorrection(
@@ -778,6 +786,12 @@ def build_joint_model_from_config(
         ),
         "fc2_cam_kernel_size": int(cam_config.get("kernel_size", 3)),
         "fc2_cam_dropout": float(cam_config.get("dropout", 0.0)),
+        "fc2_cam_attention_update": str(
+            cam_config.get("attention_update", "replace")
+        ),
+        "fc2_cam_attention_scaling": str(
+            cam_config.get("attention_scaling", "sqrt_dim")
+        ),
         "fc2_hidden_size": int(fc2["hidden_size"]),
         "fc2_lstm_layers": int(fc2["lstm_layers"]),
         "fc2_nodes": int(fc2["nodes"]),

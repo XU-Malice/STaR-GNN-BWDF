@@ -396,6 +396,8 @@ def _run_epoch(
             loss = loss + float(share_weight) * F.mse_loss(
                 share_prediction, share_target
             )
+        if not bool(torch.isfinite(loss).item()):
+            raise FloatingPointError("Nonfinite training loss; aborting this run")
         loss.backward()
         optimizer.step()
         losses.append(float(loss.detach().cpu().item()))
@@ -822,6 +824,14 @@ def predict_joint_168h_stages(
     return stages
 
 
+def first_day_stages(stages: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
+    """Read day one from one frozen rollout without recomputing predictions."""
+    return {
+        key: value[:, 0].copy() if key == "predicted_daily_share" else value[:, :24].copy()
+        for key, value in stages.items()
+    }
+
+
 def metric_table(
     *,
     model_display_name: str,
@@ -832,12 +842,22 @@ def metric_table(
     dma_letters: Sequence[str],
     literature_config: dict[str, Any] | None,
 ) -> pd.DataFrame:
-    """Compute S1-compatible DMA and total metrics for both horizons."""
+    """Compute historical pooled metrics (S1 aggregation is not confirmed).
+
+    The standalone saved-prediction auditor additionally reports origin-mean
+    metrics without silently changing this legacy output or the predictions.
+    """
     rows: list[dict[str, Any]] = []
     for task, truth, prediction in (
         ("24h", y_true_24h, y_pred_24h),
         ("168h", y_true_168h, y_pred_168h),
     ):
+        if truth.shape != prediction.shape or truth.ndim != 3:
+            raise ValueError(f"{task}: expected equal (origin, hour, DMA) arrays")
+        if truth.shape[2] != len(dma_letters):
+            raise ValueError(f"{task}: DMA order/shape mismatch")
+        if not np.isfinite(truth).all() or not np.isfinite(prediction).all():
+            raise ValueError(f"{task}: nonfinite truth or forecast; refusing partial scoring")
         dma_metrics: list[dict[str, float]] = []
         for index, letter in enumerate(dma_letters):
             metrics = compute_metrics(truth[:, :, index], prediction[:, :, index])
@@ -1052,12 +1072,12 @@ def train_independent_family(
                 f"train_loss={loss:.6f}",
                 flush=True,
             )
-        prediction_24_norm = predict_independent_24h(
-            model, x_test, device=device, batch_size=batch_size
-        )
         prediction_168_norm = predict_independent_168h(
             model, x_test, device=device, steps=7
         )
+        # One rollout defines both horizons, avoiding float32 batch-size
+        # roundoff between a separate 24h pass and the first recursive day.
+        prediction_24_norm = prediction_168_norm[:, :24]
         predictions_24.append(scaler.inverse(prediction_24_norm))
         predictions_168.append(scaler.inverse(prediction_168_norm))
         truth_24.append(samples["y_test_eval_24h"])
@@ -1088,7 +1108,9 @@ def train_independent_family(
                 "input_weeks": int(model_config["input_weeks"][index]),
                 "scaler": scaler.state_dict(),
                 "checkpoint_policy": (
-                    "final_fixed_paper_epoch"
+                    "final_override_epoch_diagnostic"
+                    if max_epochs_override is not None
+                    else "final_fixed_paper_epoch"
                     if float(training_config.get("best_epoch_scale", 1.0)) == 1.0
                     else "final_scaled_paper_epoch_diagnostic"
                 ),
@@ -1283,24 +1305,6 @@ def train_joint_family(
             f"model={canonical} epoch={epoch}/{epochs} train_loss={loss:.6f}",
             flush=True,
         )
-    stages_24_norm = predict_joint_24h_stages(
-        model=model,
-        family=family,
-        branches=test_branches,
-        future=future_test,
-        fc2_history=fc2_test,
-        device=device,
-        batch_size=int(training_config["batch_size"]),
-    )
-    stages_24 = {
-        key: (
-            value
-            if key == "predicted_daily_share"
-            else target_scaler.inverse(value)
-        )
-        for key, value in stages_24_norm.items()
-    }
-    prediction_24 = stages_24["prediction"]
     stages_168 = predict_joint_168h_stages(
         model=model,
         family=family,
@@ -1320,6 +1324,8 @@ def train_joint_family(
         steps=7,
     )
     prediction_168 = stages_168["prediction"]
+    stages_24 = first_day_stages(stages_168)
+    prediction_24 = stages_24["prediction"]
     metrics = metric_table(
         model_display_name=str(model_config["display_name"]),
         y_true_24h=samples.y_test_24h,
@@ -1387,7 +1393,9 @@ def train_joint_family(
             "future_scaler": future_scaler.state_dict(),
             "fc2_scaler": None if fc2_scaler is None else fc2_scaler.state_dict(),
             "checkpoint_policy": (
-                "final_fixed_paper_epoch"
+                "final_override_epoch_diagnostic"
+                if max_epochs_override is not None
+                else "final_fixed_paper_epoch"
                 if float(training_config.get("best_epoch_scale", 1.0)) == 1.0
                 else "final_scaled_paper_epoch_diagnostic"
             ),
@@ -1444,6 +1452,7 @@ def run_one_model(
     output_dir = output_root / canonical / f"seed_{seed}"
     archived = prepare_output_dir(output_dir, overwrite=overwrite)
     started = time.perf_counter()
+    started_utc = datetime.now(timezone.utc).isoformat()
     (output_dir / "resolved_config.yaml").write_text(
         yaml.safe_dump(
             {
@@ -1501,7 +1510,8 @@ def run_one_model(
         "display_name": model_config["display_name"],
         "seed": int(seed),
         "device": str(device),
-        "started_utc": datetime.now(timezone.utc).isoformat(),
+        "started_utc": started_utc,
+        "completed_utc": datetime.now(timezone.utc).isoformat(),
         "elapsed_seconds": float(time.perf_counter() - started),
         "git_commit": _git_commit(),
         "data_audit": data_audit,
@@ -1515,7 +1525,17 @@ def run_one_model(
             and float(config["training"].get("learning_rate_scale", 1.0)) == 1.0
             and float(config["training"].get("best_epoch_scale", 1.0)) == 1.0
         ),
+        "formal_protocol_scope": "legacy_epoch_stride_loss_check_only",
+        "paper_reproduction_verified": False,
+        "metric_aggregation": "pooled_origins",
+        "unresolved_paper_details": [
+            "metric_aggregation_across_46_origins",
+            "optimizer", "normalization", "batch_size",
+            "CAM_intermediate_widths_and_tensor_layout",
+            "exact_preprocessed_data_and_evaluation_origins",
+        ],
         "single_frozen_checkpoint_for_24h_and_168h": True,
+        "horizon_readout": "24h_is_exact_prefix_of_single_168h_rollout",
         **details,
     }
     (output_dir / "status.json").write_text(
@@ -1590,8 +1610,8 @@ def main() -> None:
         choices=["sqrt_dim", "none"],
         default=None,
         help=(
-            "Diagnostic QK score scaling. The article defines Q/K/V attention "
-            "but does not disclose this low-level denominator."
+            "QK score scaling: 'none' matches the unscaled dot product in "
+            "Equation 5; 'sqrt_dim' is a framework-reconstruction diagnostic."
         ),
     )
     parser.add_argument(

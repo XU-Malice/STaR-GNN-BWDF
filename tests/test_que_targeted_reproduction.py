@@ -62,19 +62,19 @@ def test_runner_is_one_seed_and_covers_all_six_models() -> None:
     assert "--best-epoch-scale" in runner
 
 
-def test_lstm_s3_2_literal_zero_weight_decays_are_preserved() -> None:
+def test_lstm_s3_2_nonzero_weight_decays_are_preserved() -> None:
     config = yaml.safe_load(
         (ROOT / "configs/model/mscmnet_baselines.yaml").read_text(encoding="utf-8")
     )
     assert config["models"]["lstm"]["weight_decays"] == [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
+        0.0001,
+        0.0001,
+        0.0001,
+        0.0001,
         0.01,
-        0.0,
+        0.0001,
         0.001,
         0.001,
         0.0001,
-        0.0,
+        0.0001,
     ]

@@ -393,15 +393,16 @@ echo $! | tee logs/que_complete_reproduction_launcher.pid
 均值/标准差和不含 checkpoint/预测数组的紧凑结果包。默认使用物理 GPU 6，预计
 串行运行约 12–24 小时，实际耗时取决于 stride=6 的四倍训练样本诊断。
 
-### 2026-09-04 单种子定向数值复现
+### 2026-09-04 单种子定向数值诊断（已被 09-05 协议审计取代）
 
 87 个任务的完整诊断已经证明，多种子统计不是当前瓶颈。新的目标队列只使用固定
 种子 `20240604`，并把验收条件改为每个模型的 24 h/168 h 共八个总体指标全部
 接近补充表：MAE、MAPE、RMSE 的相对差不超过 5%，NSE 的绝对差不超过 0.01。
 DMA 明细只作为候选相同时的次级排序依据。
 
-重新逐项核对 S3-2 后发现，LSTM 的 A/B/C/D/F/J 最优 weight decay 是字面值 0；
-旧配置曾错误写为搜索网格中最小的非零值 `0.0001`。该处现已按补充表修正。
+勘误：本节此前错误声称 S3-2 的 LSTM A/B/C/D/F/J weight decay 为 0。
+2026-09-05 同时核对原 DOCX XML 和渲染第 8 页后，确认六项均为 `0.0001`。
+提交 `5b8100b` 引入的六个零值已恢复；旧 87 任务使用的非零配置才是正确转录。
 训练入口还增加了两个明确标为诊断的参数：`--learning-rate-scale` 按比例调整论文
 学习率，`--best-epoch-scale` 对 GRU/LSTM 的十个独立 best epoch 分别按比例调整，
 不会把十个 DMA 粗暴改成同一个 epoch。
@@ -417,12 +418,19 @@ DMA 明细只作为候选相同时的次级排序依据。
 单次结果中最接近论文的 `20240607`。这不是五种子重复实验，种子选择本身同样属于
 明确披露的 paper-gap 反向诊断。
 
-```bash
-nohup bash scripts/train/run_que_targeted_reproduction_gpu6.sh \
-  > logs/que_targeted_reproduction_launcher.log 2>&1 &
-echo $! | tee logs/que_targeted_reproduction_launcher.pid
-```
+该队列不再推荐启动。仅保留脚本和结果供历史追溯。
 
 结果写入 `results/que_targeted_reproduction_20260904/`；核心文件为
 `best_by_model.tsv`、`best_metric_gaps.tsv` 和 `acceptance_summary.json`。结束时
 还会生成不含 checkpoint/预测数组的紧凑结果包，训练失败不会阻止后续候选执行。
+
+### 2026-09-05 协议优先的单种子复核
+
+详见 [QUE_PROTOCOL_AUDIT_CN.md](QUE_PROTOCOL_AUDIT_CN.md)。本轮先重新评分已有
+预测，再执行六模型 × 两种归一化 × 两种优化器的固定 24 组。所有模型使用同一
+种子，不追逐测试表、不改变论文轮数/学习率，不使用 residual、zero-init 或辅助
+share loss。原文 Eq.5 的未缩放点积同时应用到主干和 FC2。
+
+历史 `formal_protocol=true` 只检查轮数、步幅和损失等部分条件，并非论文复现
+认证。新状态明确记载该字段的有限含义，且 `paper_reproduction_verified=false`。
+数值接近、程序通过、与论文算法一致是三个不同结论，不能相互替代。

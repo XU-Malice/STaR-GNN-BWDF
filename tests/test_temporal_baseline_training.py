@@ -136,3 +136,32 @@ def test_joint_stage_prediction_retains_intermediate_outputs() -> None:
     assert stages["predicted_daily_share"].shape == (3, 10)
     assert np.allclose(stages["prediction"], 3.0)
     assert np.allclose(stages["fc1_prediction"], 2.0)
+
+
+def test_metric_table_rejects_nonfinite_predictions() -> None:
+    module = _load_training_script()
+    truth = np.ones((2, 24, 10), dtype=np.float32)
+    pred = truth.copy()
+    pred[0, 0, 0] = np.nan
+    with pytest.raises(ValueError, match="nonfinite"):
+        module.metric_table(
+            model_display_name="MSNet",
+            y_true_24h=truth, y_pred_24h=pred,
+            y_true_168h=np.ones((2, 168, 10)),
+            y_pred_168h=np.ones((2, 168, 10)),
+            dma_letters=list("ABCDEFGHIJ"), literature_config=None,
+        )
+
+
+def test_first_day_is_read_from_one_rollout_for_every_stage() -> None:
+    module = _load_training_script()
+    rng = np.random.default_rng(1)
+    stages = {
+        key: rng.normal(size=(3, 168, 10)).astype(np.float32)
+        for key in ("prediction", "msnet_prediction", "fc1_prediction")
+    }
+    stages["predicted_daily_share"] = rng.random((3, 7, 10)).astype(np.float32)
+    first = module.first_day_stages(stages)
+    for key in ("prediction", "msnet_prediction", "fc1_prediction"):
+        np.testing.assert_array_equal(first[key], stages[key][:, :24])
+    np.testing.assert_array_equal(first["predicted_daily_share"], stages["predicted_daily_share"][:, 0])
