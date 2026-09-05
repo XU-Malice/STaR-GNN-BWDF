@@ -68,17 +68,34 @@ def is_alive(process: Process | None) -> bool:
     return process is not None and process.state not in {"Z", "X", "x"}
 
 
+def read_parent_pid(pid: int) -> int | None:
+    """Read ancestry metadata only; an ancestor is protected, never a target.
+
+    SSH/sudo ancestors can belong to another user. Their cwd and command line
+    are neither necessary nor authorized inputs to target identification.
+    Actual launchers/children still require the full strict read_process().
+    """
+    try:
+        stat = (Path("/proc") / str(pid) / "stat").read_text()
+        fields = stat[stat.rfind(")") + 2 :].split()
+        return int(fields[1])
+    except (FileNotFoundError, ProcessLookupError):
+        return None
+    except PermissionError as exc:
+        raise SafetyError(f"Cannot inspect parent metadata of PID {pid}: {exc}") from exc
+
+
 def protected_pids() -> set[int]:
     """Protect this helper, its invoking ancestors, and its session leader."""
     protected = {os.getpid(), os.getppid(), os.getsid(0), 1}
-    current = read_process(os.getpid())
+    current = os.getpid()
     seen: set[int] = set()
-    while current is not None and current.pid not in seen:
-        seen.add(current.pid)
-        protected.add(current.pid)
-        if current.ppid <= 0:
+    while current is not None and current > 0 and current not in seen:
+        seen.add(current)
+        protected.add(current)
+        if current == 1:
             break
-        current = read_process(current.ppid)
+        current = read_parent_pid(current)
     return protected
 
 
