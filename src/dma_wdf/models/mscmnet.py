@@ -13,8 +13,9 @@ multi-scale correction module neural network architecture":
 
 The article specifies the data flow and the Hyperopt-selected recurrent and
 fully-connected dimensions, but does not publish every low-level framework
-choice.  Figure 7 does, however, fix the CAM ordering: Conv1d and Attention
-alternate three times.  Table 3 fixes a one-channel CAM output before LSTM but
+choice.  The prose specifies Conv1d, while Table 3 labels its filter "3 x 3".
+Figure 7 fixes the CAM ordering: convolution and Attention alternate three
+times.  Table 3 fixes a one-channel CAM output before LSTM but
 does not disclose the two intermediate convolution widths.  The formal
 reconstruction treats FC1/FC2 as direct corrections; an explicitly labelled
 residual mode is retained only for diagnostics because the article does not
@@ -69,7 +70,9 @@ def _attention_scaling(value: str) -> str:
 
 def _temporal_layout(value: str) -> str:
     value = str(value).lower()
-    valid = {"full_history_flat", "per_day_flat", "per_day_vectors"}
+    valid = {
+        "full_history_flat", "per_day_flat", "per_day_vectors", "conv2d_day_hour"
+    }
     if value not in valid:
         choices = ", ".join(sorted(valid))
         raise ValueError(f"temporal_layout must be one of {choices}, got {value!r}.")
@@ -82,6 +85,17 @@ def _correction_mode(value: str) -> str:
     if value not in valid:
         choices = ", ".join(sorted(valid))
         raise ValueError(f"correction_mode must be one of {choices}, got {value!r}.")
+    return value
+
+
+def _correction_layout(value: str) -> str:
+    value = str(value).lower()
+    valid = {"global_flat", "hourwise_shared"}
+    if value not in valid:
+        raise ValueError(
+            "correction_layout must be global_flat or hourwise_shared, "
+            f"got {value!r}."
+        )
     return value
 
 
@@ -170,15 +184,33 @@ class StackedRecurrentForecaster(nn.Module):
 class GRUForecast(StackedRecurrentForecaster):
     """Independent GRU baseline for one DMA."""
 
-    def __init__(self, hidden_sizes: Sequence[int], horizon: int = PAPER_DAY_HOURS) -> None:
-        super().__init__(cell_type="GRU", hidden_sizes=hidden_sizes, horizon=horizon)
+    def __init__(
+        self,
+        hidden_sizes: Sequence[int],
+        horizon: int = PAPER_DAY_HOURS,
+        *,
+        input_features: int = 1,
+    ) -> None:
+        super().__init__(
+            cell_type="GRU", hidden_sizes=hidden_sizes,
+            horizon=horizon, input_features=input_features,
+        )
 
 
 class LSTMForecast(StackedRecurrentForecaster):
     """Independent LSTM baseline for one DMA."""
 
-    def __init__(self, hidden_sizes: Sequence[int], horizon: int = PAPER_DAY_HOURS) -> None:
-        super().__init__(cell_type="LSTM", hidden_sizes=hidden_sizes, horizon=horizon)
+    def __init__(
+        self,
+        hidden_sizes: Sequence[int],
+        horizon: int = PAPER_DAY_HOURS,
+        *,
+        input_features: int = 1,
+    ) -> None:
+        super().__init__(
+            cell_type="LSTM", hidden_sizes=hidden_sizes,
+            horizon=horizon, input_features=input_features,
+        )
 
 
 class ScaledDotProductSelfAttention(nn.Module):
@@ -310,8 +342,102 @@ class ConvAttentionBlock(nn.Module):
         return encoded
 
 
+class Conv2dDayHourAttentionBlock(nn.Module):
+    """Diagnostic interpretation of Table 3's day/hour grid and 3 x 3 filter.
+
+    This deliberately labelled hypothesis conflicts with the prose's explicit
+    Conv1d description; it must not be reported as a confirmed paper setting.
+    A Conv2d acts on the historical day/hour axes, with variables as channels.
+    After each convolution, attention uses D day tokens of size 24*C, preserving
+    the grid for the next stage. It never treats independent batch samples as
+    tokens and never receives future demand. D-by-D attention avoids quadratic
+    attention over the full D*24-hour history. FC2 keeps its separate Conv1d.
+    """
+
+    def __init__(
+        self,
+        *,
+        input_features: int,
+        channel_sizes: Sequence[int] = (16, 16, 1),
+        cnn_layers: int = 3,
+        attention_layers: int = 3,
+        kernel_size: int = 3,
+        attention_heads: int = 1,
+        dropout: float = 0.0,
+        attention_update: str = "replace",
+        attention_scaling: str = "sqrt_dim",
+    ) -> None:
+        super().__init__()
+        self.input_features = _positive_int("input_features", input_features)
+        cnn_layers = _positive_int("cnn_layers", cnn_layers)
+        attention_layers = _positive_int("attention_layers", attention_layers)
+        kernel_size = _positive_int("kernel_size", kernel_size)
+        attention_heads = _positive_int("attention_heads", attention_heads)
+        dropout = _probability("dropout", dropout)
+        self.attention_update = _attention_update(attention_update)
+        self.attention_scaling = _attention_scaling(attention_scaling)
+        channels = tuple(_positive_int("channel_size", c) for c in channel_sizes)
+        if len(channels) != cnn_layers:
+            raise ValueError("channel_sizes must provide one output size per CNN layer.")
+        if attention_layers != cnn_layers:
+            raise ValueError("Every convolution requires one Attention stage.")
+        if kernel_size % 2 == 0:
+            raise ValueError("kernel_size must be odd to preserve the day/hour grid.")
+        if attention_heads != 1:
+            raise ValueError("The diagnostic keeps single-head dot-product attention.")
+
+        self.output_features = channels[-1]
+        self.convolutions = nn.ModuleList()
+        self.attention = nn.ModuleList()
+        in_channels = self.input_features
+        for out_channels in channels:
+            self.convolutions.append(nn.Conv2d(
+                in_channels, out_channels,
+                kernel_size=kernel_size, padding=kernel_size // 2,
+            ))
+            self.attention.append(ScaledDotProductSelfAttention(
+                PAPER_DAY_HOURS * out_channels,
+                dropout=dropout, scaling=self.attention_scaling,
+            ))
+            in_channels = out_channels
+        self.activation = nn.ReLU()
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, history: torch.Tensor) -> torch.Tensor:
+        if (
+            history.ndim != 4
+            or history.shape[2] != PAPER_DAY_HOURS
+            or history.shape[-1] != self.input_features
+        ):
+            raise ValueError(
+                "2D CAM history must have shape (B,D,24,"
+                f"{self.input_features}), got {tuple(history.shape)}."
+            )
+        batch_size, days, hours, _ = history.shape
+        encoded = history
+        final_index = len(self.convolutions) - 1
+        for index, (convolution, attention) in enumerate(
+            zip(self.convolutions, self.attention)
+        ):
+            encoded = convolution(encoded.permute(0, 3, 1, 2)).permute(0, 2, 3, 1)
+            encoded = self.dropout(self.activation(encoded))
+            if self.attention_update == "skip_final" and index == final_index:
+                continue
+            daily_tokens = encoded.reshape(batch_size, days, -1)
+            attended = attention(daily_tokens).reshape(
+                batch_size, days, hours, convolution.out_channels
+            )
+            if self.attention_update == "residual" or (
+                self.attention_update == "final_residual" and index == final_index
+            ):
+                encoded = encoded + attended
+            else:
+                encoded = attended
+        return encoded
+
+
 class CAMLSTMForecastBranch(nn.Module):
-    """One paper Forecast module: 1D CNN + Attention + LSTM."""
+    """One Forecast module, with explicitly selectable layout hypotheses."""
 
     def __init__(
         self,
@@ -333,7 +459,12 @@ class CAMLSTMForecastBranch(nn.Module):
         self.horizon = _positive_int("horizon", horizon)
         self.temporal_layout = _temporal_layout(temporal_layout)
         dropout = _probability("dropout", dropout)
-        self.cam = ConvAttentionBlock(
+        cam_class = (
+            Conv2dDayHourAttentionBlock
+            if self.temporal_layout == "conv2d_day_hour"
+            else ConvAttentionBlock
+        )
+        self.cam = cam_class(
             input_features=config.input_features,
             channel_sizes=channel_sizes,
             cnn_layers=cnn_layers,
@@ -345,7 +476,7 @@ class CAMLSTMForecastBranch(nn.Module):
             attention_scaling=attention_scaling,
         )
         lstm_input_size = self.cam.output_features
-        if self.temporal_layout == "per_day_vectors":
+        if self.temporal_layout in {"per_day_vectors", "conv2d_day_hour"}:
             lstm_input_size *= PAPER_DAY_HOURS
         self.lstm = nn.LSTM(
             input_size=lstm_input_size,
@@ -364,7 +495,13 @@ class CAMLSTMForecastBranch(nn.Module):
                 f"{expected[1]},{expected[2]}), got {tuple(history.shape)}."
             )
         batch_size = history.shape[0]
-        if self.temporal_layout == "full_history_flat":
+        if self.temporal_layout == "conv2d_day_hour":
+            encoded = self.cam(history).reshape(
+                batch_size,
+                self.config.history_days,
+                PAPER_DAY_HOURS * self.cam.output_features,
+            )
+        elif self.temporal_layout == "full_history_flat":
             sequence = history.reshape(
                 batch_size,
                 self.config.history_days * PAPER_DAY_HOURS,
@@ -395,7 +532,12 @@ class CAMLSTMForecastBranch(nn.Module):
 
 
 class MSNet(nn.Module):
-    """Joint ten-DMA MSNet forecast trunk."""
+    """Joint ten-DMA MSNet forecast trunk.
+
+    The fully connected layer's time-axis treatment is unpublished. The legacy
+    global_flat path mixes all 24*10 outputs; the explicit hourwise_shared
+    hypothesis applies one shared 10-to-10 map independently at every hour.
+    """
 
     def __init__(
         self,
@@ -410,6 +552,7 @@ class MSNet(nn.Module):
         attention_update: str = "replace",
         attention_scaling: str = "sqrt_dim",
         temporal_layout: str = "full_history_flat",
+        correction_layout: str = "global_flat",
         horizon: int = PAPER_DAY_HOURS,
     ) -> None:
         super().__init__()
@@ -420,6 +563,7 @@ class MSNet(nn.Module):
             )
         self.horizon = _positive_int("horizon", horizon)
         self.num_dmas = len(configs)
+        self.correction_layout = _correction_layout(correction_layout)
         self.branches = nn.ModuleList(
             [
                 CAMLSTMForecastBranch(
@@ -438,7 +582,10 @@ class MSNet(nn.Module):
                 for config in configs
             ]
         )
-        joined = self.horizon * self.num_dmas
+        joined = (
+            self.num_dmas if self.correction_layout == "hourwise_shared"
+            else self.horizon * self.num_dmas
+        )
         self.joint_fully_connected = nn.Linear(joined, joined)
 
     def forward(self, histories: Sequence[torch.Tensor]) -> torch.Tensor:
@@ -450,6 +597,8 @@ class MSNet(nn.Module):
             branch(history) for branch, history in zip(self.branches, histories)
         ]
         concatenated = torch.stack(branch_predictions, dim=-1)
+        if self.correction_layout == "hourwise_shared":
+            return self.joint_fully_connected(concatenated)
         corrected = self.joint_fully_connected(
             concatenated.reshape(concatenated.shape[0], -1)
         )
@@ -567,9 +716,12 @@ class MSCMNetM(nn.Module):
         self.msnet = msnet
         self.future_features = _positive_int("future_features", future_features)
         self.correction_mode = _correction_mode(correction_mode)
-        output_size = msnet.horizon * msnet.num_dmas
+        self.correction_layout = msnet.correction_layout
+        shared = self.correction_layout == "hourwise_shared"
+        output_size = msnet.num_dmas if shared else msnet.horizon * msnet.num_dmas
+        future_size = self.future_features if shared else msnet.horizon * self.future_features
         self.fc1 = FullyConnectedCorrection(
-            input_size=output_size + msnet.horizon * self.future_features,
+            input_size=output_size + future_size,
             hidden_size=fc1_nodes,
             output_size=output_size,
             dropout=fc1_dropout,
@@ -594,13 +746,18 @@ class MSCMNetM(nn.Module):
     ) -> MSCMNetOutput:
         self._validate_future(future_features)
         msnet_prediction = self.msnet(histories)
-        correction_features = torch.cat(
-            [
-                msnet_prediction.reshape(msnet_prediction.shape[0], -1),
-                future_features.reshape(future_features.shape[0], -1),
-            ],
-            dim=1,
-        )
+        if self.correction_layout == "hourwise_shared":
+            correction_features = torch.cat(
+                [msnet_prediction, future_features], dim=-1,
+            ).reshape(-1, self.msnet.num_dmas + self.future_features)
+        else:
+            correction_features = torch.cat(
+                [
+                    msnet_prediction.reshape(msnet_prediction.shape[0], -1),
+                    future_features.reshape(future_features.shape[0], -1),
+                ],
+                dim=1,
+            )
         corrected = self.fc1(correction_features).reshape_as(msnet_prediction)
         if self.correction_mode == "residual":
             corrected = msnet_prediction + corrected
@@ -655,7 +812,10 @@ class MSCMNetWM(MSCMNetM):
             attention_update=fc2_cam_attention_update,
             attention_scaling=fc2_cam_attention_scaling,
         )
-        output_size = msnet.horizon * msnet.num_dmas
+        output_size = (
+            msnet.num_dmas if self.correction_layout == "hourwise_shared"
+            else msnet.horizon * msnet.num_dmas
+        )
         self.fc2 = FullyConnectedCorrection(
             input_size=output_size + msnet.num_dmas,
             hidden_size=fc2_nodes,
@@ -675,13 +835,19 @@ class MSCMNetWM(MSCMNetM):
     ) -> MSCMNetOutput:
         fc1_output = super().forward(histories, future_features)
         predicted_share = self.share_forecaster(fc2_history)
-        correction_features = torch.cat(
-            [
-                fc1_output.prediction.reshape(fc1_output.prediction.shape[0], -1),
-                predicted_share,
-            ],
-            dim=1,
-        )
+        if self.correction_layout == "hourwise_shared":
+            hourly_share = predicted_share[:, None, :].expand(-1, self.msnet.horizon, -1)
+            correction_features = torch.cat(
+                [fc1_output.prediction, hourly_share], dim=-1,
+            ).reshape(-1, 2 * self.msnet.num_dmas)
+        else:
+            correction_features = torch.cat(
+                [
+                    fc1_output.prediction.reshape(fc1_output.prediction.shape[0], -1),
+                    predicted_share,
+                ],
+                dim=1,
+            )
         corrected = self.fc2(correction_features).reshape_as(fc1_output.prediction)
         if self.correction_mode == "residual":
             corrected = fc1_output.prediction + corrected
@@ -728,8 +894,11 @@ def build_msnet_from_config(
     if bool(cam_config.get("pooling", False)):
         raise ValueError("The paper CAM explicitly does not use pooling.")
     convolution = str(cam_config.get("convolution", "conv1d")).lower()
-    if convolution != "conv1d":
-        raise ValueError("The paper CAM requires temporal Conv1d.")
+    temporal_layout = str(cam_config.get("temporal_layout", "full_history_flat"))
+    if convolution not in {"conv1d", "conv2d"}:
+        raise ValueError("CAM convolution must be conv1d or explicit diagnostic conv2d.")
+    if convolution == "conv2d" and temporal_layout != "conv2d_day_hour":
+        raise ValueError("conv2d requires the explicit conv2d_day_hour diagnostic layout.")
     return MSNet(
         branches,
         channel_sizes=tuple(cam_config.get("channel_sizes", (16, 16, 1))),
@@ -740,9 +909,8 @@ def build_msnet_from_config(
         dropout=float(cam_config.get("dropout", 0.0)),
         attention_update=str(cam_config.get("attention_update", "replace")),
         attention_scaling=str(cam_config.get("attention_scaling", "sqrt_dim")),
-        temporal_layout=str(
-            cam_config.get("temporal_layout", "full_history_flat")
-        ),
+        temporal_layout=temporal_layout,
+        correction_layout=str(model_config.get("correction_layout", "global_flat")),
     )
 
 
@@ -805,6 +973,7 @@ def build_joint_model_from_config(
 __all__ = [
     "CAMLSTMForecastBranch",
     "ConvAttentionBlock",
+    "Conv2dDayHourAttentionBlock",
     "DailyShareForecaster",
     "ForecastBranchConfig",
     "GRUForecast",

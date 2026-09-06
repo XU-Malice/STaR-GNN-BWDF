@@ -54,6 +54,7 @@ from dma_wdf.data.mscmnet_dataset import (  # noqa: E402
     JointTemporalSamples,
     build_independent_temporal_samples,
     build_joint_temporal_samples,
+    daily_share_history,
     forecast_day_features,
     load_paper_data,
 )
@@ -200,6 +201,143 @@ def _fit_scalar(normalization: str, *values: np.ndarray) -> TrainOnlyScaler:
     if _normalization_name(normalization) == "minmax":
         return MinMaxScaler.fit_scalar(*values)
     return Standardizer.fit_scalar(*values)
+
+
+def _scaler_options(training_config: dict[str, Any]) -> dict[str, str]:
+    choices = {
+        "recurrent_layout": ("hourly", "daily_vectors"),
+        "scaler_fit_scope": ("windows", "train_rows"),
+        "demand_scaling": ("per_dma", "shared"),
+    }
+    result: dict[str, str] = {}
+    for key, allowed in choices.items():
+        value = str(training_config.get(key, allowed[0]))
+        if value not in allowed:
+            raise ValueError(f"{key} must be one of {allowed}.")
+        result[key] = value
+    return result
+
+
+def _scaler_json(scaler: TrainOnlyScaler) -> dict[str, Any]:
+    """Write actual fitted parameters without repr/stringifying arrays."""
+    return {
+        key: value.tolist() if isinstance(value, np.ndarray) else value
+        for key, value in scaler.state_dict().items()
+    }
+
+
+def _scaler_audit_base(
+    training_config: dict[str, Any], bounds: dict[str, pd.Timestamp],
+) -> dict[str, Any]:
+    options = _scaler_options(training_config)
+    return {
+        **options,
+        "normalization": _normalization_name(training_config.get("normalization", "zscore")),
+        "allowed_train_bounds": {
+            key: pd.Timestamp(bounds[key]).isoformat()
+            for key in ("train_start", "train_end")
+        },
+        "test_values_used_for_fit": False,
+        "weighting": (
+            "one_observation_per_training_hour_or_complete_day"
+            if options["scaler_fit_scope"] == "train_rows"
+            else "training_window_occurrences_including_repeated_observations"
+        ),
+    }
+
+
+def _scaler_audit_entry(scaler: TrainOnlyScaler, values: np.ndarray) -> dict[str, Any]:
+    return {
+        "parameters": _scaler_json(scaler),
+        "fit_array_shape": list(values.shape),
+        "fit_rows": int(np.prod(values.shape[:-1])),
+        "feature_count": int(values.shape[-1]),
+    }
+
+
+def _train_rows(frame: pd.DataFrame, bounds: dict[str, pd.Timestamp]) -> pd.DataFrame:
+    """Select each training hour once; reject gaps or nonfinite training data."""
+    start, end = pd.Timestamp(bounds["train_start"]), pd.Timestamp(bounds["train_end"])
+    selected = frame.loc[start:end]
+    expected = pd.date_range(start, end, freq="h")
+    if len(selected) == 0 or not selected.index.equals(expected):
+        raise ValueError("Scaler fit requires complete unique hourly training rows.")
+    if not np.isfinite(selected.to_numpy(dtype=np.float64)).all():
+        raise ValueError("Nonfinite training values cannot be used to fit a scaler.")
+    return selected
+
+
+def _joint_train_fit_rows(
+    *, demand: pd.DataFrame, weather: pd.DataFrame, temporal: pd.DataFrame,
+    bounds: dict[str, pd.Timestamp], dma_columns: Sequence[str],
+    branch_feature_columns: Sequence[Sequence[str]], future_columns: Sequence[str],
+    include_fc2: bool, include_temperature: bool,
+) -> dict[str, Any]:
+    """Unique training observations for all branches, targets and covariates."""
+    target = _train_rows(demand.loc[:, list(dma_columns)], bounds)
+    weather_train = _train_rows(weather, bounds)
+    temporal_train = _train_rows(temporal, bounds)
+    exogenous = pd.concat([weather_train, temporal_train], axis=1)
+    if not exogenous.columns.is_unique:
+        raise ValueError("Weather and temporal scaler feature names must be unique.")
+    branch_rows = []
+    if len(branch_feature_columns) != len(dma_columns):
+        raise ValueError("Every DMA must have one branch feature definition.")
+    for dma, columns in zip(dma_columns, branch_feature_columns):
+        columns = tuple(columns)
+        if not columns or columns[0] != "own_dma_demand":
+            raise ValueError("Branch first feature must be own_dma_demand.")
+        branch_rows.append(np.column_stack([
+            target[dma].to_numpy(dtype=np.float32)
+            if column == "own_dma_demand"
+            else exogenous[column].to_numpy(dtype=np.float32)
+            for column in columns
+        ]))
+    fc2_rows = None
+    if include_fc2:
+        # Only complete 24-hour days wholly contained in TRAIN are eligible.
+        first = target.index[0].ceil("D")
+        last = (target.index[-1] - pd.Timedelta(hours=23)).floor("D")
+        days = pd.date_range(first, last, freq="D")
+        if len(days) == 0:
+            raise ValueError("FC2 scaler fit requires a complete training day.")
+        fc2_rows = daily_share_history(
+            demand=target, weather=weather_train,
+            starts=days + pd.Timedelta(days=1), dma_columns=dma_columns,
+            history_days=1, include_temperature=include_temperature,
+        )[:, 0, :]
+    return {
+        "branches": tuple(branch_rows),
+        "target": target.to_numpy(dtype=np.float32),
+        "future": exogenous.loc[:, list(future_columns)].to_numpy(dtype=np.float32),
+        "fc2": fc2_rows,
+    }
+
+
+def _with_demand_parameters(
+    scaler: TrainOnlyScaler, shared: TrainOnlyScaler, *, all_features: bool,
+) -> TrainOnlyScaler:
+    """Replace demand feature parameters, retaining all covariate statistics."""
+    indices = slice(None) if all_features else 0
+    if isinstance(scaler, Standardizer) and isinstance(shared, Standardizer):
+        mean, std = scaler.mean.copy(), scaler.std.copy()
+        mean[indices], std[indices] = shared.mean[0], shared.std[0]
+        return Standardizer(mean, std, scaler.fitted_from)
+    if isinstance(scaler, MinMaxScaler) and isinstance(shared, MinMaxScaler):
+        minimum, value_range = scaler.minimum.copy(), scaler.value_range.copy()
+        minimum[indices], value_range[indices] = shared.minimum[0], shared.value_range[0]
+        return MinMaxScaler(minimum, value_range, scaler.fitted_from)
+    raise TypeError("Shared and feature scaler types must agree.")
+
+
+def _recurrent_history(values: np.ndarray, layout: str) -> np.ndarray:
+    if values.ndim != 3 or values.shape[-1] != 1 or values.shape[1] % 24:
+        raise ValueError("Recurrent raw history must be (B,24*days,1).")
+    if layout == "hourly":
+        return values
+    if layout == "daily_vectors":
+        return values.reshape(values.shape[0], values.shape[1] // 24, 24)
+    raise ValueError("recurrent_layout must be hourly or daily_vectors.")
 
 
 def _build_optimizer(
@@ -431,15 +569,27 @@ def predict_independent_168h(
     *,
     device: torch.device,
     steps: int = 7,
+    recurrent_layout: str = "hourly",
 ) -> np.ndarray:
     model.eval()
     history = torch.as_tensor(x, dtype=torch.float32, device=device)
+    expected_features = 24 if recurrent_layout == "daily_vectors" else 1
+    if recurrent_layout not in {"hourly", "daily_vectors"}:
+        raise ValueError("Unknown recurrent layout.")
+    if history.ndim != 3 or history.shape[-1] != expected_features:
+        raise ValueError("History shape does not match the recurrent layout.")
+    if int(steps) <= 0:
+        raise ValueError("steps must be positive.")
     predictions: list[np.ndarray] = []
     for _ in range(int(steps)):
         predicted_day = model(history)
+        if tuple(predicted_day.shape) != (len(history), 24):
+            raise ValueError("Independent recurrent models must predict 24 hours.")
         predictions.append(predicted_day.cpu().numpy())
-        history = torch.cat(
-            [history[:, 24:, :], predicted_day.unsqueeze(-1)], dim=1
+        history = (
+            torch.cat([history[:, 1:, :], predicted_day.unsqueeze(1)], dim=1)
+            if recurrent_layout == "daily_vectors"
+            else torch.cat([history[:, 24:, :], predicted_day.unsqueeze(-1)], dim=1)
         )
     return np.concatenate(predictions, axis=1)
 
@@ -448,6 +598,8 @@ def _scaled_arrays(
     samples: JointTemporalSamples,
     *,
     normalization: str,
+    fit_rows: dict[str, Any] | None = None,
+    demand_scaling: str = "per_dma",
 ) -> tuple[
     tuple[np.ndarray, ...],
     tuple[np.ndarray, ...],
@@ -461,9 +613,43 @@ def _scaled_arrays(
     np.ndarray | None,
     TrainOnlyScaler | None,
 ]:
-    branch_scalers = tuple(
-        _fit_features(array, normalization) for array in samples.train_branches
-    )
+    if demand_scaling not in {"per_dma", "shared"}:
+        raise ValueError("demand_scaling must be per_dma or shared.")
+    fitting = fit_rows if fit_rows is not None else {
+        "branches": samples.train_branches, "target": samples.y_train_24h,
+        "future": samples.future_train, "fc2": samples.fc2_train,
+    }
+    if len(fitting["branches"]) != len(samples.train_branches):
+        raise ValueError("Scaler fitting rows must match every branch.")
+    feature_arrays = [*fitting["branches"], fitting["target"], fitting["future"]]
+    if fitting["fc2"] is not None:
+        feature_arrays.append(fitting["fc2"])
+    for array in feature_arrays:
+        if array.ndim < 2 or array.shape[0] == 0 or not np.isfinite(array).all():
+            raise ValueError("Scaler fitting arrays require finite nonempty training rows.")
+    if fitting["target"].shape[-1] != samples.y_train_24h.shape[-1]:
+        raise ValueError("Target scaler feature count differs from prediction targets.")
+    if any(source.shape[-1] != train.shape[-1] for source, train in zip(
+        fitting["branches"], samples.train_branches,
+    )):
+        raise ValueError("Branch scaler feature count differs from training inputs.")
+    if fitting["future"].shape[-1] != samples.future_train.shape[-1]:
+        raise ValueError("Future scaler feature count differs from training inputs.")
+    if samples.fc2_train is not None and (
+        fitting["fc2"] is None or fitting["fc2"].shape[-1] != samples.fc2_train.shape[-1]
+    ):
+        raise ValueError("FC2 scaler fitting rows do not match training inputs.")
+    branch_scalers = tuple(_fit_features(array, normalization) for array in fitting["branches"])
+    target_scaler = _fit_features(fitting["target"], normalization)
+    if demand_scaling == "shared":
+        if any(not columns or columns[0] != "own_dma_demand" for columns in samples.branch_feature_columns):
+            raise ValueError("Shared scaling requires own_dma_demand as each branch first feature.")
+        shared = _fit_scalar(normalization, fitting["target"])
+        target_scaler = _with_demand_parameters(target_scaler, shared, all_features=True)
+        branch_scalers = tuple(
+            _with_demand_parameters(scaler, shared, all_features=False)
+            for scaler in branch_scalers
+        )
     train_branches = tuple(
         scaler.transform(array)
         for scaler, array in zip(branch_scalers, samples.train_branches)
@@ -472,9 +658,8 @@ def _scaled_arrays(
         scaler.transform(array)
         for scaler, array in zip(branch_scalers, samples.test_branches)
     )
-    target_scaler = _fit_features(samples.y_train_24h, normalization)
     target_train = target_scaler.transform(samples.y_train_24h)
-    future_scaler = _fit_features(samples.future_train, normalization)
+    future_scaler = _fit_features(fitting["future"], normalization)
     future_train = future_scaler.transform(samples.future_train)
     future_test = future_scaler.transform(samples.future_test)
     fc2_scaler: TrainOnlyScaler | None = None
@@ -483,7 +668,9 @@ def _scaled_arrays(
     if samples.fc2_train is not None:
         if samples.fc2_test is None:
             raise ValueError("FC2 test history is missing.")
-        fc2_scaler = _fit_features(samples.fc2_train, normalization)
+        if fitting["fc2"] is None:
+            raise ValueError("FC2 scaler fitting rows are missing.")
+        fc2_scaler = _fit_features(fitting["fc2"], normalization)
         fc2_train = fc2_scaler.transform(samples.fc2_train)
         fc2_test = fc2_scaler.transform(samples.fc2_test)
     return (
@@ -873,8 +1060,12 @@ def metric_table(
                         "paper_value": np.nan,
                     }
                 )
+        # Sum in the same float64 precision as the saved-prediction audit.
+        # Float32 cancellation in nearly constant total demand can amplify a
+        # tiny summation error into a spurious NSE validation failure.
         aggregate_metrics = compute_metrics(
-            truth.sum(axis=2), prediction.sum(axis=2)
+            truth.sum(axis=2, dtype=np.float64),
+            prediction.sum(axis=2, dtype=np.float64),
         )
         aggregate_metrics["MAE"] = float(
             sum(metrics["MAE"] for metrics in dma_metrics)
@@ -974,6 +1165,12 @@ def train_independent_family(
     fixed_epochs_by_dma: dict[str, int] = {}
     effective_weight_decays_by_dma: dict[str, float] = {}
     optimizer_name = str(training_config.get("optimizer", "adam")).lower()
+    scaler_options = _scaler_options(training_config)
+    if scaler_options["demand_scaling"] != "per_dma":
+        raise ValueError("Shared demand scaling is defined for joint models only.")
+    layout = scaler_options["recurrent_layout"]
+    scaler_audit = _scaler_audit_base(training_config, bounds)
+    scaler_audit["per_dma"] = {}
     sample_count: int | None = None
     test_starts: np.ndarray | None = None
 
@@ -994,14 +1191,18 @@ def train_independent_family(
             protocol["expected_test_sequences"]
         ):
             raise ValueError("Independent baseline did not build common-46 test data.")
-        scaler = _fit_scalar(
-            training_config.get("normalization", "zscore"),
-            samples["x_train"],
-            samples["y_train_24h"],
+        fitting_values = (
+            [_train_rows(demand.loc[:, [column]], bounds).to_numpy(dtype=np.float32)]
+            if scaler_options["scaler_fit_scope"] == "train_rows"
+            else [samples["x_train"], samples["y_train_24h"]]
         )
-        x_train = scaler.transform(samples["x_train"])
+        scaler = _fit_scalar(training_config.get("normalization", "zscore"), *fitting_values)
+        scaler_audit["per_dma"][str(letter)] = _scaler_audit_entry(
+            scaler, np.concatenate([array.reshape(-1, 1) for array in fitting_values])
+        )
+        x_train = _recurrent_history(scaler.transform(samples["x_train"]), layout)
         y_train = scaler.transform(samples["y_train_24h"])
-        x_test = scaler.transform(samples["x_test_eval"])
+        x_test = _recurrent_history(scaler.transform(samples["x_test_eval"]), layout)
         loader = DataLoader(
             TensorDataset(
                 torch.as_tensor(x_train, dtype=torch.float32),
@@ -1015,9 +1216,9 @@ def train_independent_family(
         hidden_sizes = [int(value) for value in model_config["hidden_sizes"][index]]
         model: nn.Module
         if canonical == "gru":
-            model = GRUForecast(hidden_sizes)
+            model = GRUForecast(hidden_sizes, input_features=x_train.shape[-1])
         else:
-            model = LSTMForecast(hidden_sizes)
+            model = LSTMForecast(hidden_sizes, input_features=x_train.shape[-1])
         model.to(device)
         parameter_counts[str(letter)] = _parameter_count(model)
         optimizer = _build_optimizer(
@@ -1073,7 +1274,7 @@ def train_independent_family(
                 flush=True,
             )
         prediction_168_norm = predict_independent_168h(
-            model, x_test, device=device, steps=7
+            model, x_test, device=device, steps=7, recurrent_layout=layout,
         )
         # One rollout defines both horizons, avoiding float32 batch-size
         # roundoff between a separate 24h pass and the first recursive day.
@@ -1106,6 +1307,11 @@ def train_independent_family(
                 ),
                 "hidden_sizes": hidden_sizes,
                 "input_weeks": int(model_config["input_weeks"][index]),
+                "recurrent_layout": layout,
+                "input_features": int(x_train.shape[-1]),
+                "input_sequence_length": int(x_train.shape[1]),
+                "scaler_fit_scope": scaler_options["scaler_fit_scope"],
+                "demand_scaling": scaler_options["demand_scaling"],
                 "scaler": scaler.state_dict(),
                 "checkpoint_policy": (
                     "final_override_epoch_diagnostic"
@@ -1152,7 +1358,12 @@ def train_independent_family(
         starts=starts,
         dma_letters=dma_letters,
     )
+    (output_dir / "scaler_audit.json").write_text(
+        json.dumps(scaler_audit, indent=2, allow_nan=False), encoding="utf-8"
+    )
     return {
+        **scaler_options,
+        "scaler_audit_file": "scaler_audit.json",
         "checkpoint_files": checkpoint_files,
         "parameter_counts_by_dma": parameter_counts,
         "fixed_epochs_by_dma": fixed_epochs_by_dma,
@@ -1221,6 +1432,16 @@ def train_joint_family(
         expected_test_sequences=int(protocol["expected_test_sequences"]),
         train_stride_hours=int(train_stride_hours),
     )
+    scaler_options = _scaler_options(training_config)
+    fit_rows = None
+    if scaler_options["scaler_fit_scope"] == "train_rows":
+        fit_rows = _joint_train_fit_rows(
+            demand=demand, weather=weather, temporal=temporal, bounds=bounds,
+            dma_columns=protocol["dma_columns"],
+            branch_feature_columns=samples.branch_feature_columns,
+            future_columns=future_columns, include_fc2=fc2_config is not None,
+            include_temperature=include_temperature,
+        )
     (
         train_branches,
         test_branches,
@@ -1236,7 +1457,34 @@ def train_joint_family(
     ) = _scaled_arrays(
         samples,
         normalization=training_config.get("normalization", "zscore"),
+        fit_rows=fit_rows,
+        demand_scaling=scaler_options["demand_scaling"],
     )
+    fitting = fit_rows if fit_rows is not None else {
+        "branches": samples.train_branches, "target": samples.y_train_24h,
+        "future": samples.future_train, "fc2": samples.fc2_train,
+    }
+    scaler_audit = _scaler_audit_base(training_config, bounds)
+    scaler_audit.update({
+        "branches": {
+            str(letter): {
+                **_scaler_audit_entry(scaler, array), "feature_columns": list(columns),
+                "demand_parameters_source": (
+                    "shared_target_scalar" if scaler_options["demand_scaling"] == "shared"
+                    else "branch_feature_fit"
+                ),
+            }
+            for letter, scaler, array, columns in zip(
+                protocol["dma_letters"], branch_scalers,
+                fitting["branches"], samples.branch_feature_columns,
+            )
+        },
+        "target": _scaler_audit_entry(target_scaler, fitting["target"]),
+        "future": _scaler_audit_entry(future_scaler, fitting["future"]),
+        "fc2": None if fc2_scaler is None else _scaler_audit_entry(fc2_scaler, fitting["fc2"]),
+    })
+    if scaler_options["demand_scaling"] == "shared":
+        scaler_audit["target"]["shared_scalar_fit_values"] = int(fitting["target"].size)
     share_weight = (
         0.0
         if fc2_config is None
@@ -1388,6 +1636,8 @@ def train_joint_family(
             "train_stride_hours": int(train_stride_hours),
             "model_config": model_config,
             "cam_config": cam_config,
+            **scaler_options,
+            "correction_layout": str(model_config.get("correction_layout", "global_flat")),
             "branch_scalers": [value.state_dict() for value in branch_scalers],
             "target_scaler": target_scaler.state_dict(),
             "future_scaler": future_scaler.state_dict(),
@@ -1402,7 +1652,13 @@ def train_joint_family(
         },
         checkpoint,
     )
+    (output_dir / "scaler_audit.json").write_text(
+        json.dumps(scaler_audit, indent=2, allow_nan=False), encoding="utf-8"
+    )
     return {
+        **scaler_options,
+        "scaler_audit_file": "scaler_audit.json",
+        "correction_layout": str(model_config.get("correction_layout", "global_flat")),
         "checkpoint_files": [checkpoint.name],
         "parameter_count": _parameter_count(model),
         "train_samples": int(samples.y_train_24h.shape[0]),
@@ -1448,7 +1704,14 @@ def run_one_model(
     literature_config: dict[str, Any] | None,
     preflight: dict[str, Any],
 ) -> dict[str, Any]:
+    config = copy.deepcopy(config)
+    config["training"].update(_scaler_options(config["training"]))
+    config["cam"]["convolution"] = (
+        "conv2d" if config["cam"].get("temporal_layout") == "conv2d_day_hour" else "conv1d"
+    )
     model_config = config["models"][canonical]
+    if str(model_config["family"]) != "independent_recurrent":
+        model_config.setdefault("correction_layout", "global_flat")
     output_dir = output_root / canonical / f"seed_{seed}"
     archived = prepare_output_dir(output_dir, overwrite=overwrite)
     started = time.perf_counter()
@@ -1585,6 +1848,22 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--recurrent-layout", choices=["hourly", "daily_vectors"], default=None,
+        help="GRU/LSTM history axes: hourly scalar tokens or 24-feature daily tokens.",
+    )
+    parser.add_argument(
+        "--scaler-fit-scope", choices=["windows", "train_rows"], default=None,
+        help="Fit scalers on training-window occurrences or unique training rows only.",
+    )
+    parser.add_argument(
+        "--demand-scaling", choices=["per_dma", "shared"], default=None,
+        help="Joint-model demand scaling: per DMA or one scalar shared by all DMAs.",
+    )
+    parser.add_argument(
+        "--correction-layout", choices=["global_flat", "hourwise_shared"], default=None,
+        help="Joint fully connected layers act on the full day or separately on every hour.",
+    )
+    parser.add_argument(
         "--cam-channel-sizes",
         type=int,
         nargs=3,
@@ -1616,12 +1895,12 @@ def main() -> None:
     )
     parser.add_argument(
         "--cam-temporal-layout",
-        choices=["full_history_flat", "per_day_flat", "per_day_vectors"],
+        choices=["full_history_flat", "per_day_flat", "per_day_vectors", "conv2d_day_hour"],
         default=None,
         help=(
             "Diagnostic interpretation of the paper's d_i x 24 CAM input: "
             "flatten all hours, apply CAM within each day then flatten, or "
-            "send one 24-hour CAM vector per day to LSTM."
+            "send one 24-hour CAM vector per day to LSTM, or use 2D day/hour convolution."
         ),
     )
     parser.add_argument(
@@ -1742,6 +2021,11 @@ def main() -> None:
     config["training"]["best_epoch_scale"] = float(args.best_epoch_scale)
     if args.normalization is not None:
         config["training"]["normalization"] = args.normalization
+    for key in ("recurrent_layout", "scaler_fit_scope", "demand_scaling"):
+        value = getattr(args, key)
+        if value is not None:
+            config["training"][key] = value
+    config["training"].update(_scaler_options(config["training"]))
     if args.cam_channel_sizes is not None:
         if args.cam_channel_sizes[-1] != 1:
             raise ValueError("Table 3 requires the final CAM channel size to be 1.")
@@ -1752,6 +2036,9 @@ def main() -> None:
         config["cam"]["attention_scaling"] = args.cam_attention_scaling
     if args.cam_temporal_layout is not None:
         config["cam"]["temporal_layout"] = args.cam_temporal_layout
+    config["cam"]["convolution"] = (
+        "conv2d" if config["cam"].get("temporal_layout") == "conv2d_day_hour" else "conv1d"
+    )
     if args.optimizer is not None:
         config["training"]["optimizer"] = args.optimizer
     if args.loss is not None:
@@ -1775,6 +2062,9 @@ def main() -> None:
             raise ValueError("--batch-size must be positive.")
         config["training"]["batch_size"] = int(args.batch_size)
     correction_models = ("mscmnet_m", "mscmnet_wm", "mscmnet_w")
+    if args.correction_layout is not None:
+        for model_name in ("msnet", *correction_models):
+            config["models"][model_name]["correction_layout"] = args.correction_layout
     if args.correction_mode is not None:
         for model_name in correction_models:
             config["models"][model_name]["correction_mode"] = args.correction_mode
@@ -1796,6 +2086,10 @@ def main() -> None:
             )
     requested = canonical_model_name(args.model)
     selected = list(CANONICAL_MODELS) if requested == "all" else [requested]
+    if config["training"]["demand_scaling"] == "shared" and any(
+        model_name in {"gru", "lstm"} for model_name in selected
+    ):
+        raise ValueError("--demand-scaling shared is available for joint models only.")
     seed = (
         int(args.seed)
         if args.seed is not None

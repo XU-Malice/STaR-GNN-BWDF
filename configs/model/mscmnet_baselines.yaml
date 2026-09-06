@@ -105,6 +105,7 @@ models:
   msnet:
     display_name: MSNet
     family: msnet
+    correction_layout: global_flat
     branch_features: [own_dma_demand, rainfall_depth, air_temperature,
                       air_humidity, windspeed, hour, time_zone_standard,
                       weekday, holiday, day_of_week]
@@ -118,6 +119,7 @@ models:
   mscmnet_m:
     display_name: MSCMNet_M
     family: mscmnet_m
+    correction_layout: global_flat
     correction_mode: direct
     zero_init_correction: false
     branch_features: [own_dma_demand, rainfall_depth, air_temperature,
@@ -140,6 +142,7 @@ models:
     aliases: [mscmnet_mw]
     display_name: MSCMNet_WM
     family: mscmnet_wm
+    correction_layout: global_flat
     correction_mode: direct
     zero_init_correction: false
     branch_features: [own_dma_demand, rainfall_depth, air_temperature,
@@ -171,6 +174,7 @@ models:
   mscmnet_w:
     display_name: MSCMNet_W
     family: mscmnet_w
+    correction_layout: global_flat
     correction_mode: direct
     zero_init_correction: false
     branch_features: [own_dma_demand, hour, time_zone_standard,
@@ -200,6 +204,11 @@ training:
   seed: 20240604
   batch_size: 8
   normalization: zscore
+  # Historical defaults. Alternatives are explicitly recorded reconstruction
+  # candidates, not corrections to the values published in Supplementary S3.
+  recurrent_layout: hourly
+  scaler_fit_scope: windows
+  demand_scaling: per_dma
   loss: mse
   optimizer: adamw
   standardize_from_train_only: true

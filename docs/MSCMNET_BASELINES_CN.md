@@ -4,6 +4,16 @@
 multiple district metered areas based on a multi-scale correction module
 neural network architecture*（DOI: `10.1016/j.wroa.2024.100269`）。
 
+## 2026-09-06：以接近论文数值为目标的完整队列
+
+新的[数值重建计划](QUE_COMPREHENSIVE_RECONSTRUCTION_CN.md)覆盖六模型，
+固定一个 seed，最多 415 个候选，自动完成历史配置检查、学习率与轮数搜索、
+局部细化及 GRU/LSTM 分区配置选择。允许调整论文训练参数，保留每项差异；
+默认 GRU/LSTM 仍为逐小时输入。启动入口为
+`scripts/train/run_que_comprehensive_reconstruction_gpu6.sh`，
+`--budget-hours 0` 自动运行完整有限队列，`--status` 只读显示进度。
+每个结果同时比较总体与 DMA 指标，技术通过与数值接近分开报告。
+
 ## 审计结论
 
 | 位置 | GRU/LSTM | MSNet | MSCMNet_M | MSCMNet_WM/MW | MSCMNet_W | 结论 |
