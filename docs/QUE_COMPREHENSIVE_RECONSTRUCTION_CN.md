@@ -49,6 +49,7 @@
 ## 执行、恢复与证据
 
 - 单 GPU 顺序运行，默认物理 GPU 6；训练前检查可用显存、磁盘、项目导入路径和 CPU 回归测试。
+- A/B/C 每阶段的全部实际命令先进入原训练器的真实参数解析和配置检查，在设备解析前退出，不读取训练数据、不创建权重。全部通过才开始该阶段；保存 `stage_a_command_preflight.json` 等检查记录。若训练进程仍以参数错误常见退出码 2 返回，立即停止，不连续尝试其余候选。
 - 对源码、数据、请求参数、归一化统计、权重和预测建立校验记录。已完成且证据一致的候选跳过；部分完成的候选在恢复时单独处理。
 - 测试真实值、预测起点和 A–J 顺序固定，测试期不参与归一化参数拟合。保存实际归一化参数，既支持训练窗口统计，也支持训练期唯一行统计。
 - 一项训练或校验失败会单独记录，不把它计为论文指标不接近；其他候选可继续。中断时只处理当前启动器持有的子进程。
@@ -74,7 +75,7 @@ nohup bash scripts/train/run_que_comprehensive_reconstruction_gpu6.sh --budget-h
 echo "$!" > logs/que_comprehensive_reconstruction_launcher.pid
 ```
 
-`--budget-hours 0` 取消墙钟时间限制，仍保留有限候选上限。中断后重新执行同一命令，会验证已完成结果并继续。默认 run-tag 为 `que_comprehensive_reconstruction_20260906`。
+`--budget-hours 0` 取消墙钟时间限制，仍保留有限候选上限。中断后重新执行同一命令，会验证已完成结果并继续。修复后的默认 run-tag 为 `que_comprehensive_reconstruction_20260907`。
 
 查看进度，无需粘贴 Python 代码，也不会启动训练：
 
@@ -82,6 +83,29 @@ echo "$!" > logs/que_comprehensive_reconstruction_launcher.pid
 bash scripts/train/run_que_comprehensive_reconstruction_gpu6.sh --status
 ```
 
-最终结果目录为 `results/que_comprehensive_reconstruction_20260906`。`closest_complete_configurations.json` 分别给出兼顾全部88项、侧重总体8项、最坏偏差最小的完整候选；`recurrent_assembled` 保存 GRU/LSTM 分区配置及结果。紧凑压缩包自动写入项目的上级目录，文件名为 `que_comprehensive_reconstruction_20260906_compact.tar.gz`。
+最终结果目录为 `results/que_comprehensive_reconstruction_20260907`。`closest_complete_configurations.json` 分别给出兼顾全部88项、侧重总体8项、最坏偏差最小的完整候选；`recurrent_assembled` 保存 GRU/LSTM 分区配置及结果。紧凑压缩包自动写入项目的上级目录，文件名为 `que_comprehensive_reconstruction_20260907_compact.tar.gz`。
 
 运行期间不要更新源码或改动输入数据；本队列会检查其一致性。已有日志中的 `PASS` 只表示技术检查通过，是否接近须看最终数值比较。
+
+## 2026-09-07 启动参数修复与历史结果复用
+
+提交 `a42c2848b0886688ee1a13eeb989ecc4fc4c7df4` 的启动器把 CAM 宽度构造成一个字符串 `16,16,1`，而训练器的 `--cam-channel-sizes` 要求三个独立数字 `16 16 1`。上传结果证实：A 阶段 GRU/LSTM 各 14 项成功，另 67 项全部在解析阶段退出，尚未训练；B/C/D 未执行。原来的函数级训练测试和模拟队列测试没有覆盖这个实际 CLI 契约，新增测试直接运行训练器的真实解析与配置校验。
+
+已核验的 compact 包 SHA256 为 `20e9023455ccb1f579775df5037c5679089f4a0b7d54a4033923f3e6366ca906`。28 项成功结果中，168 个非权重证据文件哈希全部吻合；46 个起点与数据审计一致；2,464 项指标独立重算最大差 `3.55e-15`。这些任务累计训练约 6 小时 49 分钟。compact 未包含 280 个 `.pt`，恢复时必须校验服务器原件。
+
+更新修复提交后，以新目录恢复整轮计划：
+
+```bash
+mkdir -p logs
+nohup bash scripts/train/run_que_comprehensive_reconstruction_gpu6.sh \
+  --reuse-from "$PWD/results/que_comprehensive_reconstruction_20260906" \
+  --budget-hours 0 \
+  >> logs/que_comprehensive_reconstruction_20260907_launcher.log 2>&1 &
+echo "$!" > logs/que_comprehensive_reconstruction_20260907_launcher.pid
+```
+
+复用前核验原 manifest、源码快照、实际数据指纹、参数、预测、指标、权重和完成凭据。训练器、模型、数据处理源码及配置必须与原运行一致。本修复不改动它们；仅修改调度、命令检查、恢复及相关测试与文档。核验失败时停止并保留原件，不把证据缺失当作可复用。
+
+28 项通过核验的结果复制到新队列，标为 `PASS(reused)`。原训练 `status.json` 中的提交、时间和参数保持原样，另外保存 `reused_source_provenance.json` 说明来源；新完成凭据同时校验此来源记录。旧目录不改写。其后补跑 67 项未训练候选，并自动继续 B/C/D，固定一个 seed，仍受原有限计划上限约束。
+
+同一新目录再次启动时可以省略 `--reuse-from`，程序会从新 manifest 恢复来源。查询旧失败队列需显式使用 `--run-tag que_comprehensive_reconstruction_20260906 --status`；不带 run-tag 的 `--status` 查询修复后的新队列。

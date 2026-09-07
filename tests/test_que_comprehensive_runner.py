@@ -11,6 +11,7 @@ import signal
 import subprocess
 import sys
 import tarfile
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -187,6 +188,9 @@ def test_command_records_exploratory_overrides_and_epoch_policy(tmp_path):
     for flag, value in (("--max-epochs", "100"), ("--best-epoch-scale", "1"), ("--learning-rate-scale", "0.3"), ("--loss", "huber"), ("--joint-weight-decay", "0.0"), ("--correction-layout", "hourwise_shared")):
         assert cmd[cmd.index(flag) + 1] == value
     assert "--zero-init-correction" in cmd and "--allow-cpu" in cmd
+    index = cmd.index("--cam-channel-sizes")
+    assert cmd[index + 1:index + 4] == ["16", "16", "1"]
+    assert cmd[index + 4] == "--correction-layout"
     assert RUNNER.actual_epochs(77, RUNNER.make_case("gru", best_epoch_scale=.25)) == 19
 
 
@@ -234,7 +238,11 @@ def mock_queue_environment(tmp_path, monkeypatch):
         return (variants_b if stage == "B" else variants_c), selected
     monkeypatch.setattr(RUNNER, "adaptive_cases", adapt)
     monkeypatch.setattr(RUNNER.life, "fingerprints", lambda root, data: {"source": {"dummy.txt": RUNNER.life.file_digest(root / "dummy.txt")}, "data": {"input.txt": RUNNER.life.file_digest(data / "input.txt")}})
-    calls = {"training": [], "assembly": 0, "preflight": 0}
+    calls = {"training": [], "assembly": 0, "preflight": 0, "command_preflights": []}
+    def fake_validate_commands(training_script, commands):
+        calls["command_preflights"].append(commands)
+        return [{"status": "passed", "command": command} for command in commands]
+    monkeypatch.setattr(RUNNER, "validate_commands", fake_validate_commands)
     def assemble(queue, result_root, paper_config):
         calls["assembly"] += 1
         queue["recurrent_assembly"] = {"test": "independently_unit_tested"}
@@ -269,11 +277,13 @@ def test_full_tiny_queue_all_stages_resume_without_retraining(tmp_path, monkeypa
     assert RUNNER.main(args) == 0
     assert len(calls["training"]) == 18
     assert calls["assembly"] == 1
+    assert [len(commands) for commands in calls["command_preflights"]] == [6, 6, 6]
     result = root / "results/test_run"
     status = json.loads((result / "queue_status.json").read_text())
     assert status["status"] == "completed" and status["finished_cases"] == 18 and status["stage_c_selected"]
     assert status["paper_reproduction_verified"] is False
     assert (result / "stage_b_manifest.json").exists() and (result / "stage_c_manifest.json").exists()
+    assert all(json.loads((result / f"stage_{stage}_command_preflight.json").read_text())["status"] == "passed" for stage in "abc")
     original_manifest = (result / "manifest.json").read_bytes()
     assert RUNNER.main(args) == 0
     assert len(calls["training"]) == 18
@@ -315,6 +325,7 @@ def test_interrupted_training_cleans_owned_supervisor_and_keeps_state(tmp_path, 
     assert RUNNER.main(args) == 143
     status = json.loads((root / "results/test_run/queue_status.json").read_text())
     assert status["status"] == "interrupted" and status["failed_cases"] == 0
+    assert status["active_case"] is None
     assert status["cases"][0]["technical_status"] == "running"
 
 
@@ -341,3 +352,108 @@ def test_retry_failed_prior_case_keeps_frozen_adaptive_plans(tmp_path, monkeypat
     assert len(calls["training"]) == 19  # precisely the one failed case was retried
     assert (result / "stage_b_manifest.json").read_bytes() == frozen_b
     assert (result / "stage_c_manifest.json").read_bytes() == frozen_c
+
+
+def test_invalid_stage_command_stops_before_any_gpu_or_training(tmp_path, monkeypatch):
+    root, args, calls = mock_queue_environment(tmp_path, monkeypatch)
+    def reject(training_script, commands):
+        assert len(commands) == 6
+        assert training_script == root / "scripts/train/train_temporal_baselines.py"
+        raise ValueError("--cam-channel-sizes: expected 3 arguments")
+    def forbidden_gpu(*args, **kwargs):
+        raise AssertionError("No GPU preflight may run when actual CLI validation fails")
+    monkeypatch.setattr(RUNNER, "validate_commands", reject)
+    monkeypatch.setattr(RUNNER.life, "gpu_preflight", forbidden_gpu)
+    assert RUNNER.main(args) == 1
+    assert calls["training"] == []
+    result = root / "results/test_run"
+    status = json.loads((result / "queue_status.json").read_text())
+    assert status["status"] == "failed" and status["cases"] == []
+    assert status["active_case"] is None
+    report = json.loads((result / "stage_a_command_preflight.json").read_text())
+    assert report["status"] == "failed" and len(report["commands"]) == 6
+    assert "expected 3 arguments" in report["error"]
+    assert not (result / "stage_b_manifest.json").exists()
+
+
+def test_unexpected_training_exit_two_stops_on_first_case(tmp_path, monkeypatch):
+    root, args, calls = mock_queue_environment(tmp_path, monkeypatch)
+    parent = RUNNER.life.ChildSupervisor
+    class ArgumentFailureSupervisor(parent):
+        def run(self, cmd, log):
+            if "scripts/train/train_temporal_baselines.py" in cmd:
+                calls["training"].append(cmd)
+                log.write_text("training CLI error\n")
+                return 2
+            return super().run(cmd, log)
+    monkeypatch.setattr(RUNNER.life, "ChildSupervisor", ArgumentFailureSupervisor)
+    assert RUNNER.main(args) == 1
+    assert len(calls["training"]) == 1
+    result = root / "results/test_run"
+    status = json.loads((result / "queue_status.json").read_text())
+    assert status["status"] == "failed" and status["failed_cases"] == 1
+    assert status["cases"][0]["exit_code"] == 2 and status["active_case"] is None
+    assert "stopped immediately" in status["error"]
+    assert not (result / "stage_b_manifest.json").exists()
+
+
+def test_reuse_sweep_precedes_training_and_resume_recovers_source(tmp_path, monkeypatch):
+    root, args, calls = mock_queue_environment(tmp_path, monkeypatch)
+    source = root / "results/old_run"
+    source.mkdir(parents=True)
+    (source / "manifest.json").write_text('{"unit_test_source":true}\n')
+    source_before = (source / "manifest.json").read_bytes()
+    imported = []
+    def prepare_reuse(source_root, destination_root, current_manifest, current_evaluation, runner):
+        assert source_root == source
+        assert current_evaluation == evaluation_fixture()
+        assert runner.validate_case is RUNNER.validate_case
+        assert current_manifest["reuse_source"]["root"] == str(source)
+        return {"destination": destination_root}
+    def import_case(context, case, expected):
+        if case["model"] not in ("gru", "lstm"):
+            return None
+        run = context["destination"] / "cases" / case["case"] / case["model"] / f"seed_{RUNNER.SEED}"
+        assert not run.exists()
+        build_artifacts(run, case, expected)
+        metadata = {"source_root": str(source), "source_case": case["case"], "source_manifest_signature": "unit_test",
+                    "source_training_git_commit": "original_training_commit", "training_seconds_saved": 100.0, "reused_utc": RUNNER.life.utc_now()}
+        RUNNER.life.atomic_json(run / "reused_source_provenance.json", metadata)
+        status = json.loads((run / "status.json").read_text())
+        RUNNER.life.atomic_json(run / "completion_receipt.json", {"request_sha256": RUNNER.life.digest(expected), "files": RUNNER.evidence_hashes(run, status)})
+        imported.append(case["case"])
+        return metadata
+    helper = SimpleNamespace(prepare_reuse=prepare_reuse, import_case=import_case)
+    monkeypatch.setattr(RUNNER, "load_helper", lambda name: helper)
+    parent = RUNNER.life.ChildSupervisor
+    class VerifiedReuseSupervisor(parent):
+        def run(self, cmd, log):
+            if "scripts/train/train_temporal_baselines.py" in cmd:
+                assert len(imported) == 2, "All reusable Stage A cases must be imported before first training"
+            return super().run(cmd, log)
+    monkeypatch.setattr(RUNNER.life, "ChildSupervisor", VerifiedReuseSupervisor)
+    assert RUNNER.main(args + ["--reuse-from", str(source)]) == 0
+    assert len(calls["training"]) == 16
+    result = root / "results/test_run"
+    status = json.loads((result / "queue_status.json").read_text())
+    reused = [record for record in status["cases"] if record.get("reuse")]
+    assert len(reused) == 2 and all(record["technical_status"] == "PASS(reused)" for record in reused)
+    assert all(record["elapsed_seconds"] == 0 for record in reused)
+    assert sum(record["reuse"]["training_seconds_saved"] for record in reused) == 200
+    original_manifest = (result / "manifest.json").read_bytes()
+    assert RUNNER.main(args) == 0  # reuse source persists without repeating the flag
+    assert len(calls["training"]) == 16 and len(imported) == 2
+    assert (result / "manifest.json").read_bytes() == original_manifest
+    assert (source / "manifest.json").read_bytes() == source_before
+
+
+def test_reused_provenance_is_bound_to_completion_receipt(tmp_path):
+    case = RUNNER.make_case("gru")
+    run = tmp_path / "run"
+    request = build_artifacts(run, case)
+    RUNNER.life.atomic_json(run / "reused_source_provenance.json", {"source_training_git_commit": "original"})
+    status = json.loads((run / "status.json").read_text())
+    RUNNER.life.atomic_json(run / "completion_receipt.json", {"request_sha256": RUNNER.life.digest(request), "files": RUNNER.evidence_hashes(run, status)})
+    assert RUNNER.validate_case(run, case, request)[0]
+    RUNNER.life.atomic_json(run / "reused_source_provenance.json", {"source_training_git_commit": "changed"})
+    assert not RUNNER.validate_case(run, case, request)[0]

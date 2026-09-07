@@ -24,6 +24,7 @@ import signal
 import sys
 import tarfile
 import time
+from types import SimpleNamespace
 from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -182,7 +183,7 @@ def command_for(case: dict[str, Any], args: argparse.Namespace, output_root: Pat
         command += ["--recurrent-layout", case["recurrent_layout"]]
     else:
         command += ["--cam-attention-update", "replace", "--cam-attention-scaling", case["cam_attention_scaling"],
-                    "--cam-temporal-layout", case["cam_temporal_layout"], "--cam-channel-sizes", ",".join(map(str, case["cam_channel_sizes"])), "--correction-layout", case["correction_layout"]]
+                    "--cam-temporal-layout", case["cam_temporal_layout"], "--cam-channel-sizes", *map(str, case["cam_channel_sizes"]), "--correction-layout", case["correction_layout"]]
     if case["model"].startswith("mscmnet_"):
         command += ["--correction-mode", case["correction_mode"]]
         if case["zero_init_correction"]:
@@ -215,9 +216,49 @@ def actual_epochs(published: int, case: dict[str, Any]) -> int:
 
 def evidence_hashes(run: Path, status: dict[str, Any]) -> dict[str, str]:
     names = ["status.json", "resolved_config.yaml", "predictions_common46.npz", "metrics.csv", "loss_curve.csv", "scaler_audit.json", *status["checkpoint_files"]]
+    if (run / "reused_source_provenance.json").exists():
+        names.append("reused_source_provenance.json")
     if any(Path(name).name != name for name in names):
         raise ValueError("Unsafe evidence filename")
     return {name: life.file_digest(run / name) for name in names}
+
+
+def load_helper(name: str) -> Any:
+    """Load optional training helpers only after read-only CLI actions return."""
+    spec = importlib.util.spec_from_file_location(name, Path(__file__).with_name(f"{name}.py"))
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def validate_commands(training_script: Path, commands: list[list[str]]) -> list[dict[str, Any]]:
+    return load_helper("validate_que_candidate_commands").validate_commands(training_script, commands)
+
+
+def preflight_stage_commands(stage: str, cases: list[dict[str, Any]], args: argparse.Namespace,
+                             result_root: Path) -> None:
+    commands = []
+    for case in cases:
+        case_root = result_root / "cases" / case["case"]
+        command = command_for(case, args, case_root)
+        if (case_root / case["model"] / f"seed_{SEED}").exists():
+            command.append("--overwrite")
+        commands.append(command)
+    path = result_root / f"stage_{stage.lower()}_command_preflight.json"
+    report = {"stage": stage, "case_count": len(cases), "commands": commands,
+              "created_utc": life.utc_now(), "status": "validating"}
+    life.atomic_json(path, report)
+    try:
+        report["validation"] = validate_commands(PROJECT_ROOT / "scripts/train/train_temporal_baselines.py", commands)
+    except Exception as exc:
+        report.update(status="failed", error=f"{type(exc).__name__}: {exc}")
+        life.atomic_json(path, report)
+        raise RuntimeError(f"Stage {stage} real training CLI/config preflight failed; no candidate in this stage started: {exc}") from exc
+    report["status"] = "passed"
+    life.atomic_json(path, report)
+    print(f"阶段{stage}：{len(cases)}条实际训练命令已通过真实参数解析和配置检查。", flush=True)
 
 
 def validate_case(run: Path, case: dict[str, Any], expected: dict[str, Any], *, require_receipt: bool = True) -> tuple[bool, str]:
@@ -419,6 +460,10 @@ def print_status(result_root: Path, log_root: Path) -> int:
     done = queue.get("finished_cases", 0)
     print(f"队列状态：{queue.get('status')}；阶段：{queue.get('current_stage', '预检')}")
     print(f"已结束：{done}/{total} 个已生成任务；成功：{queue.get('passed_cases', 0)}；失败：{queue.get('failed_cases', 0)}")
+    reused = [record for record in queue.get("cases", []) if record.get("reuse") and record.get("technical_status", "").startswith("PASS")]
+    if reused:
+        saved = sum(float(record["reuse"].get("training_seconds_saved", 0)) for record in reused) / 3600
+        print(f"其中复用并重新核验历史结果：{len(reused)}项；保留既有训练约{saved:.2f}小时。")
     print(f"已生成任务剩余（含正在运行）：{max(0, total-done)}；整个有限计划上限：{queue.get('maximum_case_count', MAX_CASES)}")
     if not queue.get("stage_c_selected"):
         print("后续候选尚待自动生成，当前分母不是最终任务数。")
@@ -489,7 +534,7 @@ def make_bundle(root: Path, result_root: Path, log_root: Path) -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--run-tag", default="que_comprehensive_reconstruction_20260906")
+    parser.add_argument("--run-tag", default="que_comprehensive_reconstruction_20260907")
     parser.add_argument("--gpu-id", default="6")
     parser.add_argument("--device", choices=("cpu", "cuda:0"), default="cuda:0")
     parser.add_argument("--minimum-free-mib", type=int, default=8192)
@@ -497,6 +542,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--status", action="store_true", help="Read existing progress only; no training, writes or GPU access")
     parser.add_argument("--data-dir", type=Path, default=PROJECT_ROOT / "data/processed/data_build")
     parser.add_argument("--paper-config", type=Path, default=PROJECT_ROOT / "configs/evaluation/mscmnet_paper_metrics.yaml")
+    parser.add_argument("--reuse-from", type=Path, help="Verify and copy compatible completed cases from an older run; original evidence remains unchanged")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,100}", args.run_tag) or not re.fullmatch(r"[0-9]+", args.gpu_id):
@@ -543,8 +589,15 @@ def main(argv: list[str] | None = None) -> int:
         paper = yaml.safe_load(args.paper_config.read_text())
         manifest = {"version": 1, "base_cases": base_cases, "maximum_cases": MAX_CASES, "signatures": signatures, "paper_sha256": life.file_digest(args.paper_config),
                     "device": args.device, "data_dir": str(args.data_dir), "selection_mode": PRIMARY_MODE, "seed": SEED}
-        manifest["signature"] = life.digest(manifest)
         manifest_path = result_root / "manifest.json"
+        if args.reuse_from is None and manifest_path.exists():
+            prior_reuse = json.loads(manifest_path.read_text()).get("reuse_source")
+            if prior_reuse:
+                args.reuse_from = Path(prior_reuse["root"])
+        if args.reuse_from is not None:
+            args.reuse_from = args.reuse_from.resolve()
+            manifest["reuse_source"] = {"root": str(args.reuse_from), "manifest_sha256": life.file_digest(args.reuse_from / "manifest.json")}
+        manifest["signature"] = life.digest(manifest)
         if manifest_path.exists():
             if json.loads(manifest_path.read_text()) != manifest:
                 raise RuntimeError("Existing run has different source/data/plan. Preserved; choose a new run-tag.")
@@ -569,10 +622,19 @@ def main(argv: list[str] | None = None) -> int:
         if supervisor.run(command, log_root / "audit_data_protocol.log"):
             raise RuntimeError("Source-data audit failed; no training started")
         evaluation = json.loads((result_root / "audit_data_protocol/paper_data_statistics.json").read_text())["common_evaluation"]
-        preflight = [*life.PREFLIGHT_TESTS, "tests/test_que_comprehensive_runner.py", "tests/test_que_comprehensive_integration.py", "tests/test_que_recurrent_assembly.py"]
+        preflight = [*life.PREFLIGHT_TESTS, "tests/test_que_comprehensive_runner.py", "tests/test_que_comprehensive_integration.py", "tests/test_que_recurrent_assembly.py",
+                     "tests/test_que_candidate_commands.py", "tests/test_que_completed_reuse.py"]
         if supervisor.run([sys.executable, "-m", "pytest", "-q", *preflight], log_root / "preflight_tests.log"):
             raise RuntimeError("Server CPU tests failed; no training started")
         by_name = {record["case"]: record for record in queue["cases"]}
+        reuse_helper, reuse_context = None, None
+        if args.reuse_from is not None:
+            reuse_helper = load_helper("reuse_que_completed_runs")
+            # Dynamic import users need not register this runner in sys.modules.
+            runner_api = SimpleNamespace(**globals())
+            print(f"复用预检：核验旧结果、源码兼容性和全部权重哈希：{args.reuse_from}", flush=True)
+            reuse_context = reuse_helper.prepare_reuse(args.reuse_from, result_root, manifest, evaluation, runner_api)
+            print(f"复用预检通过：{reuse_context.get('available_count', 0)}项；待通过阶段命令检查后导入。", flush=True)
         time_limit = started + args.time_budget_hours * 3600 if args.time_budget_hours else float("inf")
         stop_budget = False
         all_cases = list(base_cases)
@@ -600,6 +662,30 @@ def main(argv: list[str] | None = None) -> int:
                 all_cases.extend(followups)
                 queue.update(case_count=len(all_cases), **{f"stage_{stage.lower()}_selected": True})
             current = [case for case in all_cases if case["stage"] == stage]
+            queue.update(status="command_preflight", active_case=None, current_stage=stage)
+            refresh_status(queue, result_root)
+            preflight_stage_commands(stage, current, args, result_root)
+            if stage == "A" and reuse_context is not None:
+                for case in current:
+                    run = result_root / "cases" / case["case"] / case["model"] / f"seed_{SEED}"
+                    if run.exists():
+                        continue
+                    request = {"signature": life.digest({"manifest": manifest["signature"], "settings": setting_key(case)}), "case": case,
+                               "model_config": expected_model_config(published, case), "evaluation": evaluation}
+                    metadata = reuse_helper.import_case(reuse_context, case, request)
+                    if metadata is None:
+                        continue
+                    valid, reason = validate_case(run, case, request)
+                    if not valid:
+                        raise RuntimeError(f"Imported case failed destination validation: {case['case']}: {reason}")
+                    record = by_name.get(case["case"])
+                    if record is None:
+                        record = {"case": case["case"], "model": case["model"], "stage": stage, "settings": case}
+                        queue["cases"].append(record)
+                        by_name[case["case"]] = record
+                    record.update(technical_status="PASS(reused)", validation=reason, exit_code=0, elapsed_seconds=0.0, reuse=metadata)
+                    refresh_status(queue, result_root)
+                    print(f"复用已验证结果：{case['case']}；原始训练提交={metadata.get('source_training_git_commit')}，无需重训。", flush=True)
             for case in current:
                 if life.fingerprints(root, args.data_dir) != signatures or life.file_digest(args.paper_config) != manifest["paper_sha256"]:
                     raise RuntimeError("Source/data/reference changed during queue; remaining work stopped and outputs preserved")
@@ -617,11 +703,14 @@ def main(argv: list[str] | None = None) -> int:
                     record = {"case": case["case"], "model": case["model"], "stage": stage, "settings": case}
                     by_name[case["case"]] = record
                     queue["cases"].append(record)
-                record.update(technical_status="PASS(existing)" if valid else "running", validation=reason)
+                cached_status = "PASS(reused)" if record.get("reuse") else "PASS(existing)"
+                record.update(technical_status=cached_status if valid else "running", validation=reason)
                 queue.update(status="running", active_case=case["case"], current_stage=stage)
                 refresh_status(queue, result_root)
-                print(f"开始任务 {queue['finished_cases']}/{queue['case_count']} (上限{MAX_CASES}): {case['case']} {json.dumps({k: case[k] for k in TRAINING_KEYS}, ensure_ascii=False)}", flush=True)
+                action = "核验已完成任务" if valid else "开始任务"
+                print(f"{action} {queue['finished_cases']}/{queue['case_count']} (上限{MAX_CASES}): {case['case']} {json.dumps({k: case[k] for k in TRAINING_KEYS}, ensure_ascii=False)}", flush=True)
                 if not valid:
+                    record.pop("reuse", None)
                     if args.device != "cpu":
                         life.atomic_json(log_root / f"{case['case']}_gpu.json", life.gpu_preflight(args.gpu_id, args.minimum_free_mib))
                     command = command_for(case, args, case_root)
@@ -638,6 +727,10 @@ def main(argv: list[str] | None = None) -> int:
                         status = json.loads((run / "status.json").read_text())
                         life.atomic_json(run / "completion_receipt.json", {"request_sha256": life.digest(request), "files": evidence_hashes(run, status)})
                     record.update(technical_status="PASS" if rc == 0 and valid else "FAIL", validation=reason)
+                    if rc == 2:
+                        record["validation"] = f"training_exit_2:{reason}"
+                        refresh_status(queue, result_root)
+                        raise RuntimeError(f"Training command exited 2 for {case['case']}; queue stopped immediately to prevent repeated argument/configuration failures")
                 if record["technical_status"].startswith("PASS"):
                     try:
                         record["scores"] = score_case(run, case, paper)
@@ -674,7 +767,7 @@ def main(argv: list[str] | None = None) -> int:
         supervisor.terminate_owned()
         for sig, handler in handlers.items():
             signal.signal(sig, handler)
-        queue.update(exit_code=exit_code, finished_utc=life.utc_now())
+        queue.update(exit_code=exit_code, finished_utc=life.utc_now(), active_case=None)
         if owns_lock and owns_run:
             refresh_status(queue, result_root)
             try:
