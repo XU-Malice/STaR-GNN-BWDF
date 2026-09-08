@@ -25,6 +25,8 @@ QUEUE_ONLY_FILES = frozenset({
     "scripts/train/run_que_comprehensive_reconstruction_gpu6.sh",
     "scripts/train/reuse_que_completed_runs.py",
     "scripts/train/validate_que_candidate_commands.py",
+    "scripts/train/que_shared_gpu_runtime.py",
+    "scripts/train/run_que_comprehensive_reconstruction_shared_gpu7.sh",
 })
 REQUIRED_TRAINING_FILES = frozenset({
     "scripts/train/train_temporal_baselines.py",

@@ -38,7 +38,8 @@ def _command(runner, case, tmp_path):
     return runner.command_for(case, args, tmp_path / case["case"])
 
 
-def test_real_parser_accepts_stage_a_and_adaptive_variations(modules, tmp_path):
+@pytest.mark.parametrize("shared", [False, True])
+def test_real_parser_accepts_stage_a_and_adaptive_variations(modules, tmp_path, shared):
     runner, cli = modules
     base = runner.stage_a_cases()
     unique = {runner.setting_key(case): case for case in base}
@@ -62,6 +63,17 @@ def test_real_parser_accepts_stage_a_and_adaptive_variations(modules, tmp_path):
             unique[runner.setting_key(case)] = case
     cases = list(unique.values())
     commands = [_command(runner, case, tmp_path) for case in cases]
+    if shared:
+        args = argparse.Namespace(data_dir=tmp_path / "intentionally_absent_data", device="cuda:0",
+                                  allow_shared_gpu=True, shared_memory_limit_gib=6.0,
+                                  shared_headroom_gib=2.0)
+        commands = [runner.command_for(case, args, tmp_path / case["case"]) for case in cases]
+        # Also exercise the actual resource-wrapper parser for every generated
+        # command. It forwards the unchanged trainer argument vector exactly.
+        wrapper = runner.load_helper("que_shared_gpu_runtime")
+        for index, command in enumerate(commands):
+            actual = runner.launch_command(command, args, tmp_path / f"resource_{index}.json")
+            assert wrapper.parse_arguments(actual[3:]).trainer_args == command[3:]
     before = set(tmp_path.iterdir())
     results = cli.validate_commands(ROOT / "scripts/train/train_temporal_baselines.py", commands)
     assert len(results) == len(cases) > 415

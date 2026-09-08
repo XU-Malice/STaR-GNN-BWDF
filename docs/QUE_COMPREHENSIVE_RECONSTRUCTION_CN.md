@@ -109,3 +109,37 @@ echo "$!" > logs/que_comprehensive_reconstruction_20260907_launcher.pid
 28 项通过核验的结果复制到新队列，标为 `PASS(reused)`。原训练 `status.json` 中的提交、时间和参数保持原样，另外保存 `reused_source_provenance.json` 说明来源；新完成凭据同时校验此来源记录。旧目录不改写。其后补跑 67 项未训练候选，并自动继续 B/C/D，固定一个 seed，仍受原有限计划上限约束。
 
 同一新目录再次启动时可以省略 `--reuse-from`，程序会从新 manifest 恢复来源。查询旧失败队列需显式使用 `--run-tag que_comprehensive_reconstruction_20260906 --status`；不带 run-tag 的 `--status` 查询修复后的新队列。
+
+## 2026-09-08 显式共享 GPU 7
+
+用户服务器的8张GPU均已有计算进程。GPU7快照显示剩余8838 MiB，vLLM与另一Python进程仍占用显存。原启动器要求GPU没有计算进程，所以会在资源预检停止；这与模型训练是否正常、能否接近论文无关。
+
+新增共享入口只在显式启用时允许其他计算进程存在。默认独占检查保留。共享入口仍执行相同A/B/C/D单seed搜索，训练器、模型、精度、batch、学习率、轮数和评价代码保持不变。
+
+共享入口使用以下运行策略：
+
+- 物理GPU7映射为训练进程的逻辑`cuda:0`，一次运行一个候选。
+- 启动前至少8192 MiB空闲；PyTorch缓存分配器限额6 GiB，另留2 GiB启动余量。CUDA上下文创建后，再要求至少7 GiB空闲；训练器自身的空闲显存检查为6 GiB。
+- 限额通过PyTorch的 `torch.cuda.set_per_process_memory_fraction` 设置，按设备总可见显存计算比例。它约束缓存分配器，**不是整个进程所有CUDA分配的硬配额**。共享进程的显存变化和算力竞争仍可能影响运行与速度。见 [PyTorch 2.9 官方说明](https://docs.pytorch.org/docs/2.9/generated/torch.cuda.memory.set_per_process_memory_fraction.html)。
+- 显存不足时状态为`waiting_gpu`，每30秒查询一次，达到门槛后自动开始。每次等待都检查源代码与数据仍一致，遵守墙钟预算与中断信号。
+- 初始化后显存下降或训练OOM会记录资源报告并最多重试2次，保持原训练设置。重试后仍不足的候选记为资源失败，继续其他候选；不能因此把该配置判断为论文指标不接近。无法取得全部模型有效候选时，原自适应阶段保护仍生效。
+- 每次训练的资源报告保存在该队列日志目录的`*_resource_attempt_*.json`，包括分配器限额、实际峰值和退出原因。既有vLLM/Python进程只读取状态，队列不会向它们发送信号。
+
+源码调度策略已改变，因此共享入口使用新的`que_comprehensive_reconstruction_shared_20260908`目录。从原始20260906目录核验并复制28个GRU/LSTM结果，不重训，也不修改20260906或20260907目录。
+
+```bash
+mkdir -p logs
+nohup bash scripts/train/run_que_comprehensive_reconstruction_shared_gpu7.sh \
+  --reuse-from "$PWD/results/que_comprehensive_reconstruction_20260906" \
+  --budget-hours 0 \
+  >> logs/que_shared_gpu7_launcher.log 2>&1 &
+echo "$!" > logs/que_shared_gpu7_launcher.pid
+```
+
+查看共享队列（无需激活训练环境，不会访问GPU或启动训练）：
+
+```bash
+bash scripts/train/run_que_comprehensive_reconstruction_shared_gpu7.sh --status
+```
+
+完成后结果包为项目上级目录的`que_comprehensive_reconstruction_shared_20260908_compact.tar.gz`。同一命令再次启动会验证并跳过完成项。`--budget-hours 0`允许长期等待资源，但候选搜索仍是有限计划。更改共享限额会改变运行清单签名，应使用新run-tag；不要在运行期间编辑源码或数据。

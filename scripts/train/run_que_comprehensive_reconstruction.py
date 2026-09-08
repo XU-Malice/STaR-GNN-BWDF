@@ -179,6 +179,10 @@ def command_for(case: dict[str, Any], args: argparse.Namespace, output_root: Pat
                "--data-dir", str(args.data_dir), "--output-root", str(output_root), "--device", args.device]
     if args.device == "cpu":
         command.append("--allow-cpu")
+    if getattr(args, "allow_shared_gpu", False):
+        # CUDA context is established by the resource wrapper before this
+        # check. Admission separately requires allocator cap + headroom.
+        command += ["--minimum-free-gib", str(args.shared_memory_limit_gib)]
     if case["model"] in ("gru", "lstm"):
         command += ["--recurrent-layout", case["recurrent_layout"]]
     else:
@@ -237,6 +241,85 @@ def validate_commands(training_script: Path, commands: list[list[str]]) -> list[
     return load_helper("validate_que_candidate_commands").validate_commands(training_script, commands)
 
 
+def launch_command(command: list[str], args: argparse.Namespace, report: Path) -> list[str]:
+    if not getattr(args, "allow_shared_gpu", False):
+        return command
+    return load_helper("que_shared_gpu_runtime").wrap_command(
+        command, args.shared_memory_limit_gib, args.shared_headroom_gib, report)
+
+
+class QueueBudgetPause(Exception):
+    """The finite queue can be resumed after its wall-clock budget expires."""
+
+
+def execute_candidate(case: dict[str, Any], args: argparse.Namespace, case_root: Path,
+                      run: Path, record: dict[str, Any], queue: dict[str, Any],
+                      result_root: Path, log_root: Path, supervisor: Any,
+                      deadline: float, source_check: Any) -> tuple[int, float]:
+    """Resource-only retries never change a candidate's numerical settings."""
+    shared = bool(getattr(args, "allow_shared_gpu", False))
+    helper = load_helper("que_shared_gpu_runtime") if shared else None
+    retries = args.shared_resource_retries if shared else 0
+    elapsed = 0.0
+    attempts = record.setdefault("resource_attempts", []) if shared else []
+    for attempt in range(retries + 1):
+        source_check()
+        if shared:
+            required = max(args.minimum_free_mib,
+                           math.ceil((args.shared_memory_limit_gib + args.shared_headroom_gib) * 1024))
+            def waiting(snapshot):
+                source_check()
+                queue.update(status="waiting_gpu", gpu_wait={**snapshot, "required_mib": required,
+                             "poll_seconds": args.gpu_poll_seconds, "case": case["case"]})
+                record.update(technical_status="waiting_gpu", validation="waiting_for_free_memory")
+                refresh_status(queue, result_root)
+                print(f"等待 GPU {args.gpu_id} 显存：空闲 {snapshot['free_mib']} MiB，"
+                      f"需要 {required} MiB；{args.gpu_poll_seconds:g} 秒后重查。", flush=True)
+            try:
+                snapshot = helper.wait_for_memory(args.gpu_id, required, args.gpu_poll_seconds,
+                                                  deadline, waiting)
+            except helper.GpuWaitExpired as exc:
+                raise QueueBudgetPause(str(exc)) from exc
+            life.atomic_json(log_root / f"{case['case']}_gpu.json", snapshot)
+            queue.pop("gpu_wait", None)
+        elif args.device != "cpu":
+            life.atomic_json(log_root / f"{case['case']}_gpu.json",
+                             life.gpu_preflight(args.gpu_id, args.minimum_free_mib))
+        source_check()
+        queue.update(status="running")
+        record.update(technical_status="running", validation="resource_preflight_passed")
+        refresh_status(queue, result_root)
+        command = command_for(case, args, case_root)
+        if run.exists():
+            command.append("--overwrite")
+        report = log_root / f"{case['case']}_resource_attempt_{len(attempts)+1}.json"
+        actual = launch_command(command, args, report)
+        tick = time.monotonic()
+        rc = supervisor.run(actual, log_root / f"{case['case']}.log")
+        duration = time.monotonic() - tick
+        elapsed += duration
+        if shared:
+            detail = json.loads(report.read_text()) if report.is_file() else {"status": "missing_resource_report"}
+            attempts.append({"exit_code": rc, "elapsed_seconds": duration, "report": str(report),
+                             "resource_status": detail.get("status")})
+            record["resource_status"] = detail.get("status")
+            if rc == 0 and detail.get("status") != "completed":
+                raise RuntimeError(f"Successful shared trainer lacks a completed resource report: {case['case']}")
+            if rc == 75 and detail.get("status") not in ("resource_wait", "resource_oom"):
+                raise RuntimeError(f"Unverified resource retry for {case['case']}")
+        if not shared or rc != 75 or attempt == retries:
+            return rc, elapsed
+        record.update(technical_status="waiting_gpu", validation="retrying_resource_failure")
+        queue.update(status="waiting_gpu")
+        refresh_status(queue, result_root)
+        print(f"资源不足：{case['case']}，保持原训练参数，第 {attempt+1}/{retries} 次重试。", flush=True)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise QueueBudgetPause("Wall-clock budget expired during shared GPU retry")
+        time.sleep(min(args.gpu_poll_seconds, remaining))
+    raise AssertionError("Resource attempt loop did not return")
+
+
 def preflight_stage_commands(stage: str, cases: list[dict[str, Any]], args: argparse.Namespace,
                              result_root: Path) -> None:
     commands = []
@@ -252,6 +335,9 @@ def preflight_stage_commands(stage: str, cases: list[dict[str, Any]], args: argp
     life.atomic_json(path, report)
     try:
         report["validation"] = validate_commands(PROJECT_ROOT / "scripts/train/train_temporal_baselines.py", commands)
+        if getattr(args, "allow_shared_gpu", False):
+            report["launch_commands"] = [launch_command(command, args, result_root / f"cli_preflight_{i}_resource.json")
+                                         for i, command in enumerate(commands)]
     except Exception as exc:
         report.update(status="failed", error=f"{type(exc).__name__}: {exc}")
         life.atomic_json(path, report)
@@ -469,6 +555,14 @@ def print_status(result_root: Path, log_root: Path) -> int:
         print("后续候选尚待自动生成，当前分母不是最终任务数。")
     active = queue.get("active_case")
     print(f"当前任务：{active or '无'}；状态更新时间：{queue.get('updated_utc')}")
+    if queue.get("gpu_policy", {}).get("allow_shared_gpu"):
+        policy = queue["gpu_policy"]
+        print(f"共享 GPU {queue.get('gpu_id')}：PyTorch 分配器限额 {policy['memory_limit_gib']:g} GiB；"
+              f"启动预留 {policy['headroom_gib']:g} GiB。")
+    if queue.get("status") == "waiting_gpu":
+        info = queue.get("gpu_wait", {})
+        print(f"正在等待显存或重试资源失败，尚未启动下一次训练；空闲={info.get('free_mib', '待复查')} MiB，"
+              f"门槛={info.get('required_mib', '待复查')} MiB。")
     times = [float(r["elapsed_seconds"]) for r in queue.get("cases", []) if r.get("elapsed_seconds") and r.get("technical_status", "").startswith("PASS")]
     if len(times) >= 3 and total > done:
         estimate = sum(times) / len(times) * (total - done) / 3600
@@ -538,6 +632,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--gpu-id", default="6")
     parser.add_argument("--device", choices=("cpu", "cuda:0"), default="cuda:0")
     parser.add_argument("--minimum-free-mib", type=int, default=8192)
+    parser.add_argument("--allow-shared-gpu", action="store_true", help="Explicitly allow existing GPU processes; use memory admission, allocator cap and resource waits")
+    parser.add_argument("--shared-memory-limit-gib", type=float, default=6.0)
+    parser.add_argument("--shared-headroom-gib", type=float, default=2.0)
+    parser.add_argument("--gpu-poll-seconds", type=float, default=30.0)
+    parser.add_argument("--shared-resource-retries", type=int, default=2)
     parser.add_argument("--time-budget-hours", "--budget-hours", dest="time_budget_hours", type=float, default=96.0, help="Per invocation hours; 0 runs the complete finite queue without a wall-clock cutoff")
     parser.add_argument("--status", action="store_true", help="Read existing progress only; no training, writes or GPU access")
     parser.add_argument("--data-dir", type=Path, default=PROJECT_ROOT / "data/processed/data_build")
@@ -549,6 +648,13 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("run-tag must be a simple directory name and gpu-id a numeric physical index")
     if not math.isfinite(args.time_budget_hours) or args.time_budget_hours < 0 or args.minimum_free_mib < 1:
         parser.error("time budget must be nonnegative and minimum free GPU memory positive")
+    if (not math.isfinite(args.shared_memory_limit_gib) or args.shared_memory_limit_gib <= 0
+            or not math.isfinite(args.shared_headroom_gib) or args.shared_headroom_gib < 1
+            or not math.isfinite(args.gpu_poll_seconds) or not 1 <= args.gpu_poll_seconds <= 60
+            or not 0 <= args.shared_resource_retries <= 3):
+        parser.error("Shared GPU requires a positive cap, >=1 GiB headroom, 1-60 second polling and 0-3 retries")
+    if args.allow_shared_gpu and args.device != "cuda:0":
+        parser.error("Shared GPU mode requires --device cuda:0")
     base_cases = stage_a_cases()
     if args.status:
         return print_status(PROJECT_ROOT / "results" / args.run_tag, PROJECT_ROOT / "logs" / args.run_tag)
@@ -577,6 +683,10 @@ def main(argv: list[str] | None = None) -> int:
     queue = {"status": "preflight", "started_utc": life.utc_now(), "case_count": len(base_cases), "maximum_case_count": MAX_CASES,
              "stage_b_selected": False, "seed": SEED, "primary_mode": PRIMARY_MODE, "test_target_feedback": True,
              "paper_reproduction_verified": False, "technical_success": False, "cases": []}
+    gpu_policy = {"allow_shared_gpu": args.allow_shared_gpu, "memory_limit_gib": args.shared_memory_limit_gib,
+                  "headroom_gib": args.shared_headroom_gib, "minimum_free_mib": args.minimum_free_mib,
+                  "poll_seconds": args.gpu_poll_seconds, "resource_retries": args.shared_resource_retries}
+    queue.update(gpu_id=args.gpu_id, gpu_policy=gpu_policy)
     exit_code, started = 0, time.monotonic()
     try:
         try:
@@ -589,6 +699,8 @@ def main(argv: list[str] | None = None) -> int:
         paper = yaml.safe_load(args.paper_config.read_text())
         manifest = {"version": 1, "base_cases": base_cases, "maximum_cases": MAX_CASES, "signatures": signatures, "paper_sha256": life.file_digest(args.paper_config),
                     "device": args.device, "data_dir": str(args.data_dir), "selection_mode": PRIMARY_MODE, "seed": SEED}
+        if args.allow_shared_gpu:
+            manifest["gpu_policy"] = gpu_policy
         manifest_path = result_root / "manifest.json"
         if args.reuse_from is None and manifest_path.exists():
             prior_reuse = json.loads(manifest_path.read_text()).get("reuse_source")
@@ -623,7 +735,8 @@ def main(argv: list[str] | None = None) -> int:
             raise RuntimeError("Source-data audit failed; no training started")
         evaluation = json.loads((result_root / "audit_data_protocol/paper_data_statistics.json").read_text())["common_evaluation"]
         preflight = [*life.PREFLIGHT_TESTS, "tests/test_que_comprehensive_runner.py", "tests/test_que_comprehensive_integration.py", "tests/test_que_recurrent_assembly.py",
-                     "tests/test_que_candidate_commands.py", "tests/test_que_completed_reuse.py"]
+                     "tests/test_que_candidate_commands.py", "tests/test_que_completed_reuse.py",
+                     "tests/test_que_shared_gpu_runtime.py", "tests/test_que_shared_gpu_queue.py"]
         if supervisor.run([sys.executable, "-m", "pytest", "-q", *preflight], log_root / "preflight_tests.log"):
             raise RuntimeError("Server CPU tests failed; no training started")
         by_name = {record["case"]: record for record in queue["cases"]}
@@ -636,6 +749,9 @@ def main(argv: list[str] | None = None) -> int:
             reuse_context = reuse_helper.prepare_reuse(args.reuse_from, result_root, manifest, evaluation, runner_api)
             print(f"复用预检通过：{reuse_context.get('available_count', 0)}项；待通过阶段命令检查后导入。", flush=True)
         time_limit = started + args.time_budget_hours * 3600 if args.time_budget_hours else float("inf")
+        def source_check():
+            if life.fingerprints(root, args.data_dir) != signatures or life.file_digest(args.paper_config) != manifest["paper_sha256"]:
+                raise RuntimeError("Source/data/reference changed during queue; remaining work stopped and outputs preserved")
         stop_budget = False
         all_cases = list(base_cases)
         for stage in ("A", "B", "C"):
@@ -711,21 +827,18 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"{action} {queue['finished_cases']}/{queue['case_count']} (上限{MAX_CASES}): {case['case']} {json.dumps({k: case[k] for k in TRAINING_KEYS}, ensure_ascii=False)}", flush=True)
                 if not valid:
                     record.pop("reuse", None)
-                    if args.device != "cpu":
-                        life.atomic_json(log_root / f"{case['case']}_gpu.json", life.gpu_preflight(args.gpu_id, args.minimum_free_mib))
-                    command = command_for(case, args, case_root)
-                    if run.exists():
-                        command.append("--overwrite")
                     record["started_utc"] = life.utc_now()
-                    tick = time.monotonic()
-                    rc = supervisor.run(command, log_root / f"{case['case']}.log")
-                    record.update(exit_code=rc, elapsed_seconds=time.monotonic() - tick, finished_utc=life.utc_now())
+                    rc, elapsed = execute_candidate(case, args, case_root, run, record, queue,
+                                                    result_root, log_root, supervisor, time_limit, source_check)
+                    record.update(exit_code=rc, elapsed_seconds=elapsed, finished_utc=life.utc_now())
                     if run.is_dir():
                         life.atomic_json(run / "request_signature.json", request)
                     valid, reason = validate_case(run, case, request, require_receipt=False)
                     if rc == 0 and valid:
                         status = json.loads((run / "status.json").read_text())
                         life.atomic_json(run / "completion_receipt.json", {"request_sha256": life.digest(request), "files": evidence_hashes(run, status)})
+                    if args.allow_shared_gpu and rc == 75:
+                        reason = f"shared_gpu_resource_retries_exhausted:{record.get('resource_status')}"
                     record.update(technical_status="PASS" if rc == 0 and valid else "FAIL", validation=reason)
                     if rc == 2:
                         record["validation"] = f"training_exit_2:{reason}"
@@ -756,6 +869,9 @@ def main(argv: list[str] | None = None) -> int:
             queue.update(independent_metric_audit=receipt, audit_exit_code=audit_code, technical_success=not queue["failed_cases"] and audit_code == 0 and audit_ok)
             queue["status"] = "completed" if queue["technical_success"] else "completed_with_failures"
             exit_code = 0 if queue["technical_success"] else 1
+    except QueueBudgetPause as exc:
+        queue.update(status="paused_time_budget", active_case=None, pause_reason=str(exc))
+        exit_code = 0
     except life.InterruptedRun as exc:
         queue.update(status="interrupted", error=str(exc))
         exit_code = 128 + exc.signum

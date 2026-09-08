@@ -154,6 +154,19 @@ def test_missing_critical_file_in_source_coverage_is_rejected(evidence):
         prepare(evidence)
 
 
+def test_explicit_shared_queue_helpers_allow_reuse_without_changing_training(evidence):
+    current = evidence["current_manifest"]
+    current["signatures"]["source"]["scripts/train/que_shared_gpu_runtime.py"] = "c" * 64
+    current["signatures"]["source"]["scripts/train/run_que_comprehensive_reconstruction_shared_gpu7.sh"] = "d" * 64
+    current["gpu_policy"] = {"allow_shared_gpu": True, "memory_limit_gib": 6, "headroom_gib": 2}
+    signed(current)
+    context = prepare(evidence)
+    assert context["available_count"] == 1
+    assert context["training_seconds_saved"] == 124
+    for name in REUSE.REQUIRED_TRAINING_FILES:
+        assert context["unchanged_training_sources"][name] == evidence["old_manifest"]["signatures"]["source"][name]
+
+
 def test_old_manifest_self_signature_and_nested_fingerprints_are_checked(evidence):
     old = evidence["old_manifest"]
     old["maximum_cases"] += 1
