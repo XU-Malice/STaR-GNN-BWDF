@@ -84,7 +84,7 @@ watch_pid=$!
 echo "$watch_pid" > "$project_root/logs/que_total_match_watch_launcher.pid"
 sleep 2
 if kill -0 "$watch_pid" 2>/dev/null; then
-  echo "总体监测已启动：PID=$watch_pid；每60秒检查，六个模型全部达标后保存并请求停止训练。"
+  echo "总体监测已启动：PID=$watch_pid；每60秒检查，全部达标后保存结果。自动停止是否可用见下方状态。"
 else
   echo "监测进程已经退出，请查看下面的状态及日志。"
   tail -n 20 "$launcher_log"

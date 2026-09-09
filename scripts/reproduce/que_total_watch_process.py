@@ -10,6 +10,8 @@ there is deliberately no numeric-PID signal fallback.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import ctypes
+import errno
 import os
 from pathlib import Path
 import re
@@ -17,10 +19,79 @@ import select
 import signal
 import stat as stat_module
 import sys
+from typing import Callable
 
 
 class SafetyError(RuntimeError):
     """The requested queue cannot be identified or signalled safely."""
+
+
+class PidfdUnavailable(SafetyError):
+    """Pidfd APIs are absent; a caller may continue without automatic stopping."""
+
+
+@dataclass(frozen=True)
+class _PidfdAPI:
+    open: Callable[[int, int], int]
+    send_signal: Callable[[int, int, None, int], object]
+    backend: str
+
+
+def _load_pidfd_api() -> _PidfdAPI:
+    """Use existing Python APIs, or exported libc equivalents when absent.
+
+    A Python build can omit these wrappers despite a supporting host libc and
+    kernel.  Exported libc functions invoke the same pidfd interfaces; never
+    retry a denied/unsupported syscall through another backend.  Signatures
+    follow glibc's sys/pidfd.h; no numeric syscall identifiers are used.
+    """
+    opener = getattr(os, "pidfd_open", None)
+    sender = getattr(signal, "pidfd_send_signal", None)
+    if callable(opener) and callable(sender):
+        return _PidfdAPI(opener, sender, "cpython")
+    try:
+        libc = ctypes.CDLL(None, use_errno=True)
+    except OSError as exc:
+        raise PidfdUnavailable(f"Linux pidfd support is unavailable: {exc}") from exc
+
+    def exported(name: str, argument_types: list) -> Callable:
+        try:
+            function = getattr(libc, name)
+        except AttributeError as exc:
+            raise PidfdUnavailable(
+                f"Linux pidfd support is unavailable: {name} is absent from Python and libc; "
+                "numeric-PID signals are disabled"
+            ) from exc
+        function.argtypes = argument_types
+        function.restype = ctypes.c_int
+
+        def call(*arguments: object) -> int:
+            # Keep libc alive through this closure and read its thread-local
+            # errno immediately.  OSError creates PermissionError/ESRCH types.
+            _ = libc
+            ctypes.set_errno(0)
+            result = function(*arguments)
+            if result < 0:
+                error = ctypes.get_errno() or errno.EIO
+                raise OSError(error, f"{name}: {os.strerror(error)}")
+            return result
+
+        return call
+
+    backends = []
+    if not callable(opener):
+        opener = exported("pidfd_open", [ctypes.c_int, ctypes.c_uint])
+        backends.append("libc.pidfd_open")
+    else:
+        backends.append("cpython.pidfd_open")
+    if not callable(sender):
+        sender = exported(
+            "pidfd_send_signal", [ctypes.c_int, ctypes.c_int, ctypes.c_void_p, ctypes.c_uint]
+        )
+        backends.append("libc.pidfd_send_signal")
+    else:
+        backends.append("cpython.pidfd_send_signal")
+    return _PidfdAPI(opener, sender, "+".join(backends))
 
 
 _PYTHON_NAME = re.compile(r"python(?:[0-9]+(?:\.[0-9]+)*)?\Z")
@@ -208,13 +279,14 @@ class QueueHandle:
     """A Linux pidfd bound to one complete queue identity; call close() finally."""
 
     def __init__(self, process: Process, project: Path, result_root: Path, pid_file: Path,
-                 pidfd: int, arguments: dict[str, str | bool]):
+                 pidfd: int, arguments: dict[str, str | bool], api: _PidfdAPI):
         self._process = process
         self._project = project
         self._result_root = result_root
         self._pid_file = pid_file
         self._pidfd: int | None = pidfd
         self._arguments = dict(arguments)
+        self._api = api
         self._stop_requested = False
 
     def describe(self) -> dict[str, object]:
@@ -231,6 +303,7 @@ class QueueHandle:
             "result_root": str(self._result_root),
             "pid_file": str(self._pid_file),
             "signal_mechanism": "linux_pidfd_SIGTERM_only",
+            "pidfd_backend": self._api.backend,
             "stop_requested": self._stop_requested,
         }
 
@@ -256,10 +329,14 @@ class QueueHandle:
         if self.exited():
             return False
         try:
-            signal.pidfd_send_signal(self._pidfd, signal.SIGTERM, None, 0)
+            self._api.send_signal(self._pidfd, signal.SIGTERM, None, 0)
         except ProcessLookupError:
             return False
         except OSError as exc:
+            if exc.errno == errno.ENOSYS:
+                raise PidfdUnavailable(
+                    f"Could not request graceful queue shutdown: kernel pidfd signalling is unavailable: {exc}"
+                ) from exc
             raise SafetyError(f"Could not request graceful queue shutdown: {exc}") from exc
         self._stop_requested = True
         return True
@@ -309,13 +386,14 @@ def bind_queue(project_root: Path, result_root: Path, pid_file: Path) -> QueueHa
         if process is None:
             return None
         arguments = _validate_identity(process, project, result)
-        if not hasattr(os, "pidfd_open") or not hasattr(signal, "pidfd_send_signal"):
-            raise SafetyError("Linux pidfd support is required; numeric-PID signals are disabled")
+        api = _load_pidfd_api()
         try:
-            descriptor = os.pidfd_open(pid, 0)
+            descriptor = api.open(pid, 0)
         except ProcessLookupError:
             return None
         except OSError as exc:
+            if exc.errno == errno.ENOSYS:
+                raise PidfdUnavailable(f"Cannot bind queue pidfd: kernel pidfd support is unavailable: {exc}") from exc
             raise SafetyError(f"Cannot bind queue pidfd; no signals will be sent: {exc}") from exc
         try:
             current = read_process(pid)
@@ -325,7 +403,7 @@ def bind_queue(project_root: Path, result_root: Path, pid_file: Path) -> QueueHa
             _validate_identity(current, project, result)
             if not _same_identity(process, current):
                 raise SafetyError("Queue identity changed while opening pidfd")
-            return QueueHandle(process, project, result, pid_path, descriptor, arguments)
+            return QueueHandle(process, project, result, pid_path, descriptor, arguments, api)
         except BaseException:
             os.close(descriptor)
             raise

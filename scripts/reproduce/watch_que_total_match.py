@@ -119,11 +119,19 @@ def print_status(output):
         return 1
     state = json.loads(path.read_text())
     print(f"监测状态：{state.get('status')}；更新时间：{state.get('updated_utc')}")
-    print(f"总体接近：{state.get('matched_model_count', 0)}/6 个模型，"
-          f"所选配置 {state.get('matched_total_cells', 0)}/48 项。")
+    if "matched_model_count" in state:
+        print(f"总体接近：{state['matched_model_count']}/6 个模型，"
+              f"所选配置 {state['matched_total_cells']}/48 项。")
+    else:
+        print("本次监测尚未完成结果扫描；不代表已有结果归零。")
     print(f"判定标准：误差相对差≤{state['policy']['error_relative_tolerance']:.1%}；"
           f"NSE绝对差≤{state['policy']['nse_absolute_tolerance']:g}；不考核各DMA数值接近。")
     print(f"验证状态：{state.get('selection', {}).get('verification', '尚未验证')}")
+    if "automatic_stop_available" in state:
+        print("自动停止：" + ("可用；全部达标并完成保存后才请求退出。"
+              if state["automatic_stop_available"] else "不可用；继续监测和保存结果，不发送停止信号。"))
+    if state.get("capability_warning"):
+        print(f"兼容性说明：{state['capability_warning']}")
     if state.get("selection"):
         print(snapshot_summary(state["selection"])["table"])
     if state.get("archive"):
@@ -156,16 +164,29 @@ def run(args, *, context_factory=None, binder=None, sleeper=time.sleep):
             print(f"已有监测程序使用 {output}，本次不重复启动。", flush=True)
             return 2
         publish(output, state)
-        if binder is None:
-            from que_total_watch_process import bind_queue
-            binder = bind_queue
         # Bind only this queue once. Never follow a replaced PID file to another run.
-        if args.watch:
-            handle = binder(root, args.result_root, args.pid_file)
+        # Monitoring alone has no process-control dependency. Only a specific
+        # missing capability may degrade; identity/permission refusals stay fatal.
+        if args.watch and args.stop_on_success:
+            capability_errors = ()
+            if binder is None:
+                from que_total_watch_process import bind_queue, PidfdUnavailable
+                binder = bind_queue
+                capability_errors = (PidfdUnavailable,)
+            try:
+                handle = binder(root, args.result_root, args.pid_file)
+            except capability_errors as exc:
+                state["capability_warning"] = f"{type(exc).__name__}: {exc}"
+                print("当前环境无法安全自动停止队列；继续更新指标并保存达标结果。"
+                      + state["capability_warning"], flush=True)
             state["queue_identity"] = handle.describe() if handle else None
-            state["automatic_stop_available"] = bool(args.stop_on_success and handle is not None)
-            if args.stop_on_success and handle is None:
+            state["automatic_stop_available"] = handle is not None
+            if handle is None and not state.get("capability_warning"):
                 print("未绑定到运行中的队列；继续只读监测，不会跟随新的PID或停止其他进程。", flush=True)
+            elif handle is not None:
+                print("自动停止已绑定当前队列；全部48项核验并保存后才请求退出。", flush=True)
+        elif args.watch:
+            state["automatic_stop_available"] = False
         if context_factory is None:
             from que_total_watch_evidence import Context
             context_factory = Context

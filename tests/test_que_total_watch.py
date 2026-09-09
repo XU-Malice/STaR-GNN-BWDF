@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import sys
 import tarfile
+from types import SimpleNamespace
 
 import pytest
 
@@ -121,6 +122,59 @@ def test_monitor_only_and_stale_queue_cannot_signal(args):
     args.stop_on_success = False
     assert watch.run(args, context_factory=context(events), binder=lambda *a: Handle(events)) == 0
     assert "stop" not in events
+
+
+def test_monitor_only_never_requires_process_capabilities(args):
+    events = []
+    args.stop_on_success = False
+    def prohibited(*unused):
+        pytest.fail("Passive observation must not inspect or bind a process")
+    assert watch.run(args, context_factory=context(events), binder=prohibited) == 0
+    assert "stop" not in events
+
+
+def test_missing_pidfd_keeps_polling_and_preserves_accepted_results(args, monkeypatch):
+    events = []
+    class PidfdUnavailable(RuntimeError):
+        pass
+    def unsupported(*unused):
+        events.append("bind_unavailable")
+        raise PidfdUnavailable("Python and libc wrappers absent")
+    monkeypatch.setitem(sys.modules, "que_total_watch_process",
+                        SimpleNamespace(bind_queue=unsupported, PidfdUnavailable=PidfdUnavailable))
+    assert watch.run(args, context_factory=context(events, values=[report(False), report()]),
+                     sleeper=lambda s: events.append("wait")) == 0
+    assert events == ["bind_unavailable", "wait", "verify", "export"]
+    state = json.loads((args.output_root / "watch_status.json").read_text())
+    assert state["status"] == "matched_and_preserved"
+    assert state["matched_model_count"] == 6 and state["matched_total_cells"] == 48
+    assert state["automatic_stop_available"] is False
+    assert "PidfdUnavailable" in state["capability_warning"]
+    assert Path(state["archive"]["path"]).is_file()
+
+
+@pytest.mark.parametrize("error", [PermissionError("not owned"), ValueError("identity changed")])
+def test_compatibility_handling_never_relaxes_identity_or_permission_refusal(args, monkeypatch, error):
+    class PidfdUnavailable(RuntimeError):
+        pass
+    def refused(*unused):
+        raise error
+    monkeypatch.setitem(sys.modules, "que_total_watch_process",
+                        SimpleNamespace(bind_queue=refused, PidfdUnavailable=PidfdUnavailable))
+    events = []
+    assert watch.run(args, context_factory=context(events)) == 2
+    assert events == []
+
+
+def test_failed_start_status_does_not_report_results_reset_to_zero(args, capsys):
+    def refused(*unused):
+        raise ValueError("identity mismatch")
+    assert watch.run(args, binder=refused) == 2
+    capsys.readouterr()
+    assert watch.print_status(args.output_root) == 0
+    printed = capsys.readouterr().out
+    assert "不代表已有结果归零" in printed
+    assert "0/6" not in printed and "0/48" not in printed
 
 
 def test_wrong_queue_binding_fails_before_evidence_or_signal(args):

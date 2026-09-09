@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import ctypes
 import errno
 import importlib.util
 import json
@@ -85,6 +86,7 @@ def test_binding_is_read_only_and_description_json_serializable(queue):
     assert metadata["run_tag"] == queue[1].name
     assert metadata["start_ticks"] == 97531
     assert metadata["signal_mechanism"] == "linux_pidfd_SIGTERM_only"
+    assert metadata["pidfd_backend"] == "cpython"
     assert queue[3]["signals"] == []
     assert not handle.exited()
     handle.close()
@@ -284,17 +286,179 @@ def test_pidfd_permission_failure_no_fallback(queue, monkeypatch):
 @pytest.mark.parametrize("attribute,owner", [("pidfd_open", "os"), ("pidfd_send_signal", "signal")])
 def test_missing_pidfd_support_refuses(queue, monkeypatch, attribute, owner):
     monkeypatch.delattr(getattr(MODULE, owner), attribute)
-    with pytest.raises(MODULE.SafetyError, match="pidfd support"):
+    monkeypatch.setattr(MODULE.ctypes, "CDLL", lambda *args, **kwargs: object())
+    with pytest.raises(MODULE.PidfdUnavailable, match="pidfd support"):
         bind(queue)
     assert queue[3]["signals"] == []
+    assert queue[3]["opened"] == []
 
 
 def test_pidfd_kernel_unsupported_refuses(queue, monkeypatch):
     def unsupported(*args):
         raise OSError(errno.ENOSYS, "unsupported")
     monkeypatch.setattr(MODULE.os, "pidfd_open", unsupported)
-    with pytest.raises(MODULE.SafetyError, match="Cannot bind queue pidfd"):
+    with pytest.raises(MODULE.PidfdUnavailable, match="Cannot bind queue pidfd"):
         bind(queue)
+
+
+class LibcSymbol:
+    def __init__(self, implementation):
+        self.implementation = implementation
+        self.argtypes = None
+        self.restype = None
+
+    def __call__(self, *arguments):
+        return self.implementation(*arguments)
+
+
+@pytest.fixture
+def libc(queue, monkeypatch):
+    state = queue[3]
+    calls = {"open": [], "signal": [], "loads": [], "open_errno": 0, "signal_errno": 0}
+
+    def open_fd(pid, flags):
+        calls["open"].append((pid, flags))
+        if calls["open_errno"]:
+            ctypes.set_errno(calls["open_errno"])
+            return -1
+        return queue[4]
+
+    def send(fd, sig, info, flags):
+        calls["signal"].append((fd, sig, info, flags))
+        if calls["signal_errno"]:
+            ctypes.set_errno(calls["signal_errno"])
+            return -1
+        state["signals"].append((fd, sig, info, flags))
+        return 0
+
+    class Library:
+        pidfd_open = LibcSymbol(open_fd)
+        pidfd_send_signal = LibcSymbol(send)
+
+    library = Library()
+
+    def load(name, **kwargs):
+        calls["loads"].append((name, kwargs))
+        return library
+
+    monkeypatch.setattr(MODULE.ctypes, "CDLL", load)
+    return library, calls
+
+
+@pytest.mark.parametrize("missing", [("open",), ("signal",), ("open", "signal")])
+def test_missing_python_wrappers_use_same_pidfd_libc_api(queue, libc, monkeypatch, missing):
+    library, calls = libc
+    if "open" in missing:
+        monkeypatch.delattr(MODULE.os, "pidfd_open")
+    if "signal" in missing:
+        monkeypatch.delattr(MODULE.signal, "pidfd_send_signal")
+
+    def prohibited(*args, **kwargs):
+        pytest.fail("No numeric PID or process-group signals may be sent")
+
+    monkeypatch.setattr(MODULE.os, "kill", prohibited)
+    monkeypatch.setattr(MODULE.os, "killpg", prohibited)
+    with bind(queue) as handle:
+        assert queue[3]["signals"] == []
+        metadata = handle.describe()
+        assert "libc.pidfd_" in metadata["pidfd_backend"]
+        assert handle.request_stop()
+        assert not handle.request_stop()
+    assert queue[3]["signals"] == [(queue[4], signal.SIGTERM, None, 0)]
+    assert queue[3]["closed"] == [queue[4]]
+    assert calls["loads"] == [(None, {"use_errno": True})]
+    if "open" in missing:
+        assert calls["open"] == [(123456789, 0)]
+        assert library.pidfd_open.argtypes == [ctypes.c_int, ctypes.c_uint]
+        assert library.pidfd_open.restype is ctypes.c_int
+    else:
+        assert calls["open"] == []
+    if "signal" in missing:
+        assert calls["signal"] == [(queue[4], signal.SIGTERM, None, 0)]
+        assert library.pidfd_send_signal.argtypes == [ctypes.c_int, ctypes.c_int, ctypes.c_void_p, ctypes.c_uint]
+        assert library.pidfd_send_signal.restype is ctypes.c_int
+    else:
+        assert calls["signal"] == []
+
+
+def test_available_python_wrappers_do_not_load_libc(queue, libc):
+    with bind(queue) as handle:
+        assert handle.request_stop()
+    assert libc[1]["loads"] == []
+
+
+@pytest.mark.parametrize("operation", ["open", "signal"])
+@pytest.mark.parametrize("error", [errno.EPERM, errno.EACCES, errno.ENOSYS])
+def test_python_kernel_error_never_retries_through_libc(queue, libc, monkeypatch, operation, error):
+    def fail(*args):
+        raise OSError(error, "denied or unavailable")
+    if operation == "open":
+        monkeypatch.setattr(MODULE.os, "pidfd_open", fail)
+    else:
+        monkeypatch.setattr(MODULE.signal, "pidfd_send_signal", fail)
+    error_type = MODULE.PidfdUnavailable if error == errno.ENOSYS else MODULE.SafetyError
+    with pytest.raises(error_type) as raised:
+        with bind(queue) as handle:
+            handle.request_stop()
+    if error != errno.ENOSYS:
+        assert not isinstance(raised.value, MODULE.PidfdUnavailable)
+    assert libc[1]["loads"] == []
+    assert queue[3]["signals"] == []
+    assert queue[3]["closed"] == ([queue[4]] if operation == "signal" else [])
+
+
+@pytest.mark.parametrize("operation", ["open", "signal"])
+@pytest.mark.parametrize("error", [errno.EPERM, errno.EACCES, errno.ENOSYS, errno.EINVAL])
+def test_libc_errno_is_preserved_without_numeric_fallback(queue, libc, monkeypatch, operation, error):
+    monkeypatch.delattr(MODULE.os, "pidfd_open")
+    monkeypatch.delattr(MODULE.signal, "pidfd_send_signal")
+    libc[1][operation + "_errno"] = error
+    error_type = MODULE.PidfdUnavailable if error == errno.ENOSYS else MODULE.SafetyError
+    with pytest.raises(error_type) as raised:
+        with bind(queue) as handle:
+            handle.request_stop()
+    assert raised.value.__cause__.errno == error
+    if error != errno.ENOSYS:
+        assert not isinstance(raised.value, MODULE.PidfdUnavailable)
+    assert queue[3]["signals"] == []
+    assert queue[3]["closed"] == ([queue[4]] if operation == "signal" else [])
+    assert len(libc[1]["open"]) == 1
+    assert len(libc[1]["signal"]) == (1 if operation == "signal" else 0)
+
+
+@pytest.mark.parametrize("operation", ["open", "signal"])
+def test_libc_process_exit_race_returns_noop(queue, libc, monkeypatch, operation):
+    monkeypatch.delattr(MODULE.os, "pidfd_open")
+    monkeypatch.delattr(MODULE.signal, "pidfd_send_signal")
+    libc[1][operation + "_errno"] = errno.ESRCH
+    if operation == "open":
+        assert bind(queue) is None
+    else:
+        with bind(queue) as handle:
+            assert not handle.request_stop()
+    assert queue[3]["signals"] == []
+    assert queue[3]["closed"] == ([queue[4]] if operation == "signal" else [])
+
+
+def test_libc_backend_still_refuses_changed_identity_and_closes_fd(queue, libc, monkeypatch):
+    monkeypatch.delattr(MODULE.os, "pidfd_open")
+    monkeypatch.delattr(MODULE.signal, "pidfd_send_signal")
+    with bind(queue) as handle:
+        queue[3]["process"] = replace(queue[3]["process"], start_ticks=9999999)
+        with pytest.raises(MODULE.SafetyError, match="identity changed"):
+            handle.request_stop()
+    assert libc[1]["signal"] == []
+    assert queue[3]["closed"] == [queue[4]]
+
+
+def test_libc_loading_unavailable_is_explicit_capability_error(queue, monkeypatch):
+    monkeypatch.delattr(MODULE.os, "pidfd_open")
+    def fail(*args, **kwargs):
+        raise OSError("No dynamic loader")
+    monkeypatch.setattr(MODULE.ctypes, "CDLL", fail)
+    with pytest.raises(MODULE.PidfdUnavailable, match="pidfd support is unavailable"):
+        bind(queue)
+    assert queue[3]["opened"] == queue[3]["signals"] == []
 
 
 def test_process_exits_during_pidfd_open(queue, monkeypatch):
