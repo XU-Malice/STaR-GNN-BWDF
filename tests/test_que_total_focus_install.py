@@ -27,6 +27,7 @@ PREFLIGHT_TESTS = (
     "test_que_total_focus.py",
     "test_que_joint_closeout.py",
     "test_que_shared_closeout_stop.py",
+    "test_que_training_source_compatibility.py",
 )
 REQUIRED_PATHS = (
     "src", "scripts", "configs", "tests", "pyproject.toml",

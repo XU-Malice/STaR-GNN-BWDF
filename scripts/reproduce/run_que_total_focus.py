@@ -154,19 +154,72 @@ def collect_validated(context, queue):
     return candidates, exclusions
 
 
-def verify_training_sources(context, tool_root):
-    """New orchestration is allowed; numerical training/data code must be identical."""
-    checked = []
-    for name, expected in context.manifest["signatures"]["source"].items():
-        if name.startswith(("src/", "configs/")) or name in {
-            "scripts/train/train_temporal_baselines.py", "scripts/train/que_shared_gpu_runtime.py"}:
-            path = tool_root / name
-            if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
-                raise ValueError(f"Supplemental training core differs from existing evidence: {name}")
-            checked.append(name)
-    if not checked:
-        raise ValueError("No shared numerical source files were verified")
-    return checked
+TRAINING_ENTRY_FILES = frozenset({"scripts/train/train_temporal_baselines.py",
+                                "scripts/train/que_shared_gpu_runtime.py"})
+INSTALL_METADATA_FILES = frozenset({"PKG-INFO", "SOURCES.txt", "dependency_links.txt", "entry_points.txt",
+    "requires.txt", "top_level.txt", "namespace_packages.txt", "not-zip-safe", "zip-safe"})
+
+
+def _install_metadata(name):
+    parts = Path(name).parts
+    return (len(parts) == 3 and parts[:2] == ("src", "star_gnn_bwdf.egg-info")
+            and parts[2] in INSTALL_METADATA_FILES)
+
+
+def verify_training_sources(context, tool_root, *, audit_path=None):
+    """Compare identical numerical source across two installation layouts.
+
+    Editable-install packaging metadata need not exist in a pure Git export.
+    Original full fingerprints, including that metadata, remain unchanged and
+    are verified before/after this check. No Python/configuration file is exempt.
+    """
+    context.check_fingerprints()
+    tool_root = Path(tool_root)
+    original = context.manifest["signatures"]["source"]
+    required = {}
+    for name, expected in original.items():
+        relative = Path(name)
+        if relative.is_absolute() or ".." in relative.parts or str(relative) != name:
+            raise ValueError(f"Unsafe frozen source path: {name}")
+        if (name.startswith(("src/", "configs/")) or name in TRAINING_ENTRY_FILES) and not _install_metadata(name):
+            required[name] = expected
+    if (not TRAINING_ENTRY_FILES <= required.keys() or not any(n.startswith("src/") for n in required)
+            or not any(n.startswith("configs/") for n in required)):
+        raise ValueError("Incomplete shared numerical source inventory")
+    exported = {}
+    for directory in ("src", "configs"):
+        base = tool_root / directory
+        if not base.is_dir() or base.is_symlink():
+            raise ValueError(f"Missing or non-regular exported source directory: {directory}")
+        for path in sorted(base.rglob("*")):
+            if "__pycache__" in path.parts or path.suffix in {".pyc", ".pyo"}:
+                continue
+            if path.is_symlink() or (not path.is_dir() and not path.is_file()):
+                raise ValueError(f"Non-regular exported source path: {path}")
+            if path.is_file():
+                exported[str(path.relative_to(tool_root))] = hashlib.sha256(path.read_bytes()).hexdigest()
+    for name in TRAINING_ENTRY_FILES:
+        path = tool_root / name
+        if not path.is_file() or any(p.is_symlink() for p in (path, *path.parents)):
+            raise ValueError(f"Missing or non-regular exported training entry: {name}")
+        exported[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    actual = {name: sha for name, sha in exported.items() if not _install_metadata(name)}
+    if set(actual) != set(required):
+        raise ValueError("Supplemental training source inventory differs: "
+            f"missing={sorted(set(required)-set(actual))}; extra={sorted(set(actual)-set(required))}")
+    for name, expected in required.items():
+        if actual[name] != expected:
+            raise ValueError(f"Supplemental training core differs from existing evidence: {name}")
+    metadata = [{"path": name, "original_sha256": original.get(name), "exported_sha256": exported.get(name)}
+        for name in sorted(set(original) | set(exported)) if _install_metadata(name)]
+    context.check_fingerprints()
+    if audit_path is not None:
+        write(audit_path, {"status": "PASS", "checked_source_sha256": required,
+            "install_metadata": metadata, "original_full_fingerprints_preserved": True,
+            "comparison": "Exact numerical source inventory and bytes; packaging metadata recorded separately"})
+    if metadata:
+        print(f"数值源码和配置核验通过；另记录 {len(metadata)} 个安装元数据文件，不要求其在两种安装方式间一致。", flush=True)
+    return sorted(required)
 
 
 def verify_candidate_evidence(candidates, context):
@@ -341,7 +394,7 @@ def run(args):
             sys.path.insert(0, str(TOOL_ROOT / "src"))
             evidence = module("que_focus_evidence", TOOL_ROOT / "scripts/reproduce/que_total_watch_evidence.py")
             context = evidence.Context(project, args.source_results.resolve())
-            verify_training_sources(context, TOOL_ROOT)
+            verify_training_sources(context, TOOL_ROOT, audit_path=output / "training_source_compatibility.json")
             if context._recompute_evaluation() != context.evaluation:
                 raise ValueError("Saved evaluation differs from original source data")
             audit_api = module("que_focus_audit", TOOL_ROOT / "scripts/reproduce/audit_que_total_objective.py")

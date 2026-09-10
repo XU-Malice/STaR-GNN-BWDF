@@ -92,7 +92,8 @@ echo "执行新流程CPU测试与命令检查；训练项目提交保持 $head_b
   PYTHONPATH="$tool_root/src" "$campaign_python" -m pytest -q \
     tests/test_que_total_recurrent_search.py tests/test_que_total_objective.py \
     tests/test_que_total_followup_training.py tests/test_que_total_focus.py \
-    tests/test_que_joint_closeout.py tests/test_que_shared_closeout_stop.py
+    tests/test_que_joint_closeout.py tests/test_que_shared_closeout_stop.py \
+    tests/test_que_training_source_compatibility.py
 ) > "$output_root/installation_preflight.log" 2>&1 || {
   tail -n 60 "$output_root/installation_preflight.log"
   echo "CPU预检未通过，未启动新流程。" >&2

@@ -59,6 +59,8 @@ git show "${tools_commit}:scripts/reproduce/install_que_total_focus.sh" | bash -
 
 四个联合模型的完整压缩包始终保留在服务器上；最终 `que_recurrent_focus_20260910_compact.tar.gz` 提供指标、配置、历史和核验记录，不嵌入该权重压缩包。已有模型组合是针对已公开测试目标的数值搜索，当前固定真值与 pooled 口径下的部分 RMSE/NSE 目标不相容，因此按原容差报告最接近结果，不承诺48项全部匹配。
 
+服务器执行 editable install 后，`src/star_gnn_bwdf.egg-info/` 下会出现 `PKG-INFO`、`SOURCES.txt` 等安装元数据；纯 Git 导出的外部工具通常不包含它们。跨安装的数值源码比较仅将该目录中列明的包装信息单独记录，仍对其余 `src`、全部配置、训练入口及共享GPU运行脚本做完整文件集合和逐字节比较。未知文件、Python代码和配置不享受该处理。原服务器目录的全量冻结指纹（包括安装元数据）及外部工具自身的全量指纹继续核验。`training_source_compatibility.json` 保存检查清单和两侧安装元数据哈希，不能通过删除原目录的 egg-info 来修复此问题。
+
 查看进度：
 
 ```bash

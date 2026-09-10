@@ -221,7 +221,7 @@ def test_campaign_real_cpu_flow_and_terminal_zero_training_bundle(evidence, tmp_
     monkeypatch.setattr(FOCUS, "read", lambda path: {"commit": "test-export"} if Path(path) == ROOT / "deployment.json" else real_read(path))
     # Source fixture imports were verified through its existing test seam;
     # separate tests cover fingerprint rejection and the real artifact boundary.
-    monkeypatch.setattr(FOCUS, "verify_training_sources", lambda *args: ["test-fixture-core"])
+    monkeypatch.setattr(FOCUS, "verify_training_sources", lambda *args, **kwargs: ["test-fixture-core"])
     output = tmp_path / "campaign"
     args = ["--project-root", str(e["project"]), "--source-results", str(e["result"]),
             "--output-root", str(output), "--max-followups-per-model", "0",
@@ -261,7 +261,7 @@ def test_full_joint_archive_handoff_and_recurrent_cpu_search(evidence, tmp_path,
     monkeypatch.setattr(FOCUS, "module", modules)
     monkeypatch.setattr(FOCUS, "read", lambda path: {"commit": "test-export"}
         if Path(path) == ROOT / "deployment.json" else real_read(path))
-    monkeypatch.setattr(FOCUS, "verify_training_sources", lambda *args: ["fixture-core"])
+    monkeypatch.setattr(FOCUS, "verify_training_sources", lambda *args, **kwargs: ["fixture-core"])
     output = tmp_path / "focused"
     assert FOCUS.main(["--project-root", str(e["project"]), "--source-results", str(e["result"]),
         "--output-root", str(output), "--watch", "--close-joint-first", "--max-followups-per-model", "0",
