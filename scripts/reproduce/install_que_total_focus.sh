@@ -20,7 +20,19 @@ else
   campaign_python=$(conda run --no-capture-output -n bwdf311 python -c 'import sys; print(sys.executable)' | tail -n 1)
 fi
 test -x "$campaign_python"
-files=(src scripts configs tests pyproject.toml uv.lock SOURCE_CHECKSUMS.sha256)
+files=(src scripts configs tests pyproject.toml SOURCE_CHECKSUMS.sha256)
+# Select files from the pinned Git object, never from the live worktree.
+# Some versions do not track uv.lock; git archive rejects absent pathspecs.
+for name in "${files[@]}"; do
+  if ! git cat-file -e "$snapshot:$name" 2>/dev/null; then
+    echo "工具提交缺少必需路径：$name；未启动新流程。" >&2
+    exit 2
+  fi
+done
+if git cat-file -e "$snapshot:uv.lock" 2>/dev/null; then
+  test "$(git cat-file -t "$snapshot:uv.lock")" = blob
+  files+=(uv.lock)
+fi
 temporary=""
 trap 'if [[ -n "$temporary" && -d "$temporary" ]]; then rm -rf -- "$temporary"; fi' EXIT
 if [[ ! -e "$tool_root" ]]; then
