@@ -6,6 +6,7 @@ import importlib.util
 import json
 from pathlib import Path
 import subprocess
+import tarfile
 from types import SimpleNamespace
 
 import pytest
@@ -156,6 +157,55 @@ def test_complete_ranking_rejects_partial_metric_table(evidence):
         FOCUS.complete_records([{"mode": "pooled", "metrics": [1]}], "pooled", evidence["paper"])
 
 
+def test_closeout_precedes_stop_and_freezes_all_four_cases(tmp_path):
+    events = []
+    output = tmp_path / "output"
+    source = tmp_path / "source"
+    FOCUS.write(source / "queue_status.json", {"status": "running"})
+    report = {"status": "READY", "report_path": str(output / "joint_closeout/snapshot/READY.json"),
+        "archive_path": str(output / "joint_closeout/snapshot/models.tar.gz"), "archive_sha256": "abc",
+        "selected_models": {m: {"case": "selected_" + m} for m in FOCUS.MODELS[2:]}}
+    def archive(*args):
+        events.append("archive")
+        return report
+    def verify(path):
+        events.append("verify")
+        return report
+    def stop(**kwargs):
+        assert events == ["archive", "verify"]
+        assert kwargs["execute"] is True
+        events.append("stop")
+        return {"status": "stop_requested"}
+    args = SimpleNamespace(output_root=output, source_results=source, project_root=tmp_path)
+    result = FOCUS.prepare_joint_handoff(None, args, {},
+        SimpleNamespace(archive_joint_closeout=archive, verify_ready=verify),
+        SimpleNamespace(stop_after_closeout=stop))
+    assert result == report
+    assert events == ["archive", "verify", "stop"]
+    candidates = [{"model": m, "case": "selected_" + m} for m in FOCUS.MODELS]
+    candidates += [{"model": "msnet", "case": "later_unarchived_msnet"}]
+    assert FOCUS.restrict_to_closed_joint_models(candidates, report) == candidates[:6]
+
+
+def test_corrupt_closeout_never_requests_stop(tmp_path):
+    output = tmp_path / "output"
+    FOCUS.write(output / "joint_closeout_reference.json", {"report_path": str(output / "snapshot/READY.json"),
+                                                         "archive_sha256": "expected"})
+    args = SimpleNamespace(output_root=output, source_results=tmp_path, project_root=tmp_path)
+    calls = []
+    archive = SimpleNamespace(verify_ready=lambda path: {"archive_sha256": "changed"})
+    with pytest.raises(ValueError, match="differs"):
+        FOCUS.prepare_joint_handoff(None, args, {}, archive,
+            SimpleNamespace(stop_after_closeout=lambda **kw: calls.append(kw)))
+    assert not calls
+
+
+def test_missing_frozen_joint_model_blocks_continuation():
+    report = {"selected_models": {m: {"case": m} for m in FOCUS.MODELS[2:]}}
+    with pytest.raises(ValueError, match="no longer valid"):
+        FOCUS.restrict_to_closed_joint_models([{"model": "gru", "case": "gru"}], report)
+
+
 @pytest.mark.parametrize("source_status,watch,expected", [("running", False, "cpu_snapshot_completed"),
                                                           ("completed", True, "completed_search")])
 def test_campaign_real_cpu_flow_and_terminal_zero_training_bundle(evidence, tmp_path, monkeypatch, source_status, watch, expected):
@@ -185,3 +235,43 @@ def test_campaign_real_cpu_flow_and_terminal_zero_training_bundle(evidence, tmp_
         assert Path(state["archive"]).is_file()
         assert real_read(output / "followup_plan.json")["cases"] == []
     assert real_read(e["result"] / "queue_status.json") == queue
+
+
+def test_full_joint_archive_handoff_and_recurrent_cpu_search(evidence, tmp_path, monkeypatch):
+    e = evidence
+    queue = {**e["queue"], "status": "running", "current_stage": "C"}
+    FOCUS.write(e["result"] / "queue_status.json", queue)
+    real_module, real_read = FOCUS.module, FOCUS.read
+    calls = []
+    def stop(**kw):
+        # Real four-model payload, weights and compressed archive must exist
+        # before the process-control boundary can be reached.
+        report = kw["validate_archive"](kw["archive_root"])
+        assert report["status"] == "READY"
+        assert set(report["selected_models"]) == set(FOCUS.MODELS[2:])
+        calls.append(report)
+        FOCUS.write(e["result"] / "queue_status.json", {**queue, "status": "interrupted"})
+        return {"status": "stopped"}
+    def modules(name, path):
+        if name == "que_focus_evidence":
+            return SimpleNamespace(Context=lambda *args: e["context"])
+        if name == "que_joint_handoff_stop":
+            return SimpleNamespace(stop_after_closeout=stop)
+        return real_module(name, path)
+    monkeypatch.setattr(FOCUS, "module", modules)
+    monkeypatch.setattr(FOCUS, "read", lambda path: {"commit": "test-export"}
+        if Path(path) == ROOT / "deployment.json" else real_read(path))
+    monkeypatch.setattr(FOCUS, "verify_training_sources", lambda *args: ["fixture-core"])
+    output = tmp_path / "focused"
+    assert FOCUS.main(["--project-root", str(e["project"]), "--source-results", str(e["result"]),
+        "--output-root", str(output), "--watch", "--close-joint-first", "--max-followups-per-model", "0",
+        "--search-starts", "1", "--search-sweeps", "1", "--pair-trials", "0"]) == 0
+    assert len(calls) == 1
+    state = real_read(output / "campaign_status.json")
+    assert state["status"] == "completed_search"
+    assert Path(state["joint_archive"]).is_file()
+    assert len(list((output / "joint_closeout/best_models").rglob("checkpoint_*.pt"))) == 4
+    assert real_read(output / "followup_plan.json")["cases"] == []
+    assert (output / "total_comparison.tsv").is_file()
+    with tarfile.open(state["archive"], "r:gz") as bundle:
+        assert not any(name.endswith((".pt", "joint_models_complete.tar.gz")) for name in bundle.getnames())

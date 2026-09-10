@@ -25,6 +25,8 @@ PREFLIGHT_TESTS = (
     "test_que_total_objective.py",
     "test_que_total_followup_training.py",
     "test_que_total_focus.py",
+    "test_que_joint_closeout.py",
+    "test_que_shared_closeout_stop.py",
 )
 REQUIRED_PATHS = (
     "src", "scripts", "configs", "tests", "pyproject.toml",
@@ -43,8 +45,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--project-root', type=Path, required=True)
 parser.add_argument('--watch', action='store_true')
 parser.add_argument('--status', action='store_true')
+parser.add_argument('--output-root', type=Path)
+parser.add_argument('--close-joint-first', action='store_true')
 args = parser.parse_args()
-out = args.project_root / 'results/que_total_focus_20260910'
+out = args.output_root or args.project_root / 'results/que_total_focus_20260910'
 status = out / 'campaign_status.json'
 if args.status:
     print(status.read_text() if status.exists() else '{}')
@@ -53,7 +57,8 @@ else:
     with (out / 'campaign.lock').open('a+') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         state = {'status': 'fixture_running', 'pid': os.getpid(),
-                 'tool_root': str(Path(__file__).resolve().parents[2])}
+                 'tool_root': str(Path(__file__).resolve().parents[2]),
+                 'close_joint_first': args.close_joint_first}
         with (out / 'fixture_starts.jsonl').open('a') as events:
             events.write(json.dumps(state) + '\n')
         status.write_text(json.dumps(state))
@@ -129,9 +134,9 @@ class Installation:
     def tool_root(self) -> Path:
         return self.tools / self.pin
 
-    def run(self) -> subprocess.CompletedProcess:
+    def run(self, *options) -> subprocess.CompletedProcess:
         return subprocess.run(
-            ["bash", str(INSTALLER), self.pin], cwd=self.project, env=self.env,
+            ["bash", str(INSTALLER), self.pin, *options], cwd=self.project, env=self.env,
             text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=20,
         )
 
@@ -299,3 +304,17 @@ def test_failed_cpu_preflight_never_launches_campaign(installation):
     assert len(case.preflights()) == 1
     assert not case.starts()
     assert not (case.project / "logs/que_total_focus_launcher.pid").exists()
+
+
+def test_joint_handoff_installs_separately_and_forwards_mode_once(installation):
+    case = installation
+    case.output = case.project / "results/que_recurrent_focus_20260910"
+    result = case.run("--close-joint-first")
+    assert result.returncode == 0, result.stdout
+    assert case.starts()[0]["close_joint_first"] is True
+    assert (case.project / "logs/que_recurrent_focus_launcher.pid").is_file()
+    assert (case.project / "logs/que_recurrent_focus_launcher.log").is_file()
+    assert not (case.project / "results/que_total_focus_20260910").exists()
+    repeated = case.run("--close-joint-first")
+    assert repeated.returncode == 0, repeated.stdout
+    assert len(case.starts()) == 1

@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 # git show COMMIT:scripts/reproduce/install_que_total_focus.sh | bash -s -- COMMIT
 set -Eeuo pipefail
+trap 'code=$?; echo "安装在第 ${LINENO} 行退出，退出码=${code}；请保留上方输出。" >&2; exit "$code"' ERR
 snapshot=${1:?Provide the full pinned tool commit}
+mode=${2:-}
+[[ -z "$mode" || "$mode" == --close-joint-first ]] || { echo "未知安装选项：$mode" >&2; exit 2; }
+campaign_options=()
+campaign_tag=que_total_focus
+if [[ "$mode" == --close-joint-first ]]; then
+  campaign_options+=(--close-joint-first)
+  campaign_tag=que_recurrent_focus
+fi
 [[ "$snapshot" =~ ^[0-9a-f]{40}$ ]] || { echo "需要完整40位工具提交号" >&2; exit 2; }
 project_root=$(git rev-parse --show-toplevel)
 cd "$project_root"
@@ -10,7 +19,8 @@ git cat-file -e "${snapshot}^{commit}"
 tool_parent=$(realpath -m "${QUE_FOCUS_TOOL_PARENT:-$HOME/projects/que_total_focus_tools}")
 case "$tool_parent/" in "$project_root/"*) echo "工具必须安装在训练项目外部" >&2; exit 2;; esac
 tool_root="$tool_parent/$snapshot"
-output_root="$project_root/results/que_total_focus_20260910"
+output_root="$project_root/results/${campaign_tag}_20260910"
+echo "开始安装：工具提交=$snapshot；模式=${mode:-总体定向搜索}"
 mkdir -p "$tool_parent" "$output_root" "$project_root/logs"
 exec 9> "$output_root/install.lock"
 flock -n 9 || { echo "已有安装流程，本次不重复启动。"; exit 0; }
@@ -20,6 +30,7 @@ else
   campaign_python=$(conda run --no-capture-output -n bwdf311 python -c 'import sys; print(sys.executable)' | tail -n 1)
 fi
 test -x "$campaign_python"
+echo "Python 环境已定位，开始导出并核验工具。"
 files=(src scripts configs tests pyproject.toml SOURCE_CHECKSUMS.sha256)
 # Select files from the pinned Git object, never from the live worktree.
 # Some versions do not track uv.lock; git archive rejects absent pathspecs.
@@ -72,7 +83,7 @@ export OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 NUMEXPR_NUM_TH
 campaign="$tool_root/scripts/reproduce/run_que_total_focus.py"
 if ! flock -n "$output_root/campaign.lock" true; then
   echo "已有总体定向搜索在运行，本次不重复启动。"
-  "$campaign_python" "$campaign" --project-root "$project_root" --status
+  "$campaign_python" "$campaign" --project-root "$project_root" --output-root "$output_root" --status
   exit 0
 fi
 echo "执行新流程CPU测试与命令检查；训练项目提交保持 $head_before。"
@@ -80,24 +91,29 @@ echo "执行新流程CPU测试与命令检查；训练项目提交保持 $head_b
   cd "$tool_root"
   PYTHONPATH="$tool_root/src" "$campaign_python" -m pytest -q \
     tests/test_que_total_recurrent_search.py tests/test_que_total_objective.py \
-    tests/test_que_total_followup_training.py tests/test_que_total_focus.py
+    tests/test_que_total_followup_training.py tests/test_que_total_focus.py \
+    tests/test_que_joint_closeout.py tests/test_que_shared_closeout_stop.py
 ) > "$output_root/installation_preflight.log" 2>&1 || {
   tail -n 60 "$output_root/installation_preflight.log"
   echo "CPU预检未通过，未启动新流程。" >&2
   exit 1
 }
 test "$(git rev-parse HEAD)" = "$head_before"
-nohup "$campaign_python" -u "$campaign" --project-root "$project_root" --watch \
-  9>&- >> "$project_root/logs/que_total_focus_launcher.log" 2>&1 &
+nohup "$campaign_python" -u "$campaign" --project-root "$project_root" --output-root "$output_root" --watch "${campaign_options[@]}" \
+  9>&- >> "$project_root/logs/${campaign_tag}_launcher.log" 2>&1 &
 campaign_pid=$!
-echo "$campaign_pid" > "$project_root/logs/que_total_focus_launcher.pid"
+echo "$campaign_pid" > "$project_root/logs/${campaign_tag}_launcher.pid"
 sleep 2
 if ! kill -0 "$campaign_pid" 2>/dev/null; then
-  tail -n 40 "$project_root/logs/que_total_focus_launcher.log"
-  "$campaign_python" "$campaign" --project-root "$project_root" --status
+  tail -n 40 "$project_root/logs/${campaign_tag}_launcher.log"
+  "$campaign_python" "$campaign" --project-root "$project_root" --output-root "$output_root" --status
   exit 1
 fi
 echo "总体定向搜索已启动：PID=$campaign_pid"
-echo "先执行CPU核验/组合搜索；旧队列结束并释放锁后，自动追加至多48组GRU/LSTM训练。"
-echo "日志：$project_root/logs/que_total_focus_launcher.log"
-"$campaign_python" "$campaign" --project-root "$project_root" --status
+if [[ "$mode" == --close-joint-first ]]; then
+  echo "先归档四个联合模型和参数记录，核验成功后结束旧队列，再只搜索及训练GRU/LSTM。"
+else
+  echo "先执行CPU核验/组合搜索；旧队列结束并释放锁后，自动追加至多48组GRU/LSTM训练。"
+fi
+echo "日志：$project_root/logs/${campaign_tag}_launcher.log"
+"$campaign_python" "$campaign" --project-root "$project_root" --output-root "$output_root" --status

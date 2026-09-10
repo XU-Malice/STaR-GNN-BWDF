@@ -37,6 +37,28 @@ git show "${tools_commit}:scripts/reproduce/install_que_total_focus.sh" | bash -
 
 安装器从指定Git提交核验必需目录及项目文件，只有该提交实际包含`uv.lock`时才导出它。不能根据本地工作区是否存在锁文件判断提交内容。2026-09-10首版安装失败发生在Git导出阶段，尚未启动新搜索或补充训练；重新运行修复后的安装器即可，原训练队列和已有结果不受该次失败影响。
 
+## 联合模型收尾后专注 GRU/LSTM
+
+2026-09-10用户接受 MSNet、MSCMNet_M、MSCMNet_WM、MSCMNet_W 当前最接近论文的候选，要求保存模型及尝试记录，并将后续资源集中到 GRU/LSTM。原始 C 阶段按 GRU、LSTM、MSNet、M、WM、W 的顺序执行；进入 MSNet 后，本次调用不会再训练 GRU/LSTM。原 D 仅组合已有独立 DMA 网络并重算指标，仍有可能改善循环模型总体值。
+
+安装时将 `--close-joint-first` 作为提交号之后的第二个参数：
+
+```bash
+git show "${tools_commit}:scripts/reproduce/install_que_total_focus.sh" | bash -s -- "$tools_commit" --close-joint-first
+```
+
+该模式使用独立结果目录 `results/que_recurrent_focus_20260910` 和 `logs/que_recurrent_focus_launcher.log`。按以下顺序自动执行：
+
+1. 从所有已核验完整候选的原始预测重新计算 pooled TOTAL 指标，为四个联合模型各选一个完整配置，同时保存24h和168h八项指标。选择优先最小化最大标准化差距，再比较平均差距；不会跨候选拼指标。
+2. 复制完整权重、预测、实际配置、scaler、训练曲线及审计文件，保存 A/B/C 全部计划和尝试记录。成功、复用、失败、运行中、待执行保持区分；仅尝试过的设置进入已训练去重清单。原源码、配置、数据哈希及工具源码一并记录。
+3. 生成 `joint_closeout/joint_models_complete.tar.gz` 和 SHA256；逐文件以及逐压缩包成员核验后才写入 `completion_manifest.json` 的 READY 状态。归档接受当前差距，不声称四个模型全部达到原容差。
+4. 确认完整 C 计划中 GRU/LSTM 没有未结束任务，再核对原共享 GPU7 启动器的用户、目录、命令和进程身份，通过绑定的 pidfd 发送一个 SIGTERM。原队列自己的清理路径关闭训练子进程；新流程等待旧队列终止状态和原 GPU 锁释放，不改写原队列状态或计划。
+5. 固定归档中的四个联合模型，仅为 GRU/LSTM 执行总体指标组合搜索和最多各24组补充训练。补充计划排除本轮已经尝试的参数，包括失败或未通过结果核验的设置；只使用seed20240604。共享GPU7维持6GiB分配器限额和2GiB启动余量。
+
+缺失 Python/libc pidfd 包装器时，停止器仅在已核对的 Linux x86_64/aarch64 LP64 ABI 上调用相同的内核 pidfd 接口。系统拒绝或不支持该接口时保留归档并停止交接，不对数值PID或其他GPU进程发送信号。归档或身份核验失败也不会中断旧队列。
+
+四个联合模型的完整压缩包始终保留在服务器上；最终 `que_recurrent_focus_20260910_compact.tar.gz` 提供指标、配置、历史和核验记录，不嵌入该权重压缩包。已有模型组合是针对已公开测试目标的数值搜索，当前固定真值与 pooled 口径下的部分 RMSE/NSE 目标不相容，因此按原容差报告最接近结果，不承诺48项全部匹配。
+
 查看进度：
 
 ```bash

@@ -233,6 +233,51 @@ def terminal_and_lock(queue, project, gpu_id):
     return stream
 
 
+def prepare_joint_handoff(context, args, state, archive_api, stop_api):
+    """Archive verified joint models before requesting the user's queue handoff."""
+    output = args.output_root
+    saved = output / "joint_closeout_reference.json"
+    publish(output, state, status="archiving_joint_models")
+    print("正在核验并归档四个联合模型与本轮全部参数记录；原队列此时继续运行。", flush=True)
+    if saved.exists():
+        reference = read(saved)
+        report = archive_api.verify_ready(Path(reference["report_path"]).parent)
+        if report["archive_sha256"] != reference["archive_sha256"]:
+            raise ValueError("Joint closeout archive differs from the frozen handoff")
+    else:
+        report = archive_api.archive_joint_closeout(context,
+            read(args.source_results / "queue_status.json"), output / "joint_closeout")
+        archive_api.verify_ready(Path(report["report_path"]).parent)
+        write(saved, report)
+    if report.get("status") != "READY":
+        raise ValueError("Joint model archive is not complete; original queue left running")
+    selected = report["selected_models"]
+    if set(selected) != set(MODELS[2:]):
+        raise ValueError("Four complete joint models are required before handoff")
+    publish(output, state, status="requesting_original_queue_stop",
+        joint_archive=report["archive_path"], joint_archive_sha256=report["archive_sha256"],
+        joint_selected_cases={m: selected[m]["case"] for m in MODELS[2:]})
+    print(f"四个联合模型已完整归档：{report['archive_path']}\nSHA256：{report['archive_sha256']}", flush=True)
+    print("正在核验 GRU/LSTM 已结束的计划和原启动器身份，再请求旧队列正常退出。", flush=True)
+    result = stop_api.stop_after_closeout(project_root=args.project_root.resolve(),
+        source_results=args.source_results.resolve(), archive_root=Path(report["report_path"]).parent,
+        validate_archive=archive_api.verify_ready, context=context, execute=True)
+    write(output / "original_queue_handoff.json", result)
+    print(f"旧队列交接状态：{result['status']}；接下来只搜索和训练 GRU/LSTM。", flush=True)
+    return report
+
+
+def restrict_to_closed_joint_models(candidates, report):
+    if report is None:
+        return candidates
+    selected = report["selected_models"]
+    filtered = [c for c in candidates if c["model"] in ("gru", "lstm")
+                or c["case"] == selected[c["model"]]["case"]]
+    if {c["model"] for c in filtered if c["model"] in MODELS[2:]} != set(MODELS[2:]):
+        raise ValueError("A frozen joint-model source is no longer valid")
+    return filtered
+
+
 def print_status(output):
     path = output / "campaign_status.json"
     if not path.exists():
@@ -243,6 +288,8 @@ def print_status(output):
     print(f"旧队列：{s.get('source_status')}；已核验候选：{s.get('candidate_count', 0)}")
     print(f"总体接近：{s.get('matched_model_count', 0)}/6 模型，{s.get('matched_total_cells', 0)}/48 项")
     print(f"补充训练已结束：{s.get('followups_finished', 0)}/{s.get('followup_count', '待旧队列结束后生成')}；当前：{s.get('active_case')}")
+    if s.get("joint_archive"):
+        print("四个联合模型完整归档：", s["joint_archive"])
     if s.get("searching_model"):
         print(f"CPU组合搜索：{s['searching_model']} / {s['searching_mode']}")
     if s.get("feasibility_blocked"):
@@ -260,7 +307,8 @@ def bundle_output(output, destination):
     temporary = destination.with_suffix(".tmp")
     with tarfile.open(temporary, "w:gz") as archive:
         for path in sorted(output.rglob("*")):
-            if path.is_file() and not path.is_symlink() and path.suffix not in {".pt", ".lock", ".tmp"}:
+            if (path.is_file() and not path.is_symlink() and path.suffix not in {".pt", ".lock", ".tmp"}
+                    and path.name != "joint_models_complete.tar.gz"):
                 archive.add(path, arcname=str(Path(output.name) / path.relative_to(output)), recursive=False)
     temporary.replace(destination)
     sha = hashlib.sha256(destination.read_bytes()).hexdigest()
@@ -287,6 +335,7 @@ def run(args):
             training_seeds=[20240604], original_paper_method_recovered=False, followups_finished=0,
             trained_models=["gru", "lstm"], pid=os.getpid())
         publish(output, state)
+        print("正在核对原队列的源码、数据和参数；准备读取已完成模型。", flush=True)
         gpu_lock = None
         try:
             sys.path.insert(0, str(TOOL_ROOT / "src"))
@@ -306,6 +355,8 @@ def run(args):
                 search_starts=args.search_starts, search_sweeps=args.search_sweeps, pair_trials=args.pair_trials,
                 gpu_id=args.gpu_id, memory_limit_gib=6, headroom_gib=2,
                 tool_commit=read(TOOL_ROOT / "deployment.json").get("commit"))
+            if args.close_joint_first:
+                manifest["close_joint_first"] = True
             manifest["signature"] = digest(manifest)
             mp = output / "manifest.json"
             if mp.exists() and read(mp) != manifest:
@@ -315,6 +366,12 @@ def run(args):
                 context.check_fingerprints()
                 if runner.life.fingerprints(TOOL_ROOT, context.data_dir) != signatures:
                     raise ValueError("External tool source/data changed")
+            closeout = None
+            if args.close_joint_first:
+                source_check()
+                archive_api = module("que_joint_closeout", TOOL_ROOT / "scripts/reproduce/archive_que_joint_closeout.py")
+                stop_api = module("que_joint_handoff_stop", TOOL_ROOT / "scripts/reproduce/stop_que_shared_after_closeout.py")
+                closeout = prepare_joint_handoff(context, args, state, archive_api, stop_api)
             previous_names, ranking, candidates = set(), [], []
             while True:
                 queue = read(args.source_results / "queue_status.json")
@@ -324,6 +381,7 @@ def run(args):
                 if not ranking or len(names.symmetric_difference(previous_names)) >= args.refresh_cases or (terminal and names != previous_names):
                     source_check()
                     candidates, exclusions = collect_validated(context, queue)
+                    candidates = restrict_to_closed_joint_models(candidates, closeout)
                     write(output / "source_exclusions.json", exclusions)
                     if not candidates:
                         raise ValueError("No verified complete source candidates")
@@ -350,7 +408,10 @@ def run(args):
                     raise ValueError("Frozen supplemental plan changed")
             else:
                 parent_records = complete_records(ranking, "pooled", context.paper)
-                parent_records.extend(r for r in queue.get("cases", []) if r.get("technical_status") == "FAIL")
+                # All visited settings prevent duplicates, including invalid or
+                # failed artifacts. Only separately audited records select parents.
+                parent_records.extend({**r, "technical_status": "HISTORY_ONLY", "metrics": []}
+                    for r in queue.get("cases", []) if r.get("model") in ("gru", "lstm"))
                 followups = trainer.generate_followups(parent_records, runner, args.max_followups_per_model)
                 plan = dict(campaign_signature=manifest["signature"], cases=followups,
                             objective="total8_minimax_then_mean", training_seed=20240604)
@@ -407,6 +468,8 @@ def main(argv=None):
     parser.add_argument("--source-results", type=Path)
     parser.add_argument("--output-root", type=Path)
     parser.add_argument("--watch", action="store_true")
+    parser.add_argument("--close-joint-first", action="store_true",
+        help="Archive the four joint models, stop the verified old queue, then focus on GRU/LSTM")
     parser.add_argument("--status", action="store_true")
     parser.add_argument("--gpu-id", default="7", choices=["7"])
     parser.add_argument("--max-followups-per-model", type=int, default=24, choices=range(25))
@@ -417,7 +480,8 @@ def main(argv=None):
     parser.add_argument("--poll-seconds", type=int, default=60, choices=range(1, 61))
     args = parser.parse_args(argv)
     args.source_results = args.source_results or args.project_root / "results/que_comprehensive_reconstruction_shared_20260908"
-    args.output_root = args.output_root or args.project_root / "results/que_total_focus_20260910"
+    default_tag = "que_recurrent_focus_20260910" if args.close_joint_first else "que_total_focus_20260910"
+    args.output_root = args.output_root or args.project_root / "results" / default_tag
     if args.status:
         return print_status(args.output_root)
     return run(args)
