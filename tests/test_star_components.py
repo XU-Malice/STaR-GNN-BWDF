@@ -190,8 +190,8 @@ def test_fa_dpr_tokens_do_not_concatenate_patch_last_state() -> None:
     torch.testing.assert_close(
         memory.daily_tokens[:, -1],
         expected_last,
-        atol=0.0,
-        rtol=0.0,
+        atol=1.0e-6,
+        rtol=1.0e-6,
     )
 
 

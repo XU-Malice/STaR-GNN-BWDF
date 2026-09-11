@@ -27,6 +27,54 @@ paper:
 tasks:
   24h:
     horizon: 24
+    GRU:
+      A: {MAE: 0.738, MAPE: 0.118, RMSE: 0.884, NSE: 0.699}
+      B: {MAE: 0.386, MAPE: 0.041, RMSE: 0.470, NSE: 0.689}
+      C: {MAE: 0.302, MAPE: 0.110, RMSE: 0.388, NSE: 0.767}
+      D: {MAE: 3.144, MAPE: 0.091, RMSE: 3.747, NSE: 0.617}
+      E: {MAE: 3.475, MAPE: 0.045, RMSE: 4.457, NSE: 0.875}
+      F: {MAE: 1.964, MAPE: 0.179, RMSE: 2.144, NSE: -1.513}
+      G: {MAE: 1.293, MAPE: 0.049, RMSE: 1.666, NSE: 0.813}
+      H: {MAE: 1.526, MAPE: 0.070, RMSE: 2.042, NSE: 0.887}
+      I: {MAE: 1.498, MAPE: 0.062, RMSE: 1.855, NSE: -0.341}
+      J: {MAE: 1.988, MAPE: 0.088, RMSE: 2.309, NSE: -0.156}
+      total: {MAE: 16.314, MAPE: 0.031, RMSE: 10.194, NSE: 0.916}
+    LSTM:
+      A: {MAE: 0.770, MAPE: 0.125, RMSE: 0.930, NSE: 0.650}
+      B: {MAE: 0.397, MAPE: 0.042, RMSE: 0.480, NSE: 0.673}
+      C: {MAE: 0.620, MAPE: 0.238, RMSE: 0.687, NSE: 0.239}
+      D: {MAE: 2.339, MAPE: 0.071, RMSE: 2.920, NSE: 0.774}
+      E: {MAE: 2.770, MAPE: 0.035, RMSE: 3.670, NSE: 0.913}
+      F: {MAE: 2.537, MAPE: 0.231, RMSE: 2.663, NSE: -2.866}
+      G: {MAE: 2.101, MAPE: 0.081, RMSE: 2.594, NSE: 0.597}
+      H: {MAE: 2.133, MAPE: 0.092, RMSE: 2.744, NSE: 0.814}
+      I: {MAE: 1.563, MAPE: 0.064, RMSE: 1.914, NSE: -0.257}
+      J: {MAE: 2.467, MAPE: 0.110, RMSE: 2.803, NSE: -0.833}
+      total: {MAE: 17.698, MAPE: 0.029, RMSE: 9.711, NSE: 0.920}
+    MSNet:
+      A: {MAE: 0.880, MAPE: 0.136, RMSE: 1.030, NSE: 0.577}
+      B: {MAE: 0.373, MAPE: 0.039, RMSE: 0.461, NSE: 0.683}
+      C: {MAE: 0.314, MAPE: 0.096, RMSE: 0.391, NSE: 0.744}
+      D: {MAE: 3.728, MAPE: 0.127, RMSE: 4.298, NSE: 0.272}
+      E: {MAE: 1.867, MAPE: 0.023, RMSE: 2.286, NSE: 0.972}
+      F: {MAE: 1.425, MAPE: 0.149, RMSE: 1.621, NSE: -2.392}
+      G: {MAE: 1.251, MAPE: 0.046, RMSE: 1.580, NSE: 0.803}
+      H: {MAE: 2.046, MAPE: 0.090, RMSE: 2.489, NSE: 0.821}
+      I: {MAE: 1.783, MAPE: 0.076, RMSE: 2.133, NSE: -0.469}
+      J: {MAE: 1.871, MAPE: 0.075, RMSE: 2.112, NSE: 0.273}
+      total: {MAE: 15.537, MAPE: 0.032, RMSE: 9.526, NSE: 0.929}
+    MSCMNet_M:
+      A: {MAE: 0.893, MAPE: 0.132, RMSE: 1.054, NSE: 0.579}
+      B: {MAE: 0.370, MAPE: 0.040, RMSE: 0.433, NSE: 0.714}
+      C: {MAE: 0.318, MAPE: 0.115, RMSE: 0.377, NSE: 0.758}
+      D: {MAE: 3.142, MAPE: 0.094, RMSE: 3.603, NSE: 0.625}
+      E: {MAE: 1.966, MAPE: 0.025, RMSE: 2.460, NSE: 0.965}
+      F: {MAE: 1.241, MAPE: 0.108, RMSE: 1.428, NSE: -0.187}
+      G: {MAE: 1.131, MAPE: 0.044, RMSE: 1.336, NSE: 0.884}
+      H: {MAE: 2.091, MAPE: 0.082, RMSE: 2.544, NSE: 0.846}
+      I: {MAE: 1.805, MAPE: 0.070, RMSE: 2.131, NSE: 0.193}
+      J: {MAE: 1.955, MAPE: 0.088, RMSE: 2.206, NSE: 0.141}
+      total: {MAE: 14.912, MAPE: 0.028, RMSE: 8.111, NSE: 0.954}
     MSCMNet_W:
       A: {MAE: 0.739, MAPE: 0.120, RMSE: 0.876, NSE: 0.716}
       B: {MAE: 0.394, MAPE: 0.043, RMSE: 0.454, NSE: 0.680}
@@ -53,6 +101,54 @@ tasks:
       total: {MAE: 14.790, MAPE: 0.027, RMSE: 7.924, NSE: 0.957}
   168h:
     horizon: 168
+    GRU:
+      A: {MAE: 0.828, MAPE: 0.133, RMSE: 1.028, NSE: 0.706}
+      B: {MAE: 0.393, MAPE: 0.042, RMSE: 0.493, NSE: 0.698}
+      C: {MAE: 0.303, MAPE: 0.111, RMSE: 0.415, NSE: 0.743}
+      D: {MAE: 3.285, MAPE: 0.095, RMSE: 3.988, NSE: 0.585}
+      E: {MAE: 3.484, MAPE: 0.045, RMSE: 5.054, NSE: 0.872}
+      F: {MAE: 2.205, MAPE: 0.200, RMSE: 2.392, NSE: -1.781}
+      G: {MAE: 1.266, MAPE: 0.048, RMSE: 1.838, NSE: 0.803}
+      H: {MAE: 1.655, MAPE: 0.075, RMSE: 2.243, NSE: 0.888}
+      I: {MAE: 1.593, MAPE: 0.066, RMSE: 2.070, NSE: 0.523}
+      J: {MAE: 3.293, MAPE: 0.147, RMSE: 3.918, NSE: -0.345}
+      total: {MAE: 18.305, MAPE: 0.031, RMSE: 11.353, NSE: 0.918}
+    LSTM:
+      A: {MAE: 0.808, MAPE: 0.130, RMSE: 1.006, NSE: 0.718}
+      B: {MAE: 0.399, MAPE: 0.042, RMSE: 0.499, NSE: 0.688}
+      C: {MAE: 0.630, MAPE: 0.241, RMSE: 0.698, NSE: 0.276}
+      D: {MAE: 2.342, MAPE: 0.070, RMSE: 2.984, NSE: 0.772}
+      E: {MAE: 2.760, MAPE: 0.035, RMSE: 4.195, NSE: 0.912}
+      F: {MAE: 2.648, MAPE: 0.240, RMSE: 2.791, NSE: -2.772}
+      G: {MAE: 2.142, MAPE: 0.083, RMSE: 2.705, NSE: 0.578}
+      H: {MAE: 2.170, MAPE: 0.093, RMSE: 2.810, NSE: 0.824}
+      I: {MAE: 1.741, MAPE: 0.071, RMSE: 2.186, NSE: 0.475}
+      J: {MAE: 3.037, MAPE: 0.136, RMSE: 3.647, NSE: -0.195}
+      total: {MAE: 18.678, MAPE: 0.029, RMSE: 11.031, NSE: 0.922}
+    MSNet:
+      A: {MAE: 0.869, MAPE: 0.134, RMSE: 1.055, NSE: 0.588}
+      B: {MAE: 0.383, MAPE: 0.040, RMSE: 0.479, NSE: 0.674}
+      C: {MAE: 0.310, MAPE: 0.095, RMSE: 0.398, NSE: 0.750}
+      D: {MAE: 3.804, MAPE: 0.130, RMSE: 4.452, NSE: 0.254}
+      E: {MAE: 1.864, MAPE: 0.023, RMSE: 2.365, NSE: 0.972}
+      F: {MAE: 1.472, MAPE: 0.154, RMSE: 1.702, NSE: -2.543}
+      G: {MAE: 1.276, MAPE: 0.047, RMSE: 1.670, NSE: 0.802}
+      H: {MAE: 2.132, MAPE: 0.094, RMSE: 2.631, NSE: 0.808}
+      I: {MAE: 1.809, MAPE: 0.078, RMSE: 2.210, NSE: 0.021}
+      J: {MAE: 1.990, MAPE: 0.079, RMSE: 2.305, NSE: 0.398}
+      total: {MAE: 15.908, MAPE: 0.032, RMSE: 9.698, NSE: 0.930}
+    MSCMNet_M:
+      A: {MAE: 0.809, MAPE: 0.123, RMSE: 0.985, NSE: 0.735}
+      B: {MAE: 0.406, MAPE: 0.045, RMSE: 0.476, NSE: 0.704}
+      C: {MAE: 0.324, MAPE: 0.119, RMSE: 0.386, NSE: 0.777}
+      D: {MAE: 3.281, MAPE: 0.097, RMSE: 3.811, NSE: 0.614}
+      E: {MAE: 1.819, MAPE: 0.024, RMSE: 2.416, NSE: 0.971}
+      F: {MAE: 1.518, MAPE: 0.132, RMSE: 1.738, NSE: -0.512}
+      G: {MAE: 1.069, MAPE: 0.042, RMSE: 1.292, NSE: 0.901}
+      H: {MAE: 2.196, MAPE: 0.086, RMSE: 2.701, NSE: 0.835}
+      I: {MAE: 1.814, MAPE: 0.071, RMSE: 2.196, NSE: 0.450}
+      J: {MAE: 2.168, MAPE: 0.098, RMSE: 2.461, NSE: 0.392}
+      total: {MAE: 15.405, MAPE: 0.028, RMSE: 8.395, NSE: 0.953}
     MSCMNet_W:
       A: {MAE: 0.733, MAPE: 0.117, RMSE: 0.889, NSE: 0.784}
       B: {MAE: 0.420, MAPE: 0.046, RMSE: 0.487, NSE: 0.690}

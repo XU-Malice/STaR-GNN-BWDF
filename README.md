@@ -1,6 +1,6 @@
 # STaR-GNN：多 DMA 小时需水预测
 
-[English](README_EN.md)｜[文档索引](docs/README.md)｜[方法说明](docs/METHOD_CN.md)｜[最终实验设计](docs/EXPERIMENT_DESIGN_FINAL_CN.md)｜[结果与工件](docs/RESULTS_AND_ARTIFACTS_CN.md)｜[投稿作图教程](docs/PLOTTING_CN.md)
+[English](README_EN.md)｜[文档索引](docs/README.md)｜[方法说明](docs/METHOD_CN.md)｜[六种时序基线](docs/MSCMNET_BASELINES_CN.md)｜[最终实验设计](docs/EXPERIMENT_DESIGN_FINAL_CN.md)｜[结果与工件](docs/RESULTS_AND_ARTIFACTS_CN.md)｜[投稿作图教程](docs/PLOTTING_CN.md)
 
 本仓库是 STaR-GNN 的独立可复现实现，用于 10 个分区计量区域（DMA）的 24 h day-ahead 与 168 h week-ahead 联合需水预测。仓库包含 split-aware 数据预处理、仅训练期 Pearson 功能图、DCRNN/STGCN baseline、SAS-Norm 与 FA-DPR factorial ablation、冻结 checkpoint、common-46 Test 复评，以及 Journal of Hydrology 稿件所用的投稿表图和审计工件。
 
@@ -183,6 +183,6 @@ PYTHONPATH=scripts/reproduce python \
 
 ## 8. 结果来源边界
 
-总体比较中的 GRU、LSTM、MSNet 与 MSCMNet variants 为 Que et al. (2024) reported results；DCRNN、STGCN、STaR-GNN 为 common-46 复评。仓库不会将两类来源表述为完全相同代码条件下重训。
+当前冻结投稿表中的 GRU、LSTM、MSNet 与 MSCMNet variants 仍是 Que et al. (2024) reported results；DCRNN、STGCN、STaR-GNN 为 common-46 复评。仓库现已提供六种时序模型的独立重训实现，但在新的正式运行通过前，不会把 reported 表值改称本仓库重训结果。实现、论文未公开细节与 GPU6 运行方法见 [`docs/MSCMNET_BASELINES_CN.md`](docs/MSCMNET_BASELINES_CN.md)。
 
 旧 `paper/figures/manuscript_fig1...5`、`paper/figures/test_*` 和旧 captions 继续保留用于历史复现/诊断，但不再是投稿版权威入口。

@@ -31,9 +31,14 @@ python -m py_compile \
   scripts/innovation/train_star_dcrnn.py \
   scripts/innovation/evaluate_star_dcrnn.py \
   scripts/train/train_model.py \
+  scripts/train/train_temporal_baselines.py \
   scripts/evaluate/test_model.py
 
-bash -n scripts/reproduce/*.sh scripts/data/*.sh scripts/graph/*.sh
+bash -n \
+  scripts/reproduce/*.sh \
+  scripts/data/*.sh \
+  scripts/graph/*.sh \
+  scripts/train/*.sh
 
 python - <<'PY'
 from pathlib import Path

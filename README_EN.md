@@ -1,6 +1,6 @@
 # STaR-GNN for Multi-DMA Water-Demand Forecasting
 
-[中文](README.md) | [Documentation](docs/README.md) | [Method](docs/METHOD_CN.md) | [Final experiment design](docs/EXPERIMENT_DESIGN_FINAL_CN.md) | [Results](docs/RESULTS_AND_ARTIFACTS_CN.md) | [Submission plotting guide](docs/PLOTTING_CN.md)
+[中文](README.md) | [Documentation](docs/README.md) | [Method](docs/METHOD_CN.md) | [Temporal baselines](docs/MSCMNET_BASELINES_CN.md) | [Final experiment design](docs/EXPERIMENT_DESIGN_FINAL_CN.md) | [Results](docs/RESULTS_AND_ARTIFACTS_CN.md) | [Submission plotting guide](docs/PLOTTING_CN.md)
 
 This repository provides the reproducible implementation of STaR-GNN for 24 h day-ahead and 168 h week-ahead hourly water-demand forecasting over ten district metered areas (DMAs). It includes split-aware preprocessing, a training-only Pearson functional graph, DCRNN/STGCN baselines, SAS-Norm and FA-DPR factorial ablations, frozen common-46 test artifacts, and the submission tables/figures used by the Journal of Hydrology manuscript.
 
@@ -186,6 +186,6 @@ Pass `--wf4bwdf-repo repos/wf4bwdf` to use an explicit local checkout pinned to 
 
 Final figures are exported as vector PDF, editable SVG, and 300 dpi PNG previews.
 
-Reported GRU/LSTM/MSNet/MSCMNet values are literature results from Que et al. (2024); DCRNN/STGCN/STaR-GNN are re-evaluated on common-46. These source categories are never described as having been retrained under identical code conditions.
+The frozen manuscript tables still use reported GRU/LSTM/MSNet/MSCMNet values from Que et al. (2024); DCRNN/STGCN/STaR-GNN are re-evaluated on common-46. The repository now includes an independent implementation and training pipeline for all six temporal models, but reported values are not relabeled as locally retrained results until a new formal run passes. See [`docs/MSCMNET_BASELINES_CN.md`](docs/MSCMNET_BASELINES_CN.md).
 
 Legacy `paper/figures/manuscript_fig1...5`, `paper/figures/test_*`, and old captions are retained for historical reproduction/diagnostics but are no longer the authoritative submission artifacts.

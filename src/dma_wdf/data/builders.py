@@ -49,6 +49,7 @@ def build_demand_only_samples(
     test_start: pd.Timestamp,
     test_end: pd.Timestamp,
     tz: Any,
+    train_stride_hours: int = 24,
 ) -> dict[str, np.ndarray]:
     """Build demand-only samples for GRU/LSTM baselines.
 
@@ -75,6 +76,7 @@ def build_demand_only_samples(
         train_end=train_end,
         input_weeks=input_weeks,
         target_hours=24,
+        stride_hours=int(train_stride_hours),
         tz=tz,
     )
     eval_index = make_eval_index(
@@ -137,6 +139,12 @@ def build_demand_only_samples(
         "x_test_eval": np.stack(x_test).astype(np.float32),
         "y_test_eval_24h": np.stack(y_test_24h).astype(np.float32),
         "y_test_eval_168h": np.stack(y_test_168h).astype(np.float32),
+        "train_forecast_start": np.asarray(
+            [timestamp.isoformat() for timestamp in train_starts]
+        ),
+        "test_forecast_start": np.asarray(
+            [timestamp.isoformat() for timestamp in eval_index["forecast_start"]]
+        ),
     }
 
 

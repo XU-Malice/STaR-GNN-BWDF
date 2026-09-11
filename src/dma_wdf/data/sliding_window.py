@@ -308,6 +308,7 @@ def make_train_starts(
     train_end: pd.Timestamp,
     input_weeks: int,
     target_hours: int = 24,
+    stride_hours: int = 24,
     tz: Any = None,
 ) -> pd.DatetimeIndex:
     """Generate training forecast start dates for a specific DMA/model.
@@ -320,16 +321,30 @@ def make_train_starts(
         train_end: End of the training period (inclusive).
         input_weeks: Number of weeks of history required.
         target_hours: Forecast target length (last forecast must fit).
+        stride_hours: Hours between successive training forecast origins.
         tz: Timezone.
 
     Returns:
-        DatetimeIndex of daily midnight forecast start timestamps.
+        DatetimeIndex beginning at the first valid midnight and advancing by
+        ``stride_hours``.  The formal reconstruction uses 24 h; shorter
+        strides are explicitly labelled diagnostics because the paper does
+        not disclose its training-window stride.
     """
+    stride_hours = int(stride_hours)
+    if stride_hours <= 0:
+        raise ValueError("stride_hours must be positive.")
     offset_hours = input_weeks * 7 * 24
-    return daily_starts(
+    daily = daily_starts(
         train_start + pd.Timedelta(hours=offset_hours),
         train_end - pd.Timedelta(hours=target_hours - 1),
         tz,
+    )
+    if daily.empty:
+        return daily
+    return pd.date_range(
+        daily[0],
+        daily[-1],
+        freq=pd.Timedelta(hours=stride_hours),
     )
 
 
